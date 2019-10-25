@@ -1,0 +1,38 @@
+
+model {
+
+    # CAR prior for the spatial random effects 
+    # CAR prior 
+    
+    spacesigma ~ dunif(0,5)
+    spacetau <- 1/(spacesigma*spacesigma)
+    S[1:ncell] ~ car.normal(adj[],weights[],num[],spacetau)    
+    alpha.l ~ dunif(0,1)
+    alpha <-  log(alpha.l) - log(1-alpha.l) 
+
+### BBA model
+    ### priors
+    
+    p ~ dunif(0,1)
+    b.forest ~ dnorm(0,0.01)
+    b.elev ~ dnorm(0,0.01)
+    b.eCount ~ dunif(0,10)
+    b.eList ~ dunif(-10,0)
+    ### data model
+    
+    for (i in 1:nsite){
+      z[i] ~ dbern(PSI[cell[i]])
+      muy[i] <- z[i]*p
+      Y[i] ~ dbin(muy[i],5)
+    }
+    
+    ### eBird Model
+    ### Data Model
+    
+    for (j in 1:ncell){
+      logit(psi[j]) <- S[j] + alpha + b.forest*forest[j] + b.elev*elev[j] + b.eCount*W[j] + b.eList*effort[j,1]
+      PSI[j] <- 0.001 + psi[j]*.998
+    }
+}
+    
+    
