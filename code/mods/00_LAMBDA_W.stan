@@ -2,17 +2,17 @@ data {
   int<lower=0> nCell; // number of grid cells
   int<lower=0> nSpp;  // number of species
   int<lower=0> nGen;  // number of genera
-  int<lower=0> K;  // number of cell-scale covariates
+  int<lower=0> R;  // number of cell-scale covariates (incl. intercept)
   int<lower=0> tax_i[nSpp,2];  // species-genus lookup
   int<lower=0> W[nCell,nSpp];  // cell-scale citizen science counts
   int<lower=0> E[nCell];  // cell-scale citizen science total tube counts
-  matrix[nCell,K+1] X_W;  // cell-scale citizen science covariates
+  matrix[nCell,R] X_W;  // cell-scale citizen science covariates
 }
 
 parameters {
-  matrix[K+1,nSpp] b;  // environmental covariate species slopes
-  matrix[K+1,nGen] B;  // environmental covariate genus slopes
-  vector[K+1] beta;
+  matrix[R,nSpp] b;  // environmental covariate species slopes
+  matrix[R,nGen] B;  // environmental covariate genus slopes
+  vector[R] beta;
   real<lower=0> sigma_B;
   real<lower=0> sigma_b;
 }
@@ -23,14 +23,14 @@ transformed parameters {
 model {
   sigma_B ~ normal(0, 1);
   sigma_b ~ normal(0, 1);
-  for(k in 1:(K+1)) {
-    b[k,] ~ normal(B[k,tax_i[,2]], sigma_b);
-    B[k,] ~ normal(beta[k], sigma_B);
-    beta[k] ~ normal(0, 1);
+  for(r in 1:R) {
+    b[r,] ~ normal(B[r,tax_i[,2]], sigma_b);
+    B[r,] ~ normal(beta[r], sigma_B);
+    beta[r] ~ normal(0, 1);
   }
   for(s in 1:nSpp) {
-    for(j in 1:nCell) {
-      W[j,s] ~ poisson(LAMBDA[j,s]*E[j]);
+    for(k in 1:nCell) {
+      W[k,s] ~ poisson(LAMBDA[k,s]*E[k]);
     }
   }
 }
