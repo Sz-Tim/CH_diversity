@@ -79,7 +79,7 @@ stan_data <- list(nCell_W=K_W, nCell_Y=K_Y, nCell_W_=K_W_, nCell_Y_=K_Y_,
                   effort_prSoil=effort_prSoil,
                   LAMBDA_W_=LAMBDA_W_, LAMBDA_Y_=LAMBDA_Y_)
 
-out <- stan(file="code/mods/00_LAMBDA_mvPhy_WY_repar.stan",
+out <- stan(file="code/mods/00_PPM_mvPhy_WY_repar.stan",
             data=stan_data, chains=4, thin=5,
             # control=list(adapt_delta=0.99),
             warmup=2000, iter=3000)
