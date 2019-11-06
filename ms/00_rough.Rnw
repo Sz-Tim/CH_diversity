@@ -1,0 +1,47 @@
+\documentclass[10pt,a4paper,draft]{article}
+\usepackage[margin=2cm]{geometry}
+\usepackage{lineno}
+\usepackage[round,sort]{natbib} % make the in-text citations with a round bracket, and sort by year
+\usepackage{authblk} % allows pretty formatting of author lists
+\usepackage[capitalise]{cleveref}  % when you reference a table or figure, automatically format as "Table 1" rather than "table 1" or "1".
+
+\title{Leveraging citizen science to assess richness, diversity, and abundance}
+\author[1]{Tim M. Szewczyk}
+\author[1]{Cleo Bertelsmeier}
+\affil[1]{University of Lausanne}
+\date{} %automatically writes in today's date
+
+\begin{document}
+\maketitle
+\SweaveOpts{concordance=TRUE}
+\linenumbers
+
+%% For tips on including R code: https://therostrumblog.wordpress.com/2015/04/02/sweaving-through-your-phd-learning-latex-in-rstudio/
+
+\section{Introduction}
+What structures ant species richness, diversity, and community structure at different spatial scales? We know that at a regional scale, climate is generally important, with some support for phylogenetically conserved temperature preferences. At a local scale, richness typically decreases with canopy cover. In general, abundance seems to be more idiosyncratic and variable, both temporally and spatially. This is particularly true for small species. In ants, abundance can be measured as either the number of colonies in a particular area (i.e., colony density) or as the number of workers (i.e., worker density). 
+
+Increasingly, ecologists have access to occurrence data collected in various and haphazard ways, typically in the form of online databases or citizen science projects. These data are commonly used for species distribution models, but their use in predicting richness or diversity directly has been somewhat more limited. There are several reasons for this. First, the data do not generally come from communities or assemblages, but rather an aggregation of detections from many different collectors across a variety of time spans. We like to think of diversity and richness as properties of communities, and these are decidedly not samples of communities, obscuring the ability to detect or account for interactions among species. Second, the collections for each species may have differing spatial biases, rendering any simple aggregation methods erroneous. Third, there are biases in the species that are more likely to be detected, such that any estimate of richness or diversity will necessarily be of a subset of the community biased toward larger, more active, or more interesting species.
+
+However, that doesn't mean these data can't be useful. Instead, the geographic breadth and rather indiscriminate collection methods can capture occurrences in unexpected locations or species that may be missed in alternative, more structured sampling methods. Here, we combine species occurrences of ants collected in a citizen science project in western Switzerland with a concurrent structured sampling effort. In a sequential Bayesian framework, we use the citizen science data to estimate the regional variables driving each species' distribution, then use the species-specific, genus-specific, and overall responses as prior distributions in a cross-scale model of the structured samples. We then estimate species diversity in each community, accounting for species that may not have been detected, and predicting the posterior alpha, beta, and gamma diversities, capturing the uncertainty in the community composition. Based on the species composition in each sample from the posterior distribution, we calculate taxonomic and phylogenetic diversity across spatial scales. For comparison, we run the model with uninformed prior distributions as well to assess the impact of the citizen science data.
+
+
+\section{Methods}
+\subsection{Study area}
+This is a blurb about Vaud, including some about the climate, topography, as well as current and past human land use. Also a little bit about what is known about the ant fauna here, perhaps.
+
+\subsection{Datasets}
+Ants were collected during the summer of 2019 in the canton Vaud, Switzerland in two simultaneous but distinct collection efforts. First, a citizen science project distributed labelled vials of ethanol to interested residents of the canton, who collected approximately 10 ant workers from a colony for each vial and returned the vials along with the latitude and longitude of the sample, and often basic habitat information. Participants were encouraged to explore under rocks, on bark, inside twigs, and in downed wood, and an online map was updated throughout the summer to highlight data-sparse areas.
+
+Second, structured samples of ants were collected within 44 $1 km^2$ sites. Thirty-nine of the sites are a part of long-term biodiversity monitoring efforts by the federal government, and as such are arranged on a regular grid with ~ 5-7 km between adjacent sites. Five additional sites are established monitoring sites by the University of Lausanne. The ants at each site were characterized by 25 plots distributed among habitat types in approximate proportion to the abundance of each habitat, where each habitat type occurring within the site was represented by at least one plot. Plots consisted of a 2m radius circle, with soil temperature recorded in the center, and vegetation characterized according to coverage classes within the plot (grass, forb, shrub, litter, bare, moss). Six flags were evenly spaced around the circumference, and within ~20cm of each (total surface area ~ $0.75 m^2$), we searched for ant colonies within any downed wood, under large rocks, and in ~2L of soil, litter, and small rocks using Hori Hori gardening knives. We haphazardly collected ~10 workers from each colony. All trees within the plot were also inspected for ant workers which were collected regardless of whether or not a colony was identifiable. Additionally, transects were mapped \emph{a priori}, distributed proportionally among habitat types and totalling 2km. Workers were collected from all permanent mounds within ~2m of the transect line.
+
+\subsection{Model overview}
+To leverage the information contained in each dataset, we use a community-level hierarchical inhomogenous Poisson point process model (PPM). Inhomogenous Poisson PPMs model assume that the distribution of occurrences is the result of the variation in local intensity, $\lambda(s)$, across space, which may be observed imperfectly resulting in a thinned point process. One key benefit of PPMs is that the predicted intensity can be integrated to arbitrary spatial resolution. We therefore model the expected abundance of each species within each site ($1 km^2$) and within each soil plot ($0.75 m^2$).
+
+\subsection{Model structure}
+For each species, $s$, the expected intensity $\lambda(s)$ varies continuously across the landscape. We discretize this first into $1 km^2$ cells, such that the unobserved total colony density $\Lambda_{ks}$ in each cell $k$ is conceptually equivalent to the integral of $\lambda(s)$, and functionally related to environmental drivers, $X_k$. The unstructured dataset, $\textbf{W}$, is a representation of this abundance, thinned by the proportional sampling effort $E_k$ with a species-specific offset estimated in the model, $D_s$, which defines the proportional difference in detection relative to overall prevalence. Therefore, $W_{ks} \sim Poisson(\Lambda_{ks}*E_k*D_s)$.
+
+
+\end{document}
+
+
