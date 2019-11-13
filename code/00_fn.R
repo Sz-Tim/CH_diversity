@@ -16,42 +16,48 @@ make_X <- function(K, R, quad) {
 
 
 
-make_slopes <- function(lam_0, R, G, S, tax_i, sd_b, quad) {
-  # beta
-  beta <- cbind(c(lam_0, rnorm(R-1, 0, 1)))
-  if(quad) beta[R] <- ifelse(beta[R] < 0, 2*beta[R], -2*beta[R])
-  # B
-  phy_covMX <- matrix(runif(G^2)*2-1, ncol=G)/10 
+make_slopes <- function(lam_0, R, G, S, tax_i, sd_sp, quad) {
+  # aggregate: alpha[R], beta[R]
+  if(!is.null(lam_0)) {
+    agg <- cbind(c(lam_0, rnorm(R-1, 0, 1)))
+  } else {
+    agg <- rnorm(R, 0, 1)
+  }
+  if(quad) agg[R] <- ifelse(agg[R] < 0, 2*agg[R], -2*agg[R])
+  
+  # genus-level: A[G,R], B[G,R]
+  phy_covMX <- matrix(runif(G^2)*2-1, ncol=G) 
   diag(phy_covMX) <- diag(phy_covMX)
   Sigma <- t(phy_covMX) %*% phy_covMX
-  B <- t(apply(beta, 1, function(x) mvrnorm(1, rep(x,G), Sigma)))
-  # b
-  b <- matrix(ncol=S, nrow=R)
+  gen <- t(apply(agg, 1, function(x) mvrnorm(1, rep(x,G), Sigma)))
+  
+  # species-level: a[S,R], b[S,R]
+  sp <- matrix(ncol=S, nrow=R)
   for(r in 1:(R)) {
-    b[r,] <- rnorm(S, B[r,tax_i[,2]], sd_b)
+    sp[r,] <- rnorm(S, gen[r,tax_i[,2]], sd_sp)
   }
-  return(list(beta=beta, B=B, b=b))
+  return(list(agg=agg, gen=gen, sp=sp))
 }
 
 
 
-aggregate_beta <- function(out.ls, beta.ls) {
-  gg <- map_dfr(out.ls, ~ggs(., "beta"), .id="model")
-  true <- data.frame(value=c(beta.ls$beta),
-                     Parameter=paste0("beta[", 1:length(beta.ls$beta), "]"),
-                     R=as.character(1:length(beta.ls$beta)))
+aggregate_aggSlopes <- function(out.ls, slope.ls, var) {
+  gg <- map_dfr(out.ls, ~ggs(., var), .id="model")
+  true <- data.frame(value=c(slope.ls$agg),
+                     Parameter=paste0(var, "[", 1:length(slope.ls$agg), "]"),
+                     R=as.character(1:length(slope.ls$agg)))
   return(list(gg=gg, true=true))
 }
 
 
 
-aggregate_b <- function(out.ls, beta.ls, tax_i) {
-  R <- nrow(beta.ls$b); S <- ncol(beta.ls$b)
-  gg <- map_dfr(out.ls, ~ggs(., "^b\\["), .id="model") %>%
+aggregate_spSlopes <- function(out.ls, slope.ls, tax_i, var) {
+  R <- nrow(slope.ls$sp); S <- ncol(slope.ls$sp)
+  gg <- map_dfr(out.ls, ~ggs(., paste0("^", var, "\\[")), .id="model") %>%
     mutate(R=str_sub(str_split_fixed(Parameter, ",", 2)[,1], 3, -1),
            S=str_sub(str_split_fixed(Parameter, ",", 2)[,2], 1, -2))
-  true <- data.frame(true=c(beta.ls$b), 
-                     Parameter=paste0("b[", rep(1:R, times=S), 
+  true <- data.frame(true=c(slope.ls$sp), 
+                     Parameter=paste0(var, "[", rep(1:R, times=S), 
                                       ",", rep(1:S, each=R), "]"),
                      S=as.character(rep(1:S, each=R)),
                      G=as.character(rep(tax_i[,2], each=R)),
