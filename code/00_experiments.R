@@ -3,95 +3,150 @@
 # Option 1: Citizen science model used to inform priors for structured sampling
 
 # setup
-library(boot); library(MASS); library(rstan); library(tidyverse); library(ggmcmc)
+library(boot); library(truncnorm); library(MASS); library(rstan); 
+library(tidyverse); library(ggmcmc)
 theme_set(theme_bw() + theme(panel.grid=element_blank()))
 options(mc.cores = parallel::detectCores())
 rstan_options(auto_write = TRUE)
+source("code/00_fn.R")
 
 opfo.dir <- "~/Documents/unil/opfo_str_sampling/data/"
 
 ################################################################################
 # LAMBDA as true abundance
 
-# Make up parameters
-S <- 16#139  # number of species
+## make up parameters ##########################################################
+S <- 50#139  # number of species
 G <- 4#28
 R <- 4  # number of regional covariates
 Q <- 3  # number of W effort covariates
-K_W <- 100  # number of grid cells
-K_Y <- 44
-K_W_ <- 20
-K_Y_ <- 10
+K <- list(W=100, Y=44, W_=20, Y_=10)  # number of cells
 lambda_0 <- 10.5
 effort_0 <- -11
-effort_prSoil <- 0.00001885
-sigma_b <- 0.4
-tax_i <- cbind(1:S, sample(1:G, S, TRUE, runif(G)))
+h <- 0.00001885  # (25*6*pi*(0.2)^2)/(1000*1000)
+sigma_b <- 0.5
+tax_i <- cbind(1:S, sample(1:G, S, TRUE, runif(G)), rbinom(S, 1, 0.3)+1)
 quadratic_R <- TRUE
 
-X <- cbind(1, matrix(rnorm((K_W+K_Y+K_W_+K_Y_)*(R-1)), 
-                     nrow=K_W+K_Y+K_W_+K_Y_, ncol=(R-1)))
-if(quadratic_R) X[,R] <- (X[,R-1])^2
-X_W <- X[1:K_W,]
-X_Y <- X[(1:K_Y)+K_W,]
-X_W_ <- X[(1:K_W_)+(K_W+K_Y),]
-X_Y_ <- X[(1:K_Y_)+(K_W+K_Y+K_W_),]
 
-beta <- cbind(c(lambda_0, rnorm(R-1,0,1)))
-if(quadratic_R) beta[R] <- ifelse(beta[R] < 0, 2*beta[R], -2*beta[R])
+## simulate data ###############################################################
+# covariates, slopes, and true Lambda
+X <- make_X(K, R, quadratic_R)
+beta.ls <- make_slopes(lambda_0, R, G, S, tax_i, sigma_b, quadratic_R)
+LAMBDA <- map(X, ~exp(. %*% beta.ls$b))
 
-phy_covMX <- matrix(runif(G^2)*2-1, ncol=G)/10 
-diag(phy_covMX) <- diag(phy_covMX)
-Sigma <- t(phy_covMX) %*% phy_covMX
-B <- t(apply(beta, 1, function(x) mvrnorm(1, rep(x,G), Sigma)))
-b <- matrix(ncol=S, nrow=R)
-for(r in 1:(R)) {
-  b[r,] <- rnorm(S, B[r,tax_i[,2]], sigma_b)
-}
-
-LAMBDA_W <- exp(X_W %*% b)  
-LAMBDA_Y <- exp(X_Y %*% b)  
-LAMBDA_W_ <- exp(X_W_ %*% b)  
-LAMBDA_Y_ <- exp(X_Y_ %*% b)  
-
-V <- cbind(1, matrix(rnorm((K_W+K_W_)*(Q-1)), nrow=K_W+K_W_, ncol=Q-1))
-V_W <- V[1:K_W,]
-V_W_ <- V[(1:K_W_)+K_W,]
+# W effort and bias
+U <- cbind(1, matrix(rnorm((K$W+K$W_)*(Q-1)), nrow=K$W+K$W_, ncol=Q-1))
+U_W <- U[1:K$W,]; U_W_ <- U[(1:K$W_)+K$W,]
 eta <- cbind(c(effort_0, runif(Q-1)))
-E <- inv.logit(V_W %*% eta)
-E_ <- inv.logit(V_W_ %*% eta)
-spp_effort <- rbeta(S, 0.8, 1)*2 #runif(S, 0, 2)
+E <- inv.logit(U_W %*% eta); E_ <- inv.logit(U_W_ %*% eta)
+D <- rtruncnorm(S, 0, b=Inf, tax_i[,3]-0.5, 0.5) # species-specific effort
 
-W <- matrix(NA, nrow=K_W, ncol=S)
-W_ <- matrix(NA, nrow=K_W_, ncol=S)
-Y <- matrix(NA, nrow=K_Y, ncol=S)
-Y_ <- matrix(NA, nrow=K_Y_, ncol=S)
+# counts
+obs <- map(K, ~matrix(NA, nrow=., ncol=S))
 for(s in 1:S) {
-  W[,s] <- rpois(K_W, LAMBDA_W[,s]*E*spp_effort[s])
-  W_[,s] <- rpois(K_W_, LAMBDA_W_[,s]*E_*spp_effort[s])
-  Y[,s] <- rpois(K_Y, LAMBDA_Y[,s]*effort_prSoil)
-  Y_[,s] <- rpois(K_Y_, LAMBDA_Y_[,s]*effort_prSoil)
+  obs$W[,s] <- rpois(K$W, LAMBDA$W[,s]*E*D[s])
+  obs$W_[,s] <- rpois(K$W_, LAMBDA$W_[,s]*E_*D[s])
+  obs$Y[,s] <- rpois(K$Y, LAMBDA$Y[,s]*h)
+  obs$Y_[,s] <- rpois(K$Y_, LAMBDA$Y_[,s]*h)
 }
 
-stan_data <- list(nCell_W=K_W, nCell_Y=K_Y, nCell_W_=K_W_, nCell_Y_=K_Y_, 
-                  nSpp=S, nGen=G, tax_i=tax_i, R=R, Q=Q, W=W, Y=Y, 
-                  X_W=X_W, X_Y=X_Y, X_W_=X_W_, X_Y_=X_Y_, V_W=V_W, V_W_=V_W_,
-                  effort_prSoil=effort_prSoil,
-                  LAMBDA_W_=LAMBDA_W_, LAMBDA_Y_=LAMBDA_Y_)
 
-out <- stan(file="code/mods/00_PPM_mvPhy_WY_repar.stan",
-            data=stan_data, chains=4, thin=5,
-            # control=list(adapt_delta=0.99),
-            warmup=2000, iter=3000)
+## run stan model ##############################################################
+stan_data <- list(K_W=K$W, K_Y=K$Y, K_W_=K$W_, K_Y_=K$Y_, 
+                  S=S, G=G, tax_i=tax_i, R=R, Q=Q, W=obs$W, Y=obs$Y, 
+                  X_W=X$W, X_Y=X$Y, X_W_=X$W_, X_Y_=X$Y_, 
+                  U_W=U_W, U_W_=U_W_, h=h,
+                  LAMBDA_W_=LAMBDA$W_, LAMBDA_Y_=LAMBDA$Y_)
+
+out.ls <- list(WY=stan(file="code/mods/00_PPM_mvPhy_WY_repar.stan",
+                           data=stan_data, thin=10, warmup=2000, iter=3000),
+               W=stan(file="code/mods/00_PPM_mvPhy_W_repar.stan",
+                          data=stan_data, thin=10, warmup=2000, iter=3000),
+               Y=stan(file="code/mods/00_PPM_mvPhy_Y_repar.stan",
+                          data=stan_data, thin=10, warmup=2000, iter=3000))
 
 
+## plot output: compare W, Y, WY ###############################################
+mod_cols <- c(W="#e41a1c", Y="#377eb8", WY="#984ea3")
+# beta
+beta.out <- aggregate_beta(out.ls, beta.ls)
+ggplot(beta.out$gg, aes(x=value, colour=model)) + 
+  facet_wrap(~Parameter, scales="free") + 
+  geom_vline(data=beta.out$true, aes(xintercept=value), linetype=2) +
+  geom_density() + scale_colour_manual(values=mod_cols)
+
+# b
+b.out <- aggregate_b(out.ls, beta.ls, tax_i)
+ggplot(b.out$gg, aes(x=true, colour=model)) + 
+  facet_wrap(~Parameter, scales="free", ncol=S) +
+  geom_vline(data=b.out$true, aes(xintercept=value), linetype=2) +
+  geom_density() + scale_colour_manual(values=mod_cols)
+ggplot(b.out$sum.gg, aes(mn-true, colour=model)) + 
+  geom_vline(xintercept=0, linetype=2) + geom_density() + facet_wrap(~R) +
+  scale_colour_manual(values=mod_cols)
+ggplot(b.out$sum.gg, aes(true, mn, colour=model)) + 
+  geom_abline() + geom_point() + stat_smooth(se=F, linetype=2, method="lm") + 
+  facet_wrap(~R, scales="free") + scale_colour_manual(values=mod_cols)
+
+# eta
+eta.out <- aggregate_eta(out.ls, eta)
+ggplot(eta.out$gg, aes(x=value, colour=model)) + 
+  facet_wrap(~Parameter, scales="free") +
+  geom_vline(data=eta.out$true, aes(xintercept=value), linetype=2) +
+  geom_density() + scale_colour_manual(values=mod_cols)
+
+# D
+D.out <- aggregate_D(out.ls, D)
+ggplot(D.out$gg, aes(x=value, colour=model)) + 
+  facet_wrap(~Parameter, scales="free") +
+  geom_vline(data=D.out$true, aes(xintercept=value), linetype=2) +
+  geom_density() + scale_colour_manual(values=mod_cols)
+
+# Lambda
+Lam.out <- aggregate_Lambda(out.ls, LAMBDA)
+ggplot(Lam.out$sum.gg, aes(x=true, y=med, ymin=q025, ymax=q975, colour=model)) +
+  geom_pointrange(shape=1, alpha=0.4) + geom_abline() + 
+  stat_smooth(se=F, method="lm", linetype=2, size=0.5) +
+  scale_x_log10() + scale_y_log10() + facet_grid(train~S, scales="free") + 
+  ggtitle(expression(Lambda~vs.~hat(Lambda))) +
+  scale_colour_manual(values=mod_cols)
+ggplot(Lam.out$sum.gg, aes(x=log(mn)-log(true), colour=model)) + 
+  geom_density() + geom_vline(xintercept=0, linetype=2) + 
+  facet_wrap(~train) +
+  scale_colour_manual(values=mod_cols)
+
+# prPres
+pP.out <- aggregate_prPres(out.ls, LAMBDA)
+ggplot(pP.out$sum.gg, aes(x=true, y=mn, ymin=q025, ymax=q975, colour=model)) + 
+  geom_pointrange(shape=1, alpha=0.4) + geom_abline() + 
+  stat_smooth(se=F, method="lm", linetype=2, size=0.5) +
+  facet_grid(train~S) + 
+  ggtitle(expression(prPres~vs.~hat(prPres))) +
+  scale_colour_manual(values=mod_cols)
+ggplot(pP.out$sum.gg, aes(x=mn-true, colour=model)) + 
+  geom_density() + geom_vline(xintercept=0, linetype=2) + 
+  facet_wrap(~train, scales="free") +
+  scale_colour_manual(values=mod_cols)
+
+
+
+
+
+
+
+
+
+
+## plot output: individual model run ###########################################
 ## beta ########################################################################
 gg.beta <- ggs(out, "beta")
-beta.df <- data.frame(value=c(beta),
+beta.df <- data.frame(value=c(beta.ls$beta),
                       Parameter=paste0("beta[", 1:length(beta), "]"),
                       R=as.character(1:R))
 ggs_density(gg.beta) + facet_wrap(~Parameter, scales="free") +
-  geom_vline(data=beta.df, aes(xintercept=value), linetype=2)
+  geom_vline(data=beta.df, aes(xintercept=value), linetype=2) 
+
 
 
 ## eta #########################################################################
@@ -104,13 +159,13 @@ ggs_density(gg.eta) + facet_wrap(~Parameter, scales="free") +
 
 ## b ###########################################################################
 gg.b <- ggs(out, "^b\\[")
-b.df <- data.frame(value=c(b), 
+b.df <- data.frame(value=c(beta.ls$b), 
                    Parameter=paste0("b[", rep(1:R, times=S), 
                                     ",", rep(1:S, each=(R)), "]"),
                    S=as.character(rep(1:S, each=R)),
                    G=as.character(rep(tax_i[,2], each=R)),
                    R=as.character(rep(1:(R), times=S)))
-B.df <- data.frame(value=c(B), 
+B.df <- data.frame(value=c(beta.ls$B), 
                    Parameter=paste0("B[", rep(1:R, times=G), 
                                     ",", rep(1:G, each=(R)), "]"),
                    G=as.character(rep(1:G, each=R)),
@@ -123,11 +178,11 @@ ggplot(b.df, aes(R, value)) + geom_point(aes(colour=G), alpha=0.5) +
 
 
 ## spEffort ####################################################################
-gg.spEff <- ggs(out, "spp_effort") 
-spEff.df <- data.frame(value=spp_effort, 
-                       Parameter=paste0("spp_effort[", 1:S, "]"))
-ggs_density(gg.spEff) + geom_vline(xintercept=1, size=0.15, colour="gray") +
-  geom_vline(data=spEff.df, aes(xintercept=value)) +
+gg.D <- ggs(out, "^D\\[") 
+D.df <- data.frame(value=D, 
+                   Parameter=paste0("D[", 1:S, "]"))
+ggs_density(gg.D) + geom_vline(xintercept=1, size=0.15, colour="gray") +
+  geom_vline(data=D.df, aes(xintercept=value)) +
   facet_wrap(~Parameter, scales="free_y")
 
 
@@ -266,6 +321,9 @@ ggplot(sim.df, aes(R_3, log(Lambda), group=species, colour=factor(G))) +
 ggplot(sim.df, aes(R_4, log(Lambda), group=species, colour=factor(G))) + 
   geom_point(alpha=0.4) + 
   stat_smooth(method="lm", se=F, size=0.3, linetype=3) + facet_wrap(~species)
+
+
+
 
 
 
