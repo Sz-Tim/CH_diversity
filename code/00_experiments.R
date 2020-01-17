@@ -12,15 +12,336 @@ source("code/00_fn.R")
 
 opfo.dir <- "~/Documents/unil/opfo_str_sampling/data/"
 
+
 ################################################################################
-# LAMBDA as true abundance
+# LAMBDA, lambda as true abundance
+# 1 km2 grid cells and 0.75 m2 soil plots
 
 ## make up parameters ##########################################################
-S <- 50#139  # number of species
+S <- 16#79  # number of species
+G <- 4#21
+R <- 3  # number of regional covariates
+L <- 2
+Q <- 2  # number of W effort covariates
+K <- list(W=200, Y=20, W_=50, Y_=10)  # number of cells (W: 1307, Y: 44)
+J <- list(Y=rep(1:K$Y, each=25), Y_=rep(1:K$Y_, each=25))
+I <- list(Y=length(J$Y), Y_=length(J$Y_))  # number of soil plots
+lambda_0 <- 10.5
+effort_0 <- -11
+h <- 7.5e-7  # (6*pi*(0.2)^2)/(1000*1000)
+sigma_a <- 0.3
+sigma_b <- 0.6
+tax_i <- cbind(1:S, sample(1:G, S, TRUE, runif(G)), rbinom(S, 1, 0.3)+0.5)
+quadratic_R <- TRUE
+
+
+## simulate data ###############################################################
+# covariates, slopes, true Lambda, true lambda
+X <- make_X(K, R, quadratic_R)
+V <- make_V(I, L)
+beta.ls <- make_slopes(lambda_0, R, G, S, tax_i, sigma_b, quadratic_R)
+alpha.ls <- make_slopes(NULL, L, G, S, tax_i, sigma_a, FALSE)
+LAMBDA <- map(X, ~exp(. %*% beta.ls$sp))
+lambda <- map(names(J), ~exp(V[[.]] %*% alpha.ls$sp + log(h*LAMBDA[[.]][J[[.]],])))
+names(lambda) <- names(J)
+
+# W effort and bias
+U <- cbind(1, matrix(rnorm((K$W+K$W_)*(Q-1)), nrow=K$W+K$W_, ncol=Q-1))
+U_W <- U[1:K$W,]; U_W_ <- U[(1:K$W_)+K$W,]
+eta <- cbind(c(effort_0, runif(Q-1)))
+E <- inv.logit(U_W %*% eta); E_ <- inv.logit(U_W_ %*% eta)
+D <- rtruncnorm(S, 0, b=Inf, tax_i[,3]-0.5, 0.5) # species-specific effort
+
+# counts
+obs <- list(W=matrix(NA, nrow=K$W, ncol=S), W_=matrix(NA, nrow=K$W_, ncol=S),
+            Y=matrix(NA, nrow=I$Y, ncol=S), Y_=matrix(NA, nrow=I$Y_, ncol=S))
+for(s in 1:S) {
+  obs$W[,s] <- rpois(K$W, LAMBDA$W[,s]*E*D[s])
+  obs$W_[,s] <- rpois(K$W_, LAMBDA$W_[,s]*E_*D[s])
+  obs$Y[,s] <- rpois(I$Y, lambda$Y[,s])
+  obs$Y_[,s] <- rpois(I$Y_, lambda$Y_[,s])
+}
+
+
+## run stan model ##############################################################
+stan_data <- list(K=K$W, J=K$Y, K_=K$W_, J_=K$Y_, 
+                  IJ=J$Y, IJ_=J$Y_, I=I$Y, I_=I$Y_,
+                  S=S, G=G, tax_i=tax_i[,-3], D_prior=tax_i[,3], R=R, L=L, Q=Q, 
+                  W=obs$W, Y=obs$Y, 
+                  X=rbind(X$W, X$Y), X_=rbind(X$W_, X$Y_), 
+                  X_W=X$W, X_Y=X$Y, X_W_=X$W_, X_Y_=X$Y_,
+                  V=V$Y, V_=V$Y_, U=U_W, U_=U_W_, h=h)
+
+out.ls <- list(
+  WY=stan(file="code/mods/00_PPM_mvPhy_WY_IJK.stan",
+          data=stan_data, thin=5, warmup=1500, iter=2500),
+  W=stan(file="code/mods/00_PPM_mvPhy_W_IJK.stan",
+         data=stan_data, thin=5, warmup=1500, iter=2500),
+  Y=stan(file="code/mods/00_PPM_mvPhy_Y_IJK.stan",
+         data=stan_data, thin=5, warmup=1500, iter=2500)
+)
+
+
+## plot output: compare W, Y, WY ###############################################
+mod_cols <- c(W="#e41a1c", Y="#377eb8", WY="#984ea3", "WY_con"="black")
+
+# beta
+beta.out <- aggregate_aggSlopes(out.ls, beta.ls, "beta")
+ggplot(beta.out$gg, aes(x=value, colour=model)) + 
+  facet_wrap(~Parameter, scales="free") + 
+  geom_rug(data=beta.out$post_mns, aes(x=mean), sides="b") +
+  geom_vline(data=beta.out$true, aes(xintercept=value), linetype=2) +
+  geom_density() + scale_colour_manual(values=mod_cols) 
+ggsave("eda/beta_density.pdf", width=8, height=3, units="in")
+
+# alpha
+alpha.out <- aggregate_aggSlopes(out.ls, alpha.ls, "alpha")
+ggplot(alpha.out$gg, aes(x=value, colour=model)) + 
+  facet_wrap(~Parameter, scales="free") + 
+  geom_rug(data=alpha.out$post_mns, aes(x=mean), sides="b") +
+  geom_vline(data=alpha.out$true, aes(xintercept=value), linetype=2) +
+  geom_density() + scale_colour_manual(values=mod_cols)
+ggsave("eda/alpha_density.pdf", width=7, height=3, units="in")
+
+# b
+b.out <- aggregate_spSlopes(out.ls, beta.ls, tax_i, "b")
+# ggplot(b.out$gg, aes(x=true, colour=model)) + 
+#   facet_wrap(~Parameter, scales="free", ncol=S) +
+#   geom_vline(data=b.out$true, aes(xintercept=value), linetype=2) +
+#   geom_density() + scale_colour_manual(values=mod_cols)
+# ggplot(b.out$sum.gg, aes(mn-true, colour=model)) + 
+#   geom_vline(xintercept=0, linetype=2) + geom_density() + facet_wrap(~R) +
+#   scale_colour_manual(values=mod_cols) + ggtitle("b")
+ggplot(b.out$sum.gg, aes(true, mn, colour=model)) + ggtitle("b") + 
+  geom_abline() + geom_point() + stat_smooth(se=F, linetype=2, method="lm") + 
+  facet_wrap(~R, scales="free") + scale_colour_manual(values=mod_cols)
+b.out$sum.gg %>% group_by(model, R) %>% mutate(Diff=mn-true) %>% 
+  summarise(mnDiff=sqrt(mean(Diff^2)), seDiff=sd(Diff)/sqrt(n())) %>%
+  ggplot(aes(model, y=mnDiff, ymin=mnDiff-2*seDiff, ymax=mnDiff+2*seDiff)) +
+  geom_hline(yintercept=0, linetype=2) + facet_wrap(~R) +
+  geom_pointrange(aes(colour=model)) + 
+  labs(title="b", x="Model", y="RMSE among species") + 
+  scale_colour_manual(values=mod_cols)
+ggsave("eda/b_RMSE.pdf", width=8, height=3, units="in")
+b.out$sum.gg %>% group_by(model, R) %>% mutate(Diff=mn-true) %>% 
+  ggplot(aes(model, y=Diff)) +
+  geom_hline(yintercept=0, linetype=2) + facet_wrap(~R) +
+  geom_boxplot(aes(colour=model)) + 
+  labs(title="b", x="Model", y="Error") + 
+  scale_colour_manual(values=mod_cols)
+ggsave("eda/b_box.pdf", width=8, height=3, units="in")
+
+# a
+a.out <- aggregate_spSlopes(out.ls, alpha.ls, tax_i, "a")
+# ggplot(a.out$gg, aes(x=true, colour=model)) + 
+#   facet_wrap(~Parameter, scales="free", ncol=S) +
+#   geom_vline(data=a.out$true, aes(xintercept=true), linetype=2) +
+#   geom_density() + scale_colour_manual(values=mod_cols)
+# ggplot(a.out$sum.gg, aes(mn-true, colour=model)) + 
+#   geom_vline(xintercept=0, linetype=2) + geom_density() + facet_wrap(~R) +
+#   scale_colour_manual(values=mod_cols) + ggtitle("a")
+ggplot(a.out$sum.gg, aes(true, mn, colour=model)) + ggtitle("a") + 
+  geom_abline() + geom_point() + stat_smooth(se=F, linetype=2, method="lm") + 
+  facet_wrap(~R, scales="free") + scale_colour_manual(values=mod_cols)
+a.out$sum.gg %>% group_by(model, R) %>% mutate(Diff=mn-true) %>% 
+  summarise(mnDiff=sqrt(mean(Diff^2)), seDiff=sd(Diff)/sqrt(n())) %>%
+  ggplot(aes(model, y=mnDiff, ymin=mnDiff-2*seDiff, ymax=mnDiff+2*seDiff)) +
+  geom_hline(yintercept=0, linetype=2) + facet_wrap(~R) +
+  geom_pointrange(aes(colour=model)) + 
+  labs(title="a", x="Model", y="RMSE among species") + 
+  scale_colour_manual(values=mod_cols)
+ggsave("eda/a_RMSE.pdf", width=7, height=3, units="in")
+a.out$sum.gg %>% group_by(model, R) %>% mutate(Diff=mn-true) %>% 
+  ggplot(aes(model, y=Diff)) +
+  geom_hline(yintercept=0, linetype=2) + facet_wrap(~R) +
+  geom_boxplot(aes(colour=model)) + 
+  labs(title="a", x="Model", y="Error") + 
+  scale_colour_manual(values=mod_cols)
+ggsave("eda/a_box.pdf", width=7, height=3, units="in")
+
+# eta
+eta.out <- aggregate_eta(out.ls, eta)
+ggplot(eta.out$gg, aes(x=value, colour=model)) + 
+  facet_wrap(~Parameter, scales="free") +
+  geom_vline(data=eta.out$true, aes(xintercept=value), linetype=2) +
+  geom_density() + scale_colour_manual(values=mod_cols)
+
+# D
+D.out <- aggregate_D(out.ls, D)
+ggplot(D.out$gg, aes(x=value, colour=model)) + 
+  facet_wrap(~Parameter, scales="free") +
+  geom_vline(data=D.out$true, aes(xintercept=value), linetype=2) +
+  geom_density() + scale_colour_manual(values=mod_cols)
+
+# Lambda
+Lam.out <- aggregate_Lambda(out.ls, LAMBDA)
+# ggplot(Lam.out$sum.gg, aes(x=true, y=med, ymin=q025, ymax=q975, colour=model)) +
+#   geom_pointrange(shape=1, alpha=0.4) + geom_abline() + 
+#   stat_smooth(se=F, method="lm", linetype=2, size=0.5) +
+#   scale_x_log10() + scale_y_log10() + facet_grid(train~S, scales="free") + 
+#   ggtitle(expression(Lambda~vs.~hat(Lambda))) +
+#   scale_colour_manual(values=mod_cols)
+# ggplot(Lam.out$sum.gg, aes(x=log(mn)-log(true), colour=model)) + 
+#   geom_density() + geom_vline(xintercept=0, linetype=2) + 
+#   facet_wrap(~train) + scale_colour_manual(values=mod_cols)
+ggplot(Lam.out$sum.gg, aes(x=lmn, y=log(true), colour=model)) + 
+  geom_abline() + facet_wrap(~train) +
+  geom_point(alpha=0.5) + stat_smooth(linetype=2, method="lm", se=F) +
+  scale_colour_manual(values=mod_cols) + 
+  labs(title=expression(Lambda), x="posterior mean(log)", y="log(true)") 
+
+
+# lambda
+lam.out <- aggregate_lambda(out.ls, lambda)
+# ggplot(lam.out$sum.gg, aes(x=true, y=med, ymin=q025, ymax=q975, colour=model)) +
+#   geom_pointrange(shape=1, alpha=0.4) + geom_abline() + 
+#   stat_smooth(se=F, method="lm", linetype=2, size=0.5) +
+#   scale_x_log10() + scale_y_log10() + facet_grid(train~S, scales="free") + 
+#   ggtitle(expression(Lambda~vs.~hat(Lambda))) +
+#   scale_colour_manual(values=mod_cols)
+# ggplot(lam.out$sum.gg, aes(x=log(mn)-log(true), colour=model)) + 
+#   geom_density() + geom_vline(xintercept=0, linetype=2) + 
+#   facet_wrap(~train) + scale_colour_manual(values=mod_cols)
+ggplot(lam.out$sum.gg, aes(x=log(mn), y=log(true), colour=model)) + 
+  geom_abline() + facet_wrap(~train) +
+  geom_point(alpha=0.25) + stat_smooth(linetype=2, method="lm", se=F) +
+  scale_colour_manual(values=mod_cols) +
+  labs(title=expression(lambda), x="log(posterior mean)", y="log(true)") 
+# ggplot(lam.out$sum.gg, aes(x=log(true), y=log(mn)-log(true), colour=model)) + 
+#   facet_wrap(~dataset) +
+#   geom_point(alpha=0.25) + stat_smooth(linetype=2, method="lm", se=F) +
+#   scale_colour_manual(values=mod_cols)
+
+
+lam.df <- data.frame(lambda=c(c(lambda$Y), c(lambda$Y_)),
+                     dataset=rep(c("Y", "Y_"), times=c(I$Y*S, I$Y_*S)),
+                     I=c(rep(1:I$Y, times=S), rep(1:I$Y_, times=S)),
+                     S=c(rep(1:S, each=I$Y), rep(1:S, each=I$Y_)),
+                     J=c(rep(J$Y, times=S), rep(J$Y_, times=S)),
+                     LAMBDA_true=c(c(LAMBDA$Y[J$Y,])*h, c(LAMBDA$Y_[J$Y_,])*h))
+lam.df$KS <- paste0(lam.df$J, "_", lam.df$S, "_", lam.df$dataset)
+Lam.out$sum.gg$KS <- paste0(Lam.out$sum.gg$K, "_", 
+                            Lam.out$sum.gg$S, "_", Lam.out$sum.gg$dataset)
+lam.df <- left_join(lam.df, # error because dataset != "Y", "Y_" in Lam.out$sum.gg
+                    Lam.out$sum.gg %>% filter(model=="Y") %>%
+                      select(mn, KS) %>% mutate(LAMBDA_mn=mn*h),
+                    by="KS")
+lam.df$Parameter <- paste0("lambda_", lam.df$dataset, 
+                           "[", lam.df$I, ",", lam.df$S, "]")
+lam.full <- left_join(lam.out$sum.gg, 
+                      select(lam.df, Parameter, J, LAMBDA_true, LAMBDA_mn), 
+                      by="Parameter")
+
+Lam.out$sum.gg %>% mutate(Diff=lmn-log(true)) %>% 
+  group_by(model, train) %>%
+  summarise(mnDiff=sqrt(mean(Diff^2)), sd=sd(Diff), se=sd(Diff)/sqrt(n())) %>%
+  ggplot(aes(x=model, y=mnDiff, ymin=mnDiff-2*se, 
+             ymax=mnDiff+2*se, colour=model)) + 
+  geom_hline(yintercept=0, linetype=2) + facet_wrap(~train) +
+  geom_pointrange() + scale_colour_manual(values=mod_cols) + 
+  labs(title=expression(log(Lambda)), x="Model", y="RMSE") 
+ggsave("eda/Lambda_RMSE.pdf", width=5, height=4, units="in")
+
+lam.out$sum.gg %>% mutate(Diff=lmn-log(true)) %>% 
+  group_by(model, train) %>%
+  summarise(mnDiff=sqrt(mean(Diff^2)), sd=sd(Diff), se=sd(Diff)/sqrt(n())) %>%
+  ggplot(aes(x=model, y=mnDiff, ymin=mnDiff-2*se, 
+             ymax=mnDiff+2*se, colour=model)) + 
+  geom_hline(yintercept=0, linetype=2) + facet_wrap(~train) +
+  geom_pointrange() + scale_colour_manual(values=mod_cols) + 
+  labs(title=expression(log(lambda)), x="Model", y="RMSE") 
+ggsave("eda/lambda_RMSE_.pdf", width=5, height=4, units="in")
+
+
+ggplot(Lam.out$sum.gg, aes(x=model, y=lmn-log(true), fill=model)) +
+  geom_hline(yintercept=0, linetype=2) + #ylim(-2, 10) +
+  geom_boxplot(outlier.alpha=0.2, outlier.size=0.25, outlier.shape=1) + 
+  scale_fill_manual(values=mod_cols) + facet_wrap(~train) +
+  labs(title=expression(Lambda), x="Model", y="Mean error") 
+ggsave("eda/Lambda_box.pdf", width=5, height=4, units="in")
+
+ggplot(lam.out$sum.gg, aes(x=model, y=lmn-log(true), fill=model)) +
+  geom_hline(yintercept=0, linetype=2) +
+  geom_boxplot(outlier.alpha=0.2, outlier.size=0.25, outlier.shape=1) + 
+  scale_fill_manual(values=mod_cols) + facet_wrap(~train) +
+  labs(title=expression(lambda), x="Model", y="Mean error") 
+ggsave("eda/lambda_box_.pdf", width=5, height=4, units="in")
+
+
+
+
+Lam.out$sum.gg %>% 
+  mutate(pP.mn=1-exp(-mn), pP.true=1-exp(-true), Diff=pP.mn-pP.true) %>% 
+  group_by(model, train) %>%
+  summarise(mnDiff=mean(Diff), sd=sd(Diff), se=sd(Diff)/sqrt(n())) %>%
+  ggplot(aes(x=model, y=mnDiff, ymin=mnDiff-2*se, 
+             ymax=mnDiff+2*se, colour=model)) + 
+  geom_hline(yintercept=0, linetype=2) + facet_wrap(~train) +
+  geom_pointrange() + scale_colour_manual(values=mod_cols)
+
+lam.out$sum.gg %>% 
+  mutate(pP.mn=1-exp(-mn), pP.true=1-exp(-true), Diff=pP.mn-pP.true) %>% 
+  group_by(model, train) %>%
+  summarise(mnDiff=mean(Diff), sd=sd(Diff), se=sd(Diff)/sqrt(n())) %>%
+  ggplot(aes(x=model, y=mnDiff, ymin=mnDiff-2*se, 
+             ymax=mnDiff+2*se, colour=model)) + 
+  geom_hline(yintercept=0, linetype=2) + facet_wrap(~train) +
+  geom_pointrange() + scale_colour_manual(values=mod_cols)
+
+
+ggplot(Lam.out$sum.gg, aes(x=1-exp(-true), y=1-exp(-mn), colour=model)) + 
+  geom_abline() + geom_point(alpha=0.6) + stat_smooth(method="lm", se=F) +
+  facet_wrap(~train) + scale_colour_manual(values=mod_cols)
+ggplot(Lam.out$sum.gg, aes(x=1-exp(-true), 
+                           y=(1-exp(-mn))-(1-exp(-true)), colour=model)) + 
+  geom_point() + facet_wrap(~train) + scale_colour_manual(values=mod_cols)
+  
+
+
+ggplot(filter(lam.full, train=="test"), 
+       aes(x=log(true), y=log(mn), colour=model)) + 
+  geom_abline() + geom_point(alpha=0.5, shape=1) + 
+  facet_wrap(~S, scales="free") + scale_colour_manual(values=mod_cols)
+
+ggplot(lam.full, aes(x=1-exp(-true), y=1-exp(-mn), colour=model)) + 
+  geom_abline() + geom_point(alpha=0.5, shape=1) + 
+  stat_smooth(method="lm", se=F, linetype=2) +
+  facet_wrap(~train) + scale_colour_manual(values=mod_cols)
+
+ggplot(lam.full, aes((1-exp(-mn))-(1-exp(-true)), colour=model)) + 
+  geom_density() + facet_wrap(~train) + scale_colour_manual(values=mod_cols)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+################################################################################
+# LAMBDA as true abundance
+# 1 km2 only -- aggregate soil plots Y to 1 km2
+
+## make up parameters ##########################################################
+S <- 16#139  # number of species
 G <- 4#28
 R <- 4  # number of regional covariates
 Q <- 3  # number of W effort covariates
 K <- list(W=100, Y=44, W_=20, Y_=10)  # number of cells
+J <- list(Y=25*K$Y, Y_=25*K$Y_)  # number of soil plots
 lambda_0 <- 10.5
 effort_0 <- -11
 h <- 0.00001885  # (25*6*pi*(0.2)^2)/(1000*1000)
@@ -33,7 +354,7 @@ quadratic_R <- TRUE
 # covariates, slopes, and true Lambda
 X <- make_X(K, R, quadratic_R)
 beta.ls <- make_slopes(lambda_0, R, G, S, tax_i, sigma_b, quadratic_R)
-LAMBDA <- map(X, ~exp(. %*% beta.ls$b))
+LAMBDA <- map(X, ~exp(. %*% beta.ls$sp))
 
 # W effort and bias
 U <- cbind(1, matrix(rnorm((K$W+K$W_)*(Q-1)), nrow=K$W+K$W_, ncol=Q-1))
@@ -70,14 +391,14 @@ out.ls <- list(WY=stan(file="code/mods/00_PPM_mvPhy_WY_repar.stan",
 ## plot output: compare W, Y, WY ###############################################
 mod_cols <- c(W="#e41a1c", Y="#377eb8", WY="#984ea3")
 # beta
-beta.out <- aggregate_beta(out.ls, beta.ls)
+beta.out <- aggregate_aggSlopes(out.ls, beta.ls, "beta")
 ggplot(beta.out$gg, aes(x=value, colour=model)) + 
   facet_wrap(~Parameter, scales="free") + 
   geom_vline(data=beta.out$true, aes(xintercept=value), linetype=2) +
   geom_density() + scale_colour_manual(values=mod_cols)
 
 # b
-b.out <- aggregate_b(out.ls, beta.ls, tax_i)
+b.out <- aggregate_spSlopes(out.ls, beta.ls, tax_i, "b")
 ggplot(b.out$gg, aes(x=true, colour=model)) + 
   facet_wrap(~Parameter, scales="free", ncol=S) +
   geom_vline(data=b.out$true, aes(xintercept=value), linetype=2) +
@@ -128,6 +449,14 @@ ggplot(pP.out$sum.gg, aes(x=mn-true, colour=model)) +
   geom_density() + geom_vline(xintercept=0, linetype=2) + 
   facet_wrap(~train, scales="free") +
   scale_colour_manual(values=mod_cols)
+
+
+
+
+
+
+
+
 
 
 
