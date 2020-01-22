@@ -19,6 +19,7 @@ data {
   
   // observed data
   int<lower=0> Y[I,S];  // Y counts (train)
+  int<lower=0> Y_[I_,S];  // Y counts (test)
   
   // covariates
   matrix[K+J,R] X;  // W grid cell covariates (train)
@@ -112,23 +113,20 @@ model {
 }
 
 generated quantities {
-  // matrix<lower=0>[K_W,S] What;  // latent lambda W
-  // matrix<lower=0>[I_Y,S] Yhat;  // latent lambda Y
+  
   matrix<lower=0>[K_+J_,S] LAMBDA_ = exp(X_ * b);
   matrix<lower=0>[I_,S] lambda_;
-  // matrix<lower=0>[K_W_,S] W_hat;  // latent lambda W
-  // matrix<lower=0>[I_Y_,S] Y_hat;  // latent lambda Y
+  matrix[I_,S] log_lik_lambda_;
 
   {
     matrix[J_,S] LAMBDA_Y_ = block(LAMBDA_, K_+1, 1, J_, S);
     lambda_ = exp(V_ * a + log(h * LAMBDA_Y_[IJ_,]));
   }
-  // for(s in 1:S) {
-  //   What[,s] = LAMBDA_W[,s].*E*D[s];
-  //   Yhat[,s] = lambda_Y[,s];
-  //   W_hat[,s] = LAMBDA_W_[,s].*E_*D[s];
-  //   Y_hat[,s] = lambda_Y_[,s];
-  // }
+  for(s in 1:S) {
+    for(i in 1:I_) {
+     log_lik_lambda_[i,s] = poisson_lpmf(Y_[i,s] | lambda_[i,s]);  
+    }
+  }
 }
 
 

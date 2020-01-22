@@ -5,6 +5,8 @@ data {
   int<lower=0> K_; // grid cells for W (test)
   int<lower=0> J; // grid cells for Y (train)
   int<lower=0> J_; // grid cells for Y (test)
+  int<lower=0> I_; // plots (test)
+  int<lower=0> IJ_[I_]; // plot to grid cell lookup (test)
   int<lower=0> S;  // number of species
   int<lower=0> G;  // number of genera
   int<lower=0> R;  // number of cell-scale covariates (incl. intercept)
@@ -16,12 +18,14 @@ data {
   
   // observed data
   int<lower=0> W[K,S];  // W counts (train)
+  int<lower=0> Y_[I_,S];  // Y counts (test)
   
   // covariates
   matrix[K+J,R] X;  // W grid cell covariates (train)
   matrix[K_+J_,R] X_;  // W grid cell covariates (test)
   matrix[K,Q] U;  // W effort covariates (train)
   matrix[K_,Q] U_;  // W effort covariates (test)
+  real h;  // Y (plot area)/(cell area)
   
 }
 
@@ -90,19 +94,20 @@ model {
 }
 
 generated quantities {
-  // matrix<lower=0>[K_W,S] What;  // latent lambda W
-  // matrix<lower=0>[I_Y,S] Yhat;  // latent lambda Y
   matrix<lower=0>[K_+J_,S] LAMBDA_ = exp(X_ * b);
   vector<lower=0, upper=1>[K_] E_ = inv_logit(U_ * eta);
-  // matrix<lower=0>[K_W_,S] W_hat;  // latent lambda W
-  // matrix<lower=0>[I_Y_,S] Y_hat;  // latent lambda Y
-  
-  // for(s in 1:S) {
-  //   What[,s] = LAMBDA_W[,s].*E*D[s];
-  //   Yhat[,s] = lambda_Y[,s];
-  //   W_hat[,s] = LAMBDA_W_[,s].*E_*D[s];
-  //   Y_hat[,s] = lambda_Y_[,s];
-  // }
+  matrix<lower=0>[I_,S] lambda_;
+  matrix[I_,S] log_lik_lambda_;
+
+{
+    matrix[J_,S] LAMBDA_Y_ = block(LAMBDA_, K_+1, 1, J_, S);
+    lambda_ = h * LAMBDA_Y_[IJ_,];
+  }
+  for(s in 1:S) {
+    for(i in 1:I_) {
+     log_lik_lambda_[i,s] = poisson_lpmf(Y_[i,s] | lambda_[i,s]);
+    }
+  }
 }
 
 
