@@ -1,7 +1,41 @@
-# functions for proccessing and aggregating output
-# (just for a cleaner script)
+# Assorted helper functions
+# Tim Szewczyk
+
+# Munging functions
+# Simulation functions
+# Output processing functions
 
 
+#### munging functions #########################################################
+
+#' Clean irregularities in species names
+#' Since this is a big shared file that I'm only using, I need to standardize the names for myself, but I don't want to edit the actual file since it's still in progress
+#' @param ant.df dataframe with column SPECIESID
+#' @return dataframe with species names fully standardized
+clean_species_names <- function(ant.df) {
+  ant.df$SPECIESID[ant.df$SPECIESID=="Form Copt"] <- "Form_copt"
+  ant.df$SPECIESID[ant.df$SPECIESID=="Form_lugubris/paralugubris"] <- "Form_lugu/para"
+  ant.df$SPECIESID[ant.df$SPECIESID=="Form_lugu/para/prat"] <- "Form_lugu/para"
+  ant.df$SPECIESID[ant.df$SPECIESID=="Lasi_alie gr"] <- "Lasi_alie"
+  ant.df$SPECIESID[ant.df$SPECIESID=="Temn_nyla gr"] <- "Temn_nyla"
+  ant.df$SPECIESID[ant.df$SPECIESID=="Temn_tube gr"] <- "Temn_tube"
+  ant.df$SPECIESID[ant.df$SPECIESID=="Temn_unif gr"] <- "Temn_unif"
+  return(ant.df)
+}
+
+
+
+
+
+
+#### simulation functions ######################################################
+
+#' Simulate regional covariates
+#' @param K names list with number of cells in W, W_, Y, Y_
+#' @param R number of covariates, including the intercept
+#' @param quad logical to indicate whether X[,R] = (X[,R-1])^2
+#' @return named list with covariate matrices [K$., R] with elements 'all', 'W',
+#'   'Y', "W_', and 'Y_'
 make_X <- function(K, R, quad) {
   nTot <- sum(unlist(K))
   X <- cbind(1,
@@ -16,6 +50,11 @@ make_X <- function(K, R, quad) {
 
 
 
+#' Simulate local covariates
+#' @param I names list with number of cells in Y, Y_
+#' @param L number of covariates; no intercept for this regression
+#' @return named list with covariate matrices [I$., L] with elements 'all', "Y',
+#'   and 'Y_'
 make_V <- function(I, L) {
   nTot <- sum(unlist(I)) 
   V <- matrix(rnorm(nTot*L, 0, 1), nrow=nTot, ncol=L)
@@ -26,10 +65,19 @@ make_V <- function(I, L) {
 
 
 
-make_slopes <- function(lam_0, nCov, G, S, tax_i, sd_sp, quad) {
+#' Simulate phylogenetically structured slopes
+#' @param Lam_0 global intercept for Lambda; set to NULL for local env. slopes
+#' @param nCov number of covariates, including the intercept
+#' @param G number of genera
+#' @param S number of species
+#' @param tax_i matrix with taxonomic relationships
+#' @param sd_sp standard deviation in responses within genera
+#' @param quad logical to indicate whether X[,nCov] = (X[,nCov-1])^2
+#' @return named list with slopes for 'agg', 'gen', and 'sp'
+make_slopes <- function(Lam_0, nCov, G, S, tax_i, sd_sp, quad) {
   # aggregate: alpha[nCov], beta[nCov]
-  if(!is.null(lam_0)) {
-    agg <- cbind(c(lam_0, rnorm(nCov-1, 0, 1)))
+  if(!is.null(Lam_0)) {
+    agg <- cbind(c(Lam_0, rnorm(nCov-1, 0, 1)))
   } else {
     agg <- cbind(rnorm(nCov, 0, 1))
   }
@@ -50,6 +98,11 @@ make_slopes <- function(lam_0, nCov, G, S, tax_i, sd_sp, quad) {
 }
 
 
+
+
+
+
+#### output processing functions ###############################################
 
 aggregate_aggSlopes <- function(out.ls, slope.ls, var) {
   gg <- map_dfr(out.ls, ~ggs(., var), .id="model")
@@ -113,12 +166,6 @@ aggregate_Lambda <- function(out.ls, LAMBDA) {
                           S=as.character(rep(1:dim(.)[2], each=dim(.)[1]))),
                   .id="dataset") %>%
     mutate(Parameter=paste0(dataset, "[", K, ",", S, "]"))
-  # true <- map_dfr(LAMBDA[-1],
-  #                  ~tibble(true=c(.), 
-  #                          K=as.character(rep(1:dim(.)[1], times=dim(.)[2])),
-  #                          S=as.character(rep(1:dim(.)[2], each=dim(.)[1]))),
-  #                  .id="dataset") %>%
-  #   mutate(Parameter=paste0("LAMBDA", "[", K, ",", S, "]"))
   sum.gg <- gg %>% group_by(model, Parameter) %>%
     summarise(mn=mean(value), 
               med=median(value),
@@ -136,7 +183,7 @@ aggregate_Lambda <- function(out.ls, LAMBDA) {
 
 
 aggregate_lambda <- function(out.ls, lambda) {
-  gg <- map_dfr(out.ls, ~ggs(., "lambda"), .id="model")
+  gg <- map_dfr(out.ls, ~ggs(., "^lambda"), .id="model")
   true <- map_dfr(setNames(lambda, c("lambda", "lambda_")),
                    ~tibble(true=c(.), 
                            K=as.character(rep(1:dim(.)[1], times=dim(.)[2])),
