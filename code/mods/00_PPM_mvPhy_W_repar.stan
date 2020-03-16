@@ -63,20 +63,14 @@ model {
 }
 
 generated quantities {
-  // int<lower=0> Wpp[K_W,S];  // W counts (train)
   matrix<lower=0>[K_W,S] What;  // latent lambda W
-  // int<lower=0> W_[K_W_,S];  // W counts (train)
   matrix<lower=0>[K_W_,S] LAMBDA_W_ = exp(X_W_ * b);
   vector<lower=0, upper=1>[K_W_] E_ = inv_logit(U_W_ * eta);
   matrix<lower=0>[K_W_,S] W_hat;  // latent lambda W
-  matrix<lower=0>[K_W,S] prPres_W = 1 - exp(-LAMBDA_W);
-  matrix<lower=0>[K_W_,S] prPres_W_ = 1 - exp(-LAMBDA_W_);
 
   for(s in 1:S) {
     What[,s] = LAMBDA_W[,s].*E*D[s];
-    // Wpp[,s] = poisson_rng(What[,s]);
     W_hat[,s] = LAMBDA_W_[,s].*E_*D[s];
-    // W_[,s] = poisson_rng(W_hat[,s]);
   }
 }
 
