@@ -5,12 +5,12 @@
 
 ##--- set up
 library(tidyverse); library(sf); library(googlesheets); library(rdrop2)
-gis.dir <- "~/Documents/unil/GIS/data/VD_21781/"
-ant.dir <- "~/Documents/unil/opfo_str_sampling/data/"
+gis.dir <- "../2_gis/data/VD_21781/"
+ant.dir <- "../1_opfo/data/"
 tax_i <- read_csv("data/tax_i.csv") %>% filter(sNum<50)
 plot_i <- read_csv(paste0(ant.dir, "opfo_envDataProcessed.csv")) %>% 
   arrange(BDM, Plot_id) %>% filter(Plot_id != "020201")
-source("code/00_fn.R"); source(paste0(ant.dir, "../code/opfo_fn.R"))
+source("code/00_fn.R"); source(paste0(ant.dir, "../code/00_fn.R"))
 
 
 
@@ -25,7 +25,7 @@ U_vars <- c("slope", "pop", "rdLen")
 
 ##--- grids
 # W: 1km2 grid of Vaud
-VD_raw <- st_read(paste0(gis.dir, "Vaud_boundaries.shp")) 
+VD_raw <- st_read("../2_gis/data/VD_21781/Vaud_boundaries.shp")
 VD <- st_union(VD_raw)
 VD_ext <- raster::extent(matrix(st_bbox(VD), ncol=2))
 grd_W <- raster::raster(ext=VD_ext, crs=st_crs(VD), resolution=1000) %>%
@@ -35,12 +35,12 @@ grd_W@data$layer <- 1:raster::ncell(grd_W)
 grd_W.sf <- st_as_sf(grd_W) %>% st_set_crs(st_crs(VD)) %>% rename(id=layer) %>%
   mutate(inbd=c(st_intersects(., VD, sparse=F)))
 # Y: 44 x 1km2 sampling sites
-site.sf <- agg_str_site_data(gis.dir) %>% arrange(BDM)
+site.sf <- agg_str_site_data() %>% arrange(BDM)
 
 
 
 ##--- W
-ants <- load_ant_data(pub.dir=ant.dir, str_type="soil", clean_spp=T)
+ants <- load_ant_data(str_type="soil", clean_spp=T)
 grid.W <- st_join(ants$pub, grd_W.sf) %>%
   group_by(SPECIESID, id) %>% st_set_geometry(NULL) %>%
   summarise(nObs=n()) %>% 
@@ -109,7 +109,7 @@ roads <- st_read(paste0(gis.dir, "roads_VD_21781.shp")) %>% st_set_crs(21781)
 X_W.df <- filter(grd_W.sf, id %in% W_id) %>%
   mutate(el=raster::extract(dem, ., fun=mean),
          slope=raster::extract(slope, ., fun=mean),
-         NPP=raster::extract(NPP, ., fun=mean)) %>%
+         NPP=raster::extract(NPP, ., fun=mean, na.rm=T)) %>%
   bind_cols(., map_dfc(clim, ~raster::extract(., filter(grd_W.sf, id%in%W_id), 
                                                 fun=mean))) %>%
   arrange(id)
@@ -133,7 +133,7 @@ X.all <- cbind(1, X.scale)
 
 
 ##--- V
-V.df <- st_read(paste0(ant.dir, "gis/opfo_soil_25per.shp")) %>% 
+V.df <- st_read("../2_gis/data/opfo/opfo_soil_25per.shp") %>% 
   st_transform(st_crs(site.sf)) %>%
   mutate(Plot_id=str_remove_all(plot_id, "[[[:space:]]_]")) %>%
   select(Plot_id) %>% 

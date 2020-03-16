@@ -1,33 +1,8 @@
 # Assorted helper functions
 # Tim Szewczyk
 
-# Munging functions
 # Simulation functions
 # Output processing functions
-
-
-#### munging functions #########################################################
-
-#' Clean irregularities in species names
-#' Since this is a big shared file that I'm only using, I need to standardize the names for myself, but I don't want to edit the actual file since it's still in progress
-#' @param ant.df dataframe with column SPECIESID
-#' @return dataframe with species names fully standardized
-clean_species_names <- function(ant.df) {
-  ant.df <- ant.df %>% filter(!is.na(SPECIESID))
-  ant.df$SPECIESID[ant.df$SPECIESID=="Form Copt"] <- "Form_copt"
-  ant.df$SPECIESID[ant.df$SPECIESID=="Form_lugubris/paralugubris"] <- "Form_lugu/para"
-  ant.df$SPECIESID[ant.df$SPECIESID=="Form_lugu/para/prat"] <- "Form_lugu/para"
-  ant.df$SPECIESID[ant.df$SPECIESID=="Lasi_alie gr"] <- "Lasi_alie"
-  ant.df$SPECIESID[ant.df$SPECIESID=="Temn_nyla gr"] <- "Temn_nyla"
-  ant.df$SPECIESID[ant.df$SPECIESID=="Temn_tube gr"] <- "Temn_tube"
-  ant.df$SPECIESID[ant.df$SPECIESID=="Temn_unif gr"] <- "Temn_unif"
-  ant.df$SPECIESID[ant.df$SPECIESID=="Tetr_caes gr"] <- "Tetr_caes"
-  return(ant.df)
-}
-
-
-
-
 
 
 #### simulation functions ######################################################
