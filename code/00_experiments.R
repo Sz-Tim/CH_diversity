@@ -3,14 +3,15 @@
 # Option 1: Citizen science model used to inform priors for structured sampling
 
 # setup
-library(boot); library(truncnorm); library(MASS); library(rstan); 
-library(tidyverse); library(ggmcmc); library(loo)
+library(boot); library(truncnorm); library(MASS); library(rstan); library(loo);
+library(tidyverse); library(ggmcmc)
 theme_set(theme_bw() + theme(panel.grid=element_blank()))
-options(mc.cores = parallel::detectCores())
+options(mc.cores=parallel::detectCores())
 rstan_options(auto_write = TRUE)
 source("code/00_fn.R")
 
 opfo.dir <- "~/Documents/unil/opfo_str_sampling/data/"
+
 
 
 ################################################################################
@@ -18,20 +19,21 @@ opfo.dir <- "~/Documents/unil/opfo_str_sampling/data/"
 # 1 km2 grid cells and 0.75 m2 soil plots
 
 ## make up parameters ##########################################################
-S <- 30#74  # number of species
-G <- 5#21
+S <- 16#74  # number of species
 R <- 3  # number of regional covariates
 L <- 2
 Q <- 2  # number of W effort covariates
-K <- list(W=1300, Y=35, W_=2, Y_=9)  # number of cells (W: 1252, Y: 44)
+K <- list(W=200, Y=35, W_=2, Y_=9)  # number of cells (W: 1252, Y: 44)
 IJ <- list(Y=rep(1:K$Y, each=25), Y_=rep(1:K$Y_, each=25))
 I <- list(Y=length(IJ$Y), Y_=length(IJ$Y_))  # number of soil plots
-Lambda_0 <- 7.25
-effort_0 <- -15
+Lambda_0 <- 10.5
+effort_0 <- -11
 h <- 7.5e-7  # (6*pi*(0.2)^2)/(1000*1000)
-sigma_a <- 0.3
-sigma_b <- 0.75
-tax_i <- cbind(1:S, sample(1:G, S, TRUE, runif(G)), rbinom(S, 1, 0.3)+0.5)
+sigma_a <- 0.57
+sigma_b <- 1.3
+tax_i <- read_csv("data/tax_i.csv") %>% filter(., sNum<=S) %>% 
+  dplyr::select(sNum, gNum, Dprior) %>% as.matrix
+G <- max(tax_i[,2])
 quadratic_R <- TRUE
 
 
@@ -63,6 +65,15 @@ for(s in 1:S) {
 }
 map(obs, ~summary(c(.)))
 
+ShannonH <- rep(NA, I$Y+I$Y_)
+p <- prop.table(lambda$Y, 1)
+p_ <- prop.table(lambda$Y_, 1)
+for(i in 1:I$Y) {
+  ShannonH[i] <- -sum(p[i] * log(p_[i]))
+}
+for(i in 1:I$Y) {
+  ShannonH[i+I$Y_] <- -sum(p[i] * log(p_[i]))
+}
 
 ## run stan model ##############################################################
 stan_data <- list(K=K$W, J=K$Y, K_=K$W_, J_=K$Y_, 
@@ -75,11 +86,11 @@ stan_data <- list(K=K$W, J=K$Y, K_=K$W_, J_=K$Y_,
 
 out.ls <- list(
   WY=stan(file="code/mods/PPM_mvPhy_WY_IJK.stan",
-          data=stan_data, thin=5, warmup=1500, iter=2500),
-  W=stan(file="code/mods/PPM_mvPhy_W_IJK.stan",
-         data=stan_data, thin=5, warmup=1500, iter=2500),
-  Y=stan(file="code/mods/PPM_mvPhy_Y_IJK.stan",
-         data=stan_data, thin=5, warmup=1500, iter=2500)
+          data=stan_data, thin=5, warmup=1500, iter=2000)#,
+  # W=stan(file="code/mods/PPM_mvPhy_W_IJK.stan",
+  #        data=stan_data, thin=5, warmup=1500, iter=2000),
+  # Y=stan(file="code/mods/PPM_mvPhy_Y_IJK.stan",
+  #        data=stan_data, thin=5, warmup=1500, iter=2000)
 )
 
 
@@ -99,6 +110,15 @@ map(out.ls, ~loo::waic(loo::extract_log_lik(., "log_lik_lambda_"))) %>%
   loo::loo_compare()
 map(out.ls, ~loo::loo(loo::extract_log_lik(., "log_lik_lambda_"))) %>%
   loo::loo_compare()
+
+
+
+H.out <- ggs(out.ls$WY, "ShannonH")
+H.out$site <- str_remove(str_split_fixed(H.out$Parameter, "\\[", n=2)[,2], "]")
+H.out$true <- ShannonH[as.numeric(H.out$site)]
+H.out$diff <- H.out$value - H.out$true
+ggplot(H.out, aes(x=true)) + geom_density()
+
 
 
 # beta
