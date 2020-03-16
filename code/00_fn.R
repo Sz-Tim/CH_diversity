@@ -13,6 +13,7 @@
 #' @param ant.df dataframe with column SPECIESID
 #' @return dataframe with species names fully standardized
 clean_species_names <- function(ant.df) {
+  ant.df <- ant.df %>% filter(!is.na(SPECIESID))
   ant.df$SPECIESID[ant.df$SPECIESID=="Form Copt"] <- "Form_copt"
   ant.df$SPECIESID[ant.df$SPECIESID=="Form_lugubris/paralugubris"] <- "Form_lugu/para"
   ant.df$SPECIESID[ant.df$SPECIESID=="Form_lugu/para/prat"] <- "Form_lugu/para"
@@ -20,6 +21,7 @@ clean_species_names <- function(ant.df) {
   ant.df$SPECIESID[ant.df$SPECIESID=="Temn_nyla gr"] <- "Temn_nyla"
   ant.df$SPECIESID[ant.df$SPECIESID=="Temn_tube gr"] <- "Temn_tube"
   ant.df$SPECIESID[ant.df$SPECIESID=="Temn_unif gr"] <- "Temn_unif"
+  ant.df$SPECIESID[ant.df$SPECIESID=="Tetr_caes gr"] <- "Tetr_caes"
   return(ant.df)
 }
 
@@ -73,8 +75,9 @@ make_V <- function(I, L) {
 #' @param tax_i matrix with taxonomic relationships
 #' @param sd_sp standard deviation in responses within genera
 #' @param quad logical to indicate whether X[,nCov] = (X[,nCov-1])^2
+#' @param L_Omega NULL, or cholesky factor for G genera
 #' @return named list with slopes for 'agg', 'gen', and 'sp'
-make_slopes <- function(Lam_0, nCov, G, S, tax_i, sd_sp, quad) {
+make_slopes <- function(Lam_0, nCov, G, S, tax_i, sd_sp, quad, L_Omega=NULL) {
   # aggregate: alpha[nCov], beta[nCov]
   if(!is.null(Lam_0)) {
     agg <- cbind(c(Lam_0, rnorm(nCov-1, 0, 1)))
@@ -84,10 +87,14 @@ make_slopes <- function(Lam_0, nCov, G, S, tax_i, sd_sp, quad) {
   if(quad) agg[nCov] <- ifelse(agg[nCov] < 0, 2*agg[nCov], -2*agg[nCov])
   
   # genus-level: A[G,nCov], B[G,nCov]
-  phy_covMX <- matrix(runif(G^2)*2-1, ncol=G)/2 
-  diag(phy_covMX) <- diag(phy_covMX)
-  Sigma <- t(phy_covMX) %*% phy_covMX
-  gen <- t(apply(agg, 1, function(x) mvrnorm(1, rep(x,G), Sigma)))
+  if(is.null(L_Omega)) {
+    phy_covMX <- matrix(runif(G^2)*2-1, ncol=G)/2 
+    diag(phy_covMX) <- diag(phy_covMX)
+    Sigma <- t(phy_covMX) %*% phy_covMX 
+  } else {
+    Sigma <- L_Omega %*% t(L_Omega)
+  }
+  gen <- t(apply(agg, 1, function(x) MASS::mvrnorm(1, rep(x,G), Sigma)))
   
   # species-level: a[S,nCov], b[S,nCov]
   sp <- matrix(ncol=S, nrow=nCov)
