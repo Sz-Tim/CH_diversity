@@ -5,8 +5,8 @@ data {
   int<lower=0> K_; // grid cells for W (test)
   int<lower=0> J; // grid cells for Y (train)
   int<lower=0> J_; // grid cells for Y (test)
-  int<lower=0> I_; // plots (test)
-  int<lower=0> IJ_[I_]; // plot to grid cell lookup (test)
+  // int<lower=0> I_; // plots (test)
+  // int<lower=0> IJ_[I_]; // plot to grid cell lookup (test)
   int<lower=0> S;  // number of species
   int<lower=0> G;  // number of genera
   int<lower=0> R;  // number of cell-scale covariates (incl. intercept)
@@ -18,7 +18,7 @@ data {
   
   // observed data
   int<lower=0> W[K,S];  // W counts (train)
-  int<lower=0> Y_[I_,S];  // Y counts (test)
+  // int<lower=0> Y_[I_,S];  // Y counts (test)
   
   // covariates
   matrix[K+J,R] X;  // W grid cell covariates (train)
@@ -98,16 +98,28 @@ generated quantities {
   vector<lower=0, upper=1>[K_] E_ = inv_logit(U_ * eta);
   matrix<lower=0>[I_,S] lambda_;
   matrix[I_,S] log_lik_lambda_;
+  matrix<lower=0, upper=1>[K+J,S] p;
+  matrix<lower=0, upper=1>[K_+J_,S] p_;
+  vector[K+J] ShannonH;
+  vector[K_+J_] ShannonH_;
 
-{
+  {
     matrix[J_,S] LAMBDA_Y_ = block(LAMBDA_, K_+1, 1, J_, S);
     lambda_ = h * LAMBDA_Y_[IJ_,];
   }
   for(s in 1:S) {
     for(i in 1:I_) {
-     log_lik_lambda_[i,s] = poisson_lpmf(Y_[i,s] | lambda_[i,s]);
+      log_lik_lambda_[i,s] = poisson_lpmf(Y_[i,s] | lambda_[i,s]);
     }
   }
+  for(i in 1:(K+J)) {
+    p[i,] = LAMBDA[i,] / sum(LAMBDA[i,]);
+  }
+  for(i in 1:(K_+J_)) {
+    p_[i,] = LAMBDA_[i,] / sum(LAMBDA_[i,]);
+  }
+  ShannonH = - rows_dot_product(p, log(p));
+  ShannonH_ = - rows_dot_product(p_, log(p_));
 }
 
 

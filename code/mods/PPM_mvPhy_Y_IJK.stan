@@ -113,10 +113,13 @@ model {
 }
 
 generated quantities {
-  
   matrix<lower=0>[K_+J_,S] LAMBDA_ = exp(X_ * b);
   matrix<lower=0>[I_,S] lambda_;
   matrix[I_,S] log_lik_lambda_;
+  matrix<lower=0, upper=1>[K+J,S] p;
+  matrix<lower=0, upper=1>[K_+J_,S] p_;
+  vector[K+J] ShannonH;
+  vector[K_+J_] ShannonH_;
 
   {
     matrix[J_,S] LAMBDA_Y_ = block(LAMBDA_, K_+1, 1, J_, S);
@@ -127,6 +130,14 @@ generated quantities {
      log_lik_lambda_[i,s] = poisson_lpmf(Y_[i,s] | lambda_[i,s]);  
     }
   }
+  for(i in 1:(K+J)) {
+    p[i,] = LAMBDA[i,] / sum(LAMBDA[i,]);
+  }
+  for(i in 1:(K_+J_)) {
+    p_[i,] = LAMBDA_[i,] / sum(LAMBDA_[i,]);
+  }
+  ShannonH = - rows_dot_product(p, log(p));
+  ShannonH_ = - rows_dot_product(p_, log(p_));
 }
 
 

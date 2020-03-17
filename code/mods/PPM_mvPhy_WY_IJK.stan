@@ -135,14 +135,13 @@ model {
 
 generated quantities {
   matrix<lower=0>[K_+J_,S] LAMBDA_ = exp(X_ * b);
-  matrix<lower=0>[I_,S] lambda_;
   vector<lower=0, upper=1>[K_] E_ = inv_logit(U_ * eta);
+  matrix<lower=0>[I_,S] lambda_;
   matrix[I_,S] log_lik_lambda_;
-  matrix<lower=0, upper=1>[I,S] p;
-  matrix<lower=0, upper=1>[I_,S] p_;
-  vector[I+I_] ShannonH;
-  vector[I+I_] ShannonH_dp;
-  vector[I+I_] ShannonH_rdp;
+  matrix<lower=0, upper=1>[K+J,S] p;
+  matrix<lower=0, upper=1>[K_+J_,S] p_;
+  vector[K+J] ShannonH;
+  vector[K_+J_] ShannonH_;
 
   {
     matrix[J_,S] LAMBDA_Y_ = block(LAMBDA_, K_+1, 1, J_, S);
@@ -153,18 +152,14 @@ generated quantities {
      log_lik_lambda_[i,s] = poisson_lpmf(Y_[i,s] | lambda_[i,s]);  
     }
   }
-  for(i in 1:I) {
-    p[i,] = lambda[i,] / sum(lambda[i,]);
-    ShannonH_dp[i] = - dot_product(p[i,], log(p[i,]));
-    ShannonH[i] = -sum(p[i,] .* log(p[i,]));
+  for(i in 1:(K+J)) {
+    p[i,] = LAMBDA[i,] / sum(LAMBDA[i,]);
   }
-  ShannonH_rdp[1:I] = - rows_dot_product(p, log(p));
-  for(i in 1:I_) {
-    p_[i,] = lambda_[i,] / sum(lambda_[i,]);
-    ShannonH_dp[i+I] = - dot_product(p_[i,], log(p_[i,]));
-    ShannonH[i+I] = -sum(p_[i,] .* log(p_[i,]));
+  for(i in 1:(K_+J_)) {
+    p_[i,] = LAMBDA_[i,] / sum(LAMBDA_[i,]);
   }
-  ShannonH_rdp[(I+1):(I+I_)] = - rows_dot_product(p_, log(p_));
+  ShannonH = - rows_dot_product(p, log(p));
+  ShannonH_ = - rows_dot_product(p_, log(p_));
 }
 
 
