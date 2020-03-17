@@ -17,7 +17,7 @@ source("code/00_fn.R"); source(paste0(ant.dir, "../code/00_fn.R"))
 ##--- settings
 test_prop_W <- 0.3 # proportion of W data to use for testing models
 test_prop_Y <- 0.2 # proportion of Y data to use for testing models
-X_vars <- c("MAT", "Iso", "AP", "NPP")
+X_vars <- c("MAT", "Iso", "AP", "npp")
 V_vars <- c("el", "slope", "pop")
 U_vars <- c("slope", "pop", "rdLen")
 
@@ -109,7 +109,7 @@ roads <- st_read(paste0(gis.dir, "roads_VD_21781.shp")) %>% st_set_crs(21781)
 X_W.df <- filter(grd_W.sf, id %in% W_id) %>%
   mutate(el=raster::extract(dem, ., fun=mean),
          slope=raster::extract(slope, ., fun=mean),
-         NPP=raster::extract(NPP, ., fun=mean, na.rm=T)) %>%
+         npp=raster::extract(NPP, ., fun=mean, na.rm=T)) %>%
   bind_cols(., map_dfc(clim, ~raster::extract(., filter(grd_W.sf, id%in%W_id), 
                                                 fun=mean))) %>%
   arrange(id)
@@ -145,7 +145,7 @@ V.df <- st_read("../2_gis/data/opfo/opfo_soil_25per.shp") %>%
 V.mx <- as.matrix(V.df %>% st_set_geometry(NULL) %>% 
                     select(-BDM, -Plot_id) %>% 
                     mutate_all(.funs=list(sq=~.^2)) %>%
-                    select(V_vars))
+                    select(all_of(V_vars)))
 V.scale <- scale(rbind(V.mx[1:I$Y,], 
                        V.mx[I$Y+(1:I$Y_),]))
 
@@ -165,13 +165,42 @@ U_W.df <- grd_W.sf %>% filter(id %in% W_id) %>%
   arrange(id)
 U_W.df <- left_join(U_W.df, st_set_geometry(rdLen.grd_W, NULL), by="id")
 U_W.df[is.na(U_W.df)] <- 0
-U_W.mx <- as.matrix(st_set_geometry(U_W.df, NULL) %>% select(U_vars))
+U_W.mx <- as.matrix(st_set_geometry(U_W.df, NULL) %>% select(all_of(U_vars)))
 U.scale <- scale(U_W.mx)
 U.all <- cbind(1, U.scale)
 
 
 
+##--- NA's
+# identify NA cells
+na.W <- which(is.na(rowSums(X_W.mx)[1:K$W]))
+na.W_ <- which(is.na(rowSums(X_W.mx)[K$W+(1:K$W_)]))
+
+
+
 ##--- export stan data
+d.ls <- list(K=K$W-length(na.W), K_=K$W_-length(na.W_), 
+             J=J$Y, J_=J$Y_, 
+             IJ=IJ$Y, IJ_=IJ$Y_, 
+             I=I$Y, I_=I$Y_,
+             S=max(tax_i$sNum), 
+             G=max(tax_i$gNum), 
+             tax_i=tax_i[,c("sNum", "gNum")], 
+             D_prior=tax_i$Dprior, 
+             R=dim(X.all)[2], 
+             L=dim(V.scale)[2],
+             Q=dim(U.all)[2], 
+             W=W[(1:K$W)[-na.W],], 
+             W_=W[(K$W+(1:K$W_))[-na.W_],], 
+             Y=Y[1:I$Y,],
+             Y_=Y[I$Y+(1:I$Y_),],
+             X=X.all[(1:(K$W+J$Y))[-na.W],], 
+             X_=X.all[((K$W+J$Y)+(1:(K$W_+J$Y_)))[-na.W_],], 
+             V=V.scale[1:I$Y,], 
+             V_=V.scale[I$Y+(1:I$Y_),],
+             U=U.all[(1:K$W)[-na.W],], 
+             U_=U.all[(K$W+(1:K$W_))[-na.W_],], 
+             h=7.5e-7)
 d.ls <- list(K=K$W, K_=K$W_, 
              J=J$Y, J_=J$Y_, 
              IJ=IJ$Y, IJ_=IJ$Y_, 
