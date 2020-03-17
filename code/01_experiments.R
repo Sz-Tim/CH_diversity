@@ -10,7 +10,7 @@ options(mc.cores=parallel::detectCores())
 rstan_options(auto_write = TRUE)
 source("code/00_fn.R")
 
-opfo.dir <- "~/Documents/unil/opfo_str_sampling/data/"
+opfo.dir <- "../1_opfo/data/"
 
 
 
