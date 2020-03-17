@@ -65,15 +65,8 @@ for(s in 1:S) {
 }
 map(obs, ~summary(c(.)))
 
-ShannonH <- rep(NA, I$Y+I$Y_)
-p <- prop.table(lambda$Y, 1)
-p_ <- prop.table(lambda$Y_, 1)
-for(i in 1:I$Y) {
-  ShannonH[i] <- -sum(p[i] * log(p_[i]))
-}
-for(i in 1:I$Y) {
-  ShannonH[i+I$Y_] <- -sum(p[i] * log(p_[i]))
-}
+ShannonH <- map(LAMBDA[-1], ~prop.table(., 1)) %>%
+  map(~apply(., 1, function(x) -sum(x * log(x))))
 
 ## run stan model ##############################################################
 stan_data <- list(K=K$W, J=K$Y, K_=K$W_, J_=K$Y_, 
@@ -113,11 +106,31 @@ map(out.ls, ~loo::loo(loo::extract_log_lik(., "log_lik_lambda_"))) %>%
 
 
 
-H.out <- ggs(out.ls$WY, "ShannonH")
-H.out$site <- str_remove(str_split_fixed(H.out$Parameter, "\\[", n=2)[,2], "]")
-H.out$true <- ShannonH[as.numeric(H.out$site)]
+H.out <- ggs(out.ls$W, "ShannonH") %>%
+  mutate(site=str_remove(str_split_fixed(Parameter, "\\[", n=2)[,2], "]"),
+         site=as.numeric(site),
+         par=str_split_fixed(Parameter, "\\[", n=2)[,1]) %>%
+  arrange(par, site)
+
+H.out <- rbind(H.out %>% filter(par=="ShannonH") %>%
+                 mutate(true=c(ShannonH$W, ShannonH$Y)[site]),
+               H.out %>% filter(par=="ShannonH_") %>%
+                 mutate(true=c(ShannonH$W_, ShannonH$Y_)[site]))
 H.out$diff <- H.out$value - H.out$true
-ggplot(H.out, aes(x=true)) + geom_density()
+
+ggs_caterpillar(H.out) + facet_grid(.~par, scales="free_y") + 
+  geom_point(aes(x=true, y=Parameter), colour="red", size=0.5, shape=1)
+
+ggplot(H.out, aes(x=diff)) + geom_density() 
+ggplot(H.out, aes(true, diff, colour=site)) + geom_point(alpha=0.05) +
+  facet_wrap(~par) 
+
+ggplot(H.out, aes(true, value, colour=site)) + geom_point(alpha=0.05) +
+  geom_abline(colour="red", linetype=2) + facet_wrap(~par) + ylim(0,3)
+H.out %>% group_by(Parameter, par, site) %>% 
+  summarise(true=mean(true), postmn=mean(value)) %>%
+  ggplot(aes(true, postmn, colour=site)) +  geom_point(alpha=0.5) +
+  geom_abline(colour="red", linetype=2) + facet_wrap(~par) + ylim(0,3)
 
 
 
