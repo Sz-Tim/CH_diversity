@@ -201,27 +201,27 @@ d.ls <- list(K=K$W-length(na.W), K_=K$W_-length(na.W_),
              U=U.all[(1:K$W)[-na.W],], 
              U_=U.all[(K$W+(1:K$W_))[-na.W_],], 
              h=7.5e-7)
-d.ls <- list(K=K$W, K_=K$W_, 
-             J=J$Y, J_=J$Y_, 
-             IJ=IJ$Y, IJ_=IJ$Y_, 
+d.ls <- list(K=K$W, K_=K$W_,
+             J=J$Y, J_=J$Y_,
+             IJ=IJ$Y, IJ_=IJ$Y_,
              I=I$Y, I_=I$Y_,
-             S=max(tax_i$sNum), 
-             G=max(tax_i$gNum), 
-             tax_i=tax_i[,c("sNum", "gNum")], 
-             D_prior=tax_i$Dprior, 
-             R=dim(X.all)[2], 
+             S=max(tax_i$sNum),
+             G=max(tax_i$gNum),
+             tax_i=tax_i[,c("sNum", "gNum")],
+             D_prior=tax_i$Dprior,
+             R=dim(X.all)[2],
              L=dim(V.scale)[2],
-             Q=dim(U.all)[2], 
-             W=W[1:K$W,], 
-             W_=W[K$W+(1:K$W_),], 
+             Q=dim(U.all)[2],
+             W=W[1:K$W,],
+             W_=W[K$W+(1:K$W_),],
              Y=Y[1:I$Y,],
              Y_=Y[I$Y+(1:I$Y_),],
-             X=X.all[1:(K$W+J$Y),], 
-             X_=X.all[(K$W+J$Y)+(1:(K$W_+J$Y_)),], 
-             V=V.scale[1:I$Y,], 
+             X=X.all[1:(K$W+J$Y),],
+             X_=X.all[(K$W+J$Y)+(1:(K$W_+J$Y_)),],
+             V=V.scale[1:I$Y,],
              V_=V.scale[I$Y+(1:I$Y_),],
-             U=U.all[1:K$W,], 
-             U_=U.all[K$W+(1:K$W_),], 
+             U=U.all[1:K$W,],
+             U_=U.all[K$W+(1:K$W_),],
              h=7.5e-7)
 rstan::stan_rdump(ls(d.ls),
                   file=paste0("data/stan_data/test_realData.Rdump"),
@@ -233,13 +233,15 @@ rstan::stan_rdump(ls(d.ls),
 library(rstan)
 options(mc.cores=parallel::detectCores())
 rstan_options(auto_write=TRUE)
-mods <- c("W")#, "Y", "WY")
-pars.exc <- c("a.std", "A.std", "b.std", "B.std", "LAMBDA", "LAMBDA_", "lambda")
-out.ls <- vector("list", length(mods))
+mods <- c("W", "Y", "WY")
+pars.exc <- c("a.std", "A.std", "b.std", "B.std", 
+              "LAMBDA", "LAMBDA_", "lambda", "lambda_",
+              "p", "p_")
+out.ls <- setNames(vector("list", length(mods)), mods)
 for(i in seq_along(mods)) {
   out.ls[i] <- stan(file=paste0("code/mods/PPM_mvPhy_", mods[i], "_IJK.stan"),
                     # sample_file=paste0("out/tests/", i), 
-                    pars=pars.exc, include=F,
+                    pars=pars.exc, include=F, chains=3,
                     data=read_rdump("data/stan_data/test_realData.Rdump"), 
                     thin=5, warmup=1000, iter=2000)
 }
@@ -268,18 +270,21 @@ beta.out <- aggregate_aggSlopes(out.ls, list(agg=NA), "beta")
 ggplot(beta.out$gg, aes(x=value, colour=model)) + 
   facet_wrap(~Parameter, scales="free") + 
   geom_rug(data=beta.out$post_mns, aes(x=mean), sides="b") +
-  geom_density() + scale_colour_manual(values=mod_cols) 
+  geom_density(aes(group=paste(model, Chain))) + 
+  scale_colour_manual(values=mod_cols) 
 
 alpha.out <- aggregate_aggSlopes(out.ls, list(agg=NA), "alpha")
 ggplot(alpha.out$gg, aes(x=value, colour=model)) + 
   facet_wrap(~Parameter, scales="free") + 
   geom_rug(data=alpha.out$post_mns, aes(x=mean), sides="b") +
-  geom_density() + scale_colour_manual(values=mod_cols) 
+  geom_density(aes(group=paste(model, Chain))) + 
+  scale_colour_manual(values=mod_cols) 
 
 eta.out <- aggregate_eta(out.ls, NA)
 ggplot(eta.out$gg, aes(x=value, colour=model)) + 
   facet_wrap(~Parameter, scales="free") + 
-  geom_density() + scale_colour_manual(values=mod_cols) 
+  geom_density(aes(group=paste(model, Chain))) + 
+  scale_colour_manual(values=mod_cols) 
 
 b.out <- aggregate_spSlopes(out.ls, 
                             list(sp=matrix(nrow=out.ls$W@par_dims$b[1], 
