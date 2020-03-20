@@ -5,8 +5,8 @@ data {
   int<lower=0> K_; // grid cells for W (test)
   int<lower=0> J; // grid cells for Y (train)
   int<lower=0> J_; // grid cells for Y (test)
-  // int<lower=0> I_; // plots (test)
-  // int<lower=0> IJ_[I_]; // plot to grid cell lookup (test)
+  int<lower=0> I_; // plots (test)
+  int<lower=0> IJ_[I_]; // plot to grid cell lookup (test)
   int<lower=0> S;  // number of species
   int<lower=0> G;  // number of genera
   int<lower=0> R;  // number of cell-scale covariates (incl. intercept)
@@ -18,7 +18,7 @@ data {
   
   // observed data
   int<lower=0> W[K,S];  // W counts (train)
-  // int<lower=0> Y_[I_,S];  // Y counts (test)
+  int<lower=0> Y_[I_,S];  // Y counts (test)
   
   // covariates
   matrix[K+J,R] X;  // W grid cell covariates (train)
