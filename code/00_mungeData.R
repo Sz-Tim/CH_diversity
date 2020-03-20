@@ -4,10 +4,10 @@
 
 
 ##--- set up
-library(tidyverse); library(sf); library(googlesheets); library(rdrop2)
+library(tidyverse); library(sf); library(googlesheets)
 gis.dir <- "../2_gis/data/VD_21781/"
 ant.dir <- "../1_opfo/data/"
-tax_i <- read_csv("data/tax_i.csv") %>% filter(sNum<50)
+tax_i <- read_csv("data/tax_i.csv") #%>% filter(sNum<50)
 plot_i <- read_csv(paste0(ant.dir, "opfo_envDataProcessed.csv")) %>% 
   arrange(BDM, Plot_id) %>% filter(Plot_id != "020201")
 source("code/00_fn.R"); source(paste0(ant.dir, "../code/00_fn.R"))
@@ -59,7 +59,7 @@ W_id <- which(rowSums(W)>0)
 box.Y <- ants$str %>% group_by(BDM, Plot_id, SPECIESID) %>%
   summarise(nObs=n()) %>%
   arrange(BDM)
-Y <- matrix(0, nrow=nrow(plot_i), ncol=max(tax_i$sNum))
+Y <- matrix(0, nrow=sum(site.sf$nPlot_Total), ncol=max(tax_i$sNum))
 for(s in 1:max(tax_i$sNum)) {
   sp.occ <- filter(box.Y, SPECIESID==tax_i$species[s])
   if(nrow(sp.occ)>0) Y[which(plot_i$Plot_id %in% sp.occ$Plot_id),s] <- sp.occ$nObs
@@ -81,7 +81,7 @@ I <- list(Y=length(IJ$Y),
 
 ##--- tax_i: temporary
 if(is.null(tax_i)) {
-  tax_i <- tibble(species=sort(unique(c(ants$pub$SPECIESID, ants$str$SPECIESID))),
+  tax_i <- tibble(species=sort(unique(ants$all$SPECIESID)),
                   genus=str_split_fixed(species, "_", 2)[,1],
                   sNum=as.numeric(factor(species)),
                   gNum=as.numeric(factor(genus)),
@@ -98,7 +98,7 @@ clim <- dir(gis.dir, "chelsa") %>%
   map(., ~raster::raster(paste0(gis.dir, .x)))
 dem <- raster::raster(paste0(gis.dir, "dem_VD_21781.tif"))
 slope <- raster::raster(paste0(gis.dir, "slope_VD_21781.tif"))
-NPP <- raster::raster(paste0(gis.dir, "MODIS_2010-2019_VD_21781.tif"))
+npp <- raster::raster(paste0(gis.dir, "MODIS_2010-2019_VD_21781.tif"))
 pop <- raster::raster(paste0(gis.dir, "popDensity_VD_21781.tif")) 
 roads <- st_read(paste0(gis.dir, "roads_VD_21781.shp")) %>% st_set_crs(21781)
 
@@ -109,7 +109,7 @@ roads <- st_read(paste0(gis.dir, "roads_VD_21781.shp")) %>% st_set_crs(21781)
 X_W.df <- filter(grd_W.sf, id %in% W_id) %>%
   mutate(el=raster::extract(dem, ., fun=mean),
          slope=raster::extract(slope, ., fun=mean),
-         npp=raster::extract(NPP, ., fun=mean, na.rm=T)) %>%
+         npp=raster::extract(npp, ., fun=mean, na.rm=T)) %>%
   bind_cols(., map_dfc(clim, ~raster::extract(., filter(grd_W.sf, id%in%W_id), 
                                                 fun=mean))) %>%
   arrange(id)
@@ -201,28 +201,28 @@ d.ls <- list(K=K$W-length(na.W), K_=K$W_-length(na.W_),
              U=U.all[(1:K$W)[-na.W],], 
              U_=U.all[(K$W+(1:K$W_))[-na.W_],], 
              h=7.5e-7)
-d.ls <- list(K=K$W, K_=K$W_,
-             J=J$Y, J_=J$Y_,
-             IJ=IJ$Y, IJ_=IJ$Y_,
-             I=I$Y, I_=I$Y_,
-             S=max(tax_i$sNum),
-             G=max(tax_i$gNum),
-             tax_i=tax_i[,c("sNum", "gNum")],
-             D_prior=tax_i$Dprior,
-             R=dim(X.all)[2],
-             L=dim(V.scale)[2],
-             Q=dim(U.all)[2],
-             W=W[1:K$W,],
-             W_=W[K$W+(1:K$W_),],
-             Y=Y[1:I$Y,],
-             Y_=Y[I$Y+(1:I$Y_),],
-             X=X.all[1:(K$W+J$Y),],
-             X_=X.all[(K$W+J$Y)+(1:(K$W_+J$Y_)),],
-             V=V.scale[1:I$Y,],
-             V_=V.scale[I$Y+(1:I$Y_),],
-             U=U.all[1:K$W,],
-             U_=U.all[K$W+(1:K$W_),],
-             h=7.5e-7)
+# d.ls <- list(K=K$W, K_=K$W_, 
+#              J=J$Y, J_=J$Y_, 
+#              IJ=IJ$Y, IJ_=IJ$Y_, 
+#              I=I$Y, I_=I$Y_,
+#              S=max(tax_i$sNum), 
+#              G=max(tax_i$gNum), 
+#              tax_i=tax_i[,c("sNum", "gNum")], 
+#              D_prior=tax_i$Dprior, 
+#              R=dim(X.all)[2], 
+#              L=dim(V.scale)[2],
+#              Q=dim(U.all)[2], 
+#              W=W[1:K$W,], 
+#              W_=W[K$W+(1:K$W_),], 
+#              Y=Y[1:I$Y,],
+#              Y_=Y[I$Y+(1:I$Y_),],
+#              X=X.all[1:(K$W+J$Y),], 
+#              X_=X.all[(K$W+J$Y)+(1:(K$W_+J$Y_)),], 
+#              V=V.scale[1:I$Y,], 
+#              V_=V.scale[I$Y+(1:I$Y_),],
+#              U=U.all[1:K$W,], 
+#              U_=U.all[K$W+(1:K$W_),], 
+#              h=7.5e-7)
 rstan::stan_rdump(ls(d.ls),
                   file=paste0("data/stan_data/test_realData.Rdump"),
                   envir=list2env(d.ls))
