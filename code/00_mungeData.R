@@ -17,7 +17,7 @@ source("code/00_fn.R"); source(paste0(ant.dir, "../code/00_fn.R"))
 ##--- settings
 test_prop_W <- 0.3 # proportion of W data to use for testing models
 test_prop_Y <- 0.2 # proportion of Y data to use for testing models
-X_vars <- c("MAT", "Iso", "AP", "npp")
+X_vars <- c("MAT", "Iso", "AP", "npp", "lcH", "MAT_sq")
 V_vars <- c("el", "slope", "pop")
 U_vars <- c("slope", "pop", "rdLen")
 
@@ -99,6 +99,10 @@ clim <- dir(gis.dir, "chelsa") %>%
 dem <- raster::raster(paste0(gis.dir, "dem_VD_21781.tif"))
 slope <- raster::raster(paste0(gis.dir, "slope_VD_21781.tif"))
 npp <- raster::raster(paste0(gis.dir, "MODIS_2010-2019_VD_21781.tif"))
+lc.W <- st_read(paste0(gis.dir, "lc_1kmZones_21781.shp")) %>%
+  filter(id %in% W_id) %>% st_set_geometry(NULL) %>% select(4:18) 
+lc.Y <- st_read(paste0(gis.dir, "site_lcZones_21781.shp")) %>% 
+  arrange(BDM) %>% st_set_geometry(NULL) %>% select(3:17)
 pop <- raster::raster(paste0(gis.dir, "popDensity_VD_21781.tif")) 
 roads <- st_read(paste0(gis.dir, "roads_VD_21781.shp")) %>% st_set_crs(21781)
 
@@ -109,10 +113,12 @@ roads <- st_read(paste0(gis.dir, "roads_VD_21781.shp")) %>% st_set_crs(21781)
 X_W.df <- filter(grd_W.sf, id %in% W_id) %>%
   mutate(el=raster::extract(dem, ., fun=mean),
          slope=raster::extract(slope, ., fun=mean),
-         npp=raster::extract(npp, ., fun=mean, na.rm=T)) %>%
+         npp=raster::extract(npp, ., fun=mean, na.rm=T),
+         lcH=vegan::diversity(as.matrix(lc.W))) %>%
   bind_cols(., map_dfc(clim, ~raster::extract(., filter(grd_W.sf, id%in%W_id), 
                                                 fun=mean))) %>%
   arrange(id)
+write_csv(X_W.df, "data/X_W-df.csv")
 # select covariates and add quadratic terms
 X_W.mx <- as.matrix(X_W.df %>% st_set_geometry(NULL) %>% 
                       select(-id, -inbd) %>% 
@@ -120,7 +126,8 @@ X_W.mx <- as.matrix(X_W.df %>% st_set_geometry(NULL) %>%
                       select(one_of(X_vars)))
 X_Y.mx <- as.matrix(site.sf %>% st_set_geometry(NULL) %>% 
                       select(-BDM, -region, -BDM_id, -Sample_date,
-                             -contains("nPlot")) %>% 
+                             -contains("nPlot")) %>%
+                      mutate(lcH=vegan::diversity(as.matrix(lc.Y))) %>%
                       mutate_if(is.numeric, .funs=list(sq=~.^2)) %>%
                       select(one_of(X_vars)))
 # scale and carefully combine
@@ -129,6 +136,7 @@ X.scale <- scale(rbind(X_W.mx[1:K$W,],
                        X_W.mx[K$W+(1:K$W_),], 
                        X_Y.mx[J$Y+(1:J$Y_),]))
 X.all <- cbind(1, X.scale)
+
 
 
 
@@ -233,7 +241,7 @@ rstan::stan_rdump(ls(d.ls),
 library(rstan)
 options(mc.cores=parallel::detectCores())
 rstan_options(auto_write=TRUE)
-mods <- c("W", "Y", "WY")
+mods <- "W" #c("W", "Y", "WY")
 pars.exc <- c("a.std", "A.std", "b.std", "B.std", 
               "LAMBDA", "LAMBDA_", "lambda", "lambda_",
               "p", "p_")
