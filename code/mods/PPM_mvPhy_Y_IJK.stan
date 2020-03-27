@@ -61,15 +61,15 @@ transformed parameters {
   matrix[L,G] A;  // genus plot level
   
   // Lambda/lambda
-  matrix<lower=0>[K+J,S] LAMBDA;  // cell level
-  matrix<lower=0>[I,S] lambda;  // plot level lambda
+  matrix[K+J,S] lLAMBDA;  // cell level
+  matrix[I,S] llambda;  // plot level lambda
   
   // cell level
   for(r in 1:R) {
     B[r,] = beta[r] + B_std[r,] * L_Omega_B;  // B ~ mvNorm(beta, L_Omega_B)
   }
   b = B[,tax_i[,2]] + b_std * sigma_b; // b ~ Norm(B, sigma_b)
-  LAMBDA = exp(X * b);
+  lLAMBDA = X * b;
   
   
   // plot level
@@ -78,8 +78,8 @@ transformed parameters {
   }
   a = A[,tax_i[,2]] + a_std * sigma_a; // a ~ Norm(A, sigma_a)
   {
-    matrix[J,S] LAMBDA_Y = block(LAMBDA, K+1, 1, J, S);  // cell level Y
-    lambda = exp(V * a + log(h * LAMBDA_Y[IJ,]));
+    matrix[J,S] lLAMBDA_Y = block(lLAMBDA, K+1, 1, J, S);  // cell level Y
+    llambda = V * a + log(h) + lLAMBDA_Y[IJ,];
   }
   
 }
@@ -87,7 +87,7 @@ transformed parameters {
 model {
   
   // cell level priors
-  beta[1] ~ normal(10, 1);
+  beta[1] ~ normal(6.5, 1);
   beta[2:R] ~ normal(0, 1);
   for(r in 1:R) {
     b_std[r,] ~ normal(0, 1);
@@ -107,27 +107,29 @@ model {
   
   // likelihood
   for(s in 1:S) {
-    Y[,s] ~ poisson(lambda[,s]);
+    Y[,s] ~ poisson_log(llambda[,s]);
   }
   
 }
 
 generated quantities {
-  matrix<lower=0>[K_+J_,S] LAMBDA_ = exp(X_ * b);
-  matrix<lower=0>[I_,S] lambda_;
+  matrix[K_+J_,S] lLAMBDA_ = X_ * b;
+  matrix[I_,S] llambda_;
   matrix[I_,S] log_lik_lambda_;
+  matrix<lower=0>[K+J,S] LAMBDA = exp(lLAMBDA);
+  matrix<lower=0>[K_+J_,S] LAMBDA_ = exp(lLAMBDA_);
   matrix<lower=0, upper=1>[K+J,S] p;
   matrix<lower=0, upper=1>[K_+J_,S] p_;
   vector[K+J] ShannonH;
   vector[K_+J_] ShannonH_;
 
   {
-    matrix[J_,S] LAMBDA_Y_ = block(LAMBDA_, K_+1, 1, J_, S);
-    lambda_ = exp(V_ * a + log(h * LAMBDA_Y_[IJ_,]));
+    matrix[J_,S] lLAMBDA_Y_ = block(lLAMBDA_, K_+1, 1, J_, S);
+    llambda_ = V_ * a + log(h) + lLAMBDA_Y_[IJ_,];
   }
   for(s in 1:S) {
     for(i in 1:I_) {
-     log_lik_lambda_[i,s] = poisson_lpmf(Y_[i,s] | lambda_[i,s]);  
+     log_lik_lambda_[i,s] = poisson_log_lpmf(Y_[i,s] | llambda_[i,s]);  
     }
   }
   for(i in 1:(K+J)) {

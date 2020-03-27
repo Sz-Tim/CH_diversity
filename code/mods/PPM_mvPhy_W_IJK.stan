@@ -44,7 +44,10 @@ parameters {
   vector[Q] eta;  // W sampling effort slopes 
   
   // bias: W species random effects
-  vector<lower=0>[S] D;  // species bias in W
+  // vector<lower=0>[S] D;  // species bias in W
+  
+  // hurdle probability
+  // matrix<lower=0,upper=1>[K+J,S] theta;
 
 }
 
@@ -57,7 +60,7 @@ transformed parameters {
   matrix[R,G] B;  // genus cell level
   
   // Lambda/lambda
-  matrix<lower=0>[K+J,S] LAMBDA;  // cell level
+  matrix[K+J,S] lLAMBDA;  // cell level
   vector<lower=0, upper=1>[K] E = inv_logit(U * eta);  // sampling effort
   
   // cell level
@@ -65,19 +68,19 @@ transformed parameters {
     B[r,] = beta[r] + B_std[r,] * L_Omega_B;  // B ~ mvNorm(beta, L_Omega_B)
   }
   b = B[,tax_i[,2]] + b_std * sigma_b; // b ~ Norm(B, sigma_b)
-  LAMBDA = exp(X * b);
+  lLAMBDA = X * b;
   
 }
 
 model {
   
   // effort and species bias priors
-  D ~ normal(D_prior, 1);
-  eta[1] ~ normal(-10, 1);
+  // D ~ normal(D_prior, 1);
+  eta[1] ~ normal(-12, 1);
   eta[2:Q] ~ normal(0, 1);
   
   // cell level priors
-  beta[1] ~ normal(10, 1);
+  beta[1] ~ normal(6.5, 1);
   beta[2:R] ~ normal(0, 1);
   for(r in 1:R) {
     b_std[r,] ~ normal(0, 1);
@@ -88,28 +91,48 @@ model {
   
   // likelihood
   for(s in 1:S) {
-    W[,s] ~ poisson(LAMBDA[1:K,s].*E*D[s]);
+    // for(k in 1:K) {
+    //   if (W[k,s] == 0){
+    //     target += log_sum_exp(bernoulli_lpmf(1 | theta[k,s]),
+    //     bernoulli_lpmf(0 | theta[k,s]) + 
+    //       poisson_lpmf(W[k,s] | LAMBDA[k,s]*E[k]*D[s]));
+    //   } else {
+    //     target += bernoulli_lpmf(0 | theta[k,s])
+    //     + poisson_lpmf(W[k,s] | LAMBDA[k,s]*E[k]*D[s]);
+    //   }
+    // }
+    //   if (W[k,s] == 0) {
+    //     1 ~ bernoulli(theta[k,s]);
+    //   }
+    //   else {
+    //     0 ~ bernoulli(theta[k,s]);
+    //     W[k,s] ~ poisson(LAMBDA[k,s]*E[k]*D[s]) T[1, ];
+    //   }
+    // }
+    // W[,s] ~ poisson(LAMBDA[1:K,s].*E*D[s]);
+    W[,s] ~ poisson_log(lLAMBDA[1:K,s] + log(E));
   }
   
 }
 
 generated quantities {
-  matrix<lower=0>[K_+J_,S] LAMBDA_ = exp(X_ * b);
-  vector<lower=0, upper=1>[K_] E_ = inv_logit(U_ * eta);
-  matrix<lower=0>[I_,S] lambda_;
+  matrix[K_+J_,S] lLAMBDA_ = X_ * b;
+  matrix[I_,S] llambda_;
   matrix[I_,S] log_lik_lambda_;
+  matrix[K+J,S] LAMBDA = exp(lLAMBDA);
+  matrix[K_+J_,S] LAMBDA_ = exp(lLAMBDA_);
   matrix<lower=0, upper=1>[K+J,S] p;
   matrix<lower=0, upper=1>[K_+J_,S] p_;
   vector[K+J] ShannonH;
   vector[K_+J_] ShannonH_;
 
   {
-    matrix[J_,S] LAMBDA_Y_ = block(LAMBDA_, K_+1, 1, J_, S);
-    lambda_ = h * LAMBDA_Y_[IJ_,];
+    matrix[J_,S] lLAMBDA_Y_ = block(lLAMBDA_, K_+1, 1, J_, S);
+    llambda_ = log(h) + lLAMBDA_Y_[IJ_,];
   }
   for(s in 1:S) {
     for(i in 1:I_) {
-      log_lik_lambda_[i,s] = poisson_lpmf(Y_[i,s] | lambda_[i,s]);
+      log_lik_lambda_[i,s] = poisson_log_lpmf(Y_[i,s] | llambda_[i,s]);
     }
   }
   for(i in 1:(K+J)) {
