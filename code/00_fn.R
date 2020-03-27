@@ -43,6 +43,7 @@ make_V <- function(I, L) {
 
 
 #' Simulate phylogenetically structured slopes
+#' @param agg_true NULL, or vector of true values
 #' @param Lam_0 global intercept for Lambda; set to NULL for local env. slopes
 #' @param nCov number of covariates, including the intercept
 #' @param G number of genera
@@ -52,14 +53,19 @@ make_V <- function(I, L) {
 #' @param quad logical to indicate whether X[,nCov] = (X[,nCov-1])^2
 #' @param L_Omega NULL, or cholesky factor for G genera
 #' @return named list with slopes for 'agg', 'gen', and 'sp'
-make_slopes <- function(Lam_0, nCov, G, S, tax_i, sd_sp, quad, L_Omega=NULL) {
+make_slopes <- function(agg_true=NULL, Lam_0=NULL, nCov, G, S, tax_i, 
+                        sd_sp, quad, L_Omega=NULL) {
   # aggregate: alpha[nCov], beta[nCov]
-  if(!is.null(Lam_0)) {
-    agg <- cbind(c(Lam_0, rnorm(nCov-1, 0, 1)))
+  if(is.null(agg_true)) {
+    if(!is.null(Lam_0)) {
+      agg <- cbind(c(Lam_0, rnorm(nCov-1, 0, 1)))
+    } else {
+      agg <- cbind(rnorm(nCov, 0, 1))
+    }
+    if(quad) agg[nCov] <- ifelse(agg[nCov] < 0, 2*agg[nCov], -2*agg[nCov])
   } else {
-    agg <- cbind(rnorm(nCov, 0, 1))
+    agg <- cbind(agg_true)
   }
-  if(quad) agg[nCov] <- ifelse(agg[nCov] < 0, 2*agg[nCov], -2*agg[nCov])
   
   # genus-level: A[G,nCov], B[G,nCov]
   if(is.null(L_Omega)) {
