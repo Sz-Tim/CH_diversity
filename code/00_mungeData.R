@@ -8,8 +8,14 @@ library(tidyverse); library(sf); library(googlesheets)
 gis.dir <- "../2_gis/data/VD_21781/"
 ant.dir <- "../1_opfo/data/"
 tax_i <- read_csv("data/tax_i.csv") #%>% filter(sNum<50)
+veg_i <- read_csv(paste0(ant.dir, "vegcover_id.csv")) # van der Maarel 2007
 plot_i <- read_csv(paste0(ant.dir, "opfo_envDataProcessed.csv")) %>% 
-  arrange(BDM, Plot_id) %>% filter(Plot_id != "020201")
+  arrange(BDM, Plot_id) %>% filter(Plot_id != "020201") %>%
+  group_by(BDM) %>% 
+  mutate(SoilTempStd=(SoilTemp-mean(SoilTemp,na.rm=T))/sd(SoilTemp,na.rm=T)) %>%
+  mutate_at(c("Grass", "Forb", "Shrub", "Bare", "Litter", "Moss"), 
+            ~veg_i$Pct[match(., veg_i$class)]) %>%
+  mutate(VegTot=Grass + Forb + Shrub)
 source("code/00_fn.R"); source(paste0(ant.dir, "../code/00_fn.R"))
 
 
@@ -17,9 +23,9 @@ source("code/00_fn.R"); source(paste0(ant.dir, "../code/00_fn.R"))
 ##--- settings
 test_prop_W <- 0.3 # proportion of W data to use for testing models
 test_prop_Y <- 0.2 # proportion of Y data to use for testing models
-X_vars <- c("MAT", "Iso", "AP", "npp", "lcH", "MAT_sq")
-V_vars <- c("el", "slope", "pop")
-U_vars <- c("slope", "pop", "rdLen")
+X_vars <- c("MAT", "lcH", "npp", "MAT_sq")
+V_vars <- c("SoilTempStd", "Bare", "VegTot")
+U_vars <- c("pop", "rdLen")
 
 
 
@@ -109,6 +115,7 @@ roads <- st_read(paste0(gis.dir, "roads_VD_21781.shp")) %>% st_set_crs(21781)
 
 
 ##--- X
+# !!! Need to store all covariate df's, including _sq terms (XW, XY, V, U)
 # calculate means within W cells
 X_W.df <- filter(grd_W.sf, id %in% W_id) %>%
   mutate(el=raster::extract(dem, ., fun=mean),
@@ -145,7 +152,7 @@ V.df <- st_read("../2_gis/data/opfo/opfo_soil_25per.shp") %>%
   st_transform(st_crs(site.sf)) %>%
   mutate(Plot_id=str_remove_all(plot_id, "[[[:space:]]_]")) %>%
   select(Plot_id) %>% 
-  left_join(., select(plot_i, BDM, Plot_id), by="Plot_id") %>% 
+  left_join(., select(plot_i, BDM, Plot_id, all_of(V_vars)), by="Plot_id") %>% 
   mutate(el=raster::extract(dem, .),
          slope=raster::extract(slope, .),
          pop=replace_na(raster::extract(pop, .), 0)) %>%
@@ -183,14 +190,16 @@ U.all <- cbind(1, U.scale)
 # identify NA cells
 na.W <- which(is.na(rowSums(X_W.mx)[1:K$W]))
 na.W_ <- which(is.na(rowSums(X_W.mx)[K$W+(1:K$W_)]))
+na.Y <- which(is.na(rowSums(V.mx)[1:I$Y]))
+na.Y_ <- which(is.na(rowSums(V.mx)[I$Y+(1:I$Y_)]))
 
 
 
 ##--- export stan data
 d.ls <- list(K=K$W-length(na.W), K_=K$W_-length(na.W_), 
              J=J$Y, J_=J$Y_, 
-             IJ=IJ$Y, IJ_=IJ$Y_, 
-             I=I$Y, I_=I$Y_,
+             IJ=IJ$Y[-na.Y], IJ_=IJ$Y_[-na.Y_], 
+             I=I$Y-length(na.Y), I_=I$Y_-length(na.Y_),
              S=max(tax_i$sNum), 
              G=max(tax_i$gNum), 
              tax_i=tax_i[,c("sNum", "gNum")], 
@@ -200,36 +209,36 @@ d.ls <- list(K=K$W-length(na.W), K_=K$W_-length(na.W_),
              Q=dim(U.all)[2], 
              W=W[W_id,][(1:K$W)[-na.W],], 
              W_=W[W_id,][(K$W+(1:K$W_))[-na.W_],], 
-             Y=Y[1:I$Y,],
-             Y_=Y[I$Y+(1:I$Y_),],
+             Y=Y[1:I$Y,][-na.Y,],
+             Y_=Y[I$Y+(1:I$Y_),][-na.Y_,],
              X=X.all[(1:(K$W+J$Y))[-na.W],], 
              X_=X.all[((K$W+J$Y)+(1:(K$W_+J$Y_)))[-na.W_],], 
-             V=V.scale[1:I$Y,], 
-             V_=V.scale[I$Y+(1:I$Y_),],
+             V=V.scale[1:I$Y,][-na.Y,], 
+             V_=V.scale[I$Y+(1:I$Y_),][-na.Y_,],
              U=U.all[(1:K$W)[-na.W],], 
              U_=U.all[(K$W+(1:K$W_))[-na.W_],], 
              h=7.5e-7)
-# d.ls <- list(K=K$W, K_=K$W_, 
-#              J=J$Y, J_=J$Y_, 
-#              IJ=IJ$Y, IJ_=IJ$Y_, 
+# d.ls <- list(K=K$W, K_=K$W_,
+#              J=J$Y, J_=J$Y_,
+#              IJ=IJ$Y, IJ_=IJ$Y_,
 #              I=I$Y, I_=I$Y_,
-#              S=max(tax_i$sNum), 
-#              G=max(tax_i$gNum), 
-#              tax_i=tax_i[,c("sNum", "gNum")], 
-#              D_prior=tax_i$Dprior, 
-#              R=dim(X.all)[2], 
+#              S=max(tax_i$sNum),
+#              G=max(tax_i$gNum),
+#              tax_i=tax_i[,c("sNum", "gNum")],
+#              D_prior=tax_i$Dprior,
+#              R=dim(X.all)[2],
 #              L=dim(V.scale)[2],
-#              Q=dim(U.all)[2], 
-#              W=W[1:K$W,], 
-#              W_=W[K$W+(1:K$W_),], 
+#              Q=dim(U.all)[2],
+#              W=W[1:K$W,],
+#              W_=W[K$W+(1:K$W_),],
 #              Y=Y[1:I$Y,],
 #              Y_=Y[I$Y+(1:I$Y_),],
-#              X=X.all[1:(K$W+J$Y),], 
-#              X_=X.all[(K$W+J$Y)+(1:(K$W_+J$Y_)),], 
-#              V=V.scale[1:I$Y,], 
+#              X=X.all[1:(K$W+J$Y),],
+#              X_=X.all[(K$W+J$Y)+(1:(K$W_+J$Y_)),],
+#              V=V.scale[1:I$Y,],
 #              V_=V.scale[I$Y+(1:I$Y_),],
-#              U=U.all[1:K$W,], 
-#              U_=U.all[K$W+(1:K$W_),], 
+#              U=U.all[1:K$W,],
+#              U_=U.all[K$W+(1:K$W_),],
 #              h=7.5e-7)
 rstan::stan_rdump(ls(d.ls),
                   file=paste0("data/stan_data/test_realData.Rdump"),
