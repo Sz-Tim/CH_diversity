@@ -41,14 +41,14 @@ parameters {
   
   // slopes: cell level
   matrix[R,S] b_std;  // species slopes (stdNorm)
-  real<lower=0> sigma_b;  // conspecific sd 
+  real<lower=0> sigma_b[R];  // conspecific sd 
   matrix[R,G] B_std;  // genus slopes (stdNorm)
   vector[R] beta;  // overall slopes
   cholesky_factor_corr[G] L_Omega_B;  // genus-level correlation matrix 
   
   // slopes: plot level
   matrix[L,S] a_std;  // species slopes (stdNorm)
-  real<lower=0> sigma_a;  // conspecific sd 
+  real<lower=0> sigma_a[L];  // conspecific sd 
   matrix[L,G] A_std;  // genus slopes (stdNorm)
   vector[L] alpha;  // overall slopes
   cholesky_factor_corr[G] L_Omega_A;  // genus-level correlation matrix 
@@ -79,16 +79,16 @@ transformed parameters {
   // cell level
   for(r in 1:R) {
     B[r,] = beta[r] + B_std[r,] * L_Omega_B;  // B ~ mvNorm(beta, L_Omega_B)
+    b[r,] = B[r,tax_i[,2]] + b_std[r,] * sigma_b[r]; // b ~ Norm(B, sigma_b)
   }
-  b = B[,tax_i[,2]] + b_std * sigma_b; // b ~ Norm(B, sigma_b)
   lLAMBDA = X * b;
   
   
   // plot level
   for(l in 1:L) {
     A[l,] = alpha[l] + A_std[l,] * L_Omega_A;  // A ~ mvNorm(alpha, L_Omega_A)
+    a[l,] = A[l,tax_i[,2]] + a_std[l,] * sigma_a[l]; // a ~ Norm(A, sigma_a)
   }
-  a = A[,tax_i[,2]] + a_std * sigma_a; // a ~ Norm(A, sigma_a)
   {
     matrix[J,S] lLAMBDA_Y = block(lLAMBDA, K+1, 1, J, S);  // cell level Y
     llambda = V * a + log(h) + lLAMBDA_Y[IJ,];

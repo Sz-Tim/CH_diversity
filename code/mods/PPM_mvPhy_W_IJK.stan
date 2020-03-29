@@ -35,7 +35,7 @@ parameters {
   
   // slopes: cell level
   matrix[R,S] b_std;  // species slopes (stdNorm)
-  real<lower=0> sigma_b;  // conspecific sd 
+  real<lower=0> sigma_b[R];  // conspecific sd 
   matrix[R,G] B_std;  // genus slopes (stdNorm)
   vector[R] beta;  // overall slopes
   cholesky_factor_corr[G] L_Omega_B;  // genus-level correlation matrix 
@@ -66,8 +66,8 @@ transformed parameters {
   // cell level
   for(r in 1:R) {
     B[r,] = beta[r] + B_std[r,] * L_Omega_B;  // B ~ mvNorm(beta, L_Omega_B)
+    b[r,] = B[r,tax_i[,2]] + b_std[r,] * sigma_b[r]; // b ~ Norm(B, sigma_b)
   }
-  b = B[,tax_i[,2]] + b_std * sigma_b; // b ~ Norm(B, sigma_b)
   lLAMBDA = X * b;
   
 }
