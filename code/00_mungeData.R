@@ -9,10 +9,12 @@ gis.dir <- "../2_gis/data/VD_21781/"
 ant.dir <- "../1_opfo/data/"
 tax_i <- read_csv("data/tax_i.csv") #%>% filter(sNum<50)
 veg_i <- read_csv(paste0(ant.dir, "vegcover_id.csv")) # van der Maarel 2007
+lc_i <- readxl::read_xlsx(paste0(ant.dir, "landcover_id.xlsx"), 1)
 plot_i <- read_csv(paste0(ant.dir, "opfo_envDataProcessed.csv")) %>% 
   arrange(BDM, Plot_id) %>% filter(Plot_id != "020201") %>%
   group_by(BDM) %>% 
-  mutate(SoilTempStd=(SoilTemp-mean(SoilTemp,na.rm=T))/sd(SoilTemp,na.rm=T)) %>%
+  mutate(SoilTempStd=(SoilTemp-mean(SoilTemp,na.rm=T))/sd(SoilTemp,na.rm=T),
+         CanopyOpn=(lc_i$Canopy2[match(Categorie, lc_i$LC)]=="Open")*1) %>%
   mutate_at(c("Grass", "Forb", "Shrub", "Bare", "Litter", "Moss"), 
             ~veg_i$Pct[match(., veg_i$class)]) %>%
   mutate(VegTot=Grass + Forb + Shrub)
@@ -24,7 +26,7 @@ source("code/00_fn.R"); source(paste0(ant.dir, "../code/00_fn.R"))
 test_prop_W <- 0.3 # proportion of W data to use for testing models
 test_prop_Y <- 0.2 # proportion of Y data to use for testing models
 X_vars <- c("MAT", "lcH", "npp", "MAT_sq")
-V_vars <- c("SoilTempStd", "Bare", "VegTot")
+V_vars <- c("SoilTempStd", "CanopyOpn", "VegTot")
 U_vars <- c("pop", "rdLen")
 
 
@@ -163,6 +165,11 @@ V.mx <- as.matrix(V.df %>% st_set_geometry(NULL) %>%
                     select(all_of(V_vars)))
 V.scale <- scale(rbind(V.mx[1:I$Y,], 
                        V.mx[I$Y+(1:I$Y_),]))
+if("CanopyOpn" %in% V_vars) {
+  V.scale[,"CanopyOpn"] <- V.scale[,"CanopyOpn"] * 
+    attr(V.scale, "scaled:scale")["CanopyOpn"] + 
+    attr(V.scale, "scaled:center")["CanopyOpn"]
+}
 
 
 ##--- U
@@ -241,7 +248,7 @@ d.ls <- list(K=K$W-length(na.W), K_=K$W_-length(na.W_),
 #              U_=U.all[K$W+(1:K$W_),],
 #              h=7.5e-7)
 rstan::stan_rdump(ls(d.ls),
-                  file=paste0("data/stan_data/test_realData.Rdump"),
+                  file="data/stan_data/test_realData.Rdump",
                   envir=list2env(d.ls))
 
 
