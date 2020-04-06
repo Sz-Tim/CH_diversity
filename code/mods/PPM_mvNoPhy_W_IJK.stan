@@ -30,7 +30,8 @@ parameters {
   
   // slopes: cell level
   vector[R] beta;  // overall slopes
-  cholesky_factor_corr[S] L_Omega_b[R];  // genus-level correlation matrix 
+  cholesky_factor_corr[S] L_Omega_b[R];  // species-level correlation matrix 
+  vector<lower=0>[S] sigma_b[R];  // species-level correlation matrix 
   matrix[R,S] b_std;  // species slopes (stdNorm)
   
   // slopes: W effort
@@ -49,7 +50,8 @@ transformed parameters {
   vector<lower=0, upper=1>[K] E = inv_logit(U * eta);  // sampling effort
   
   for(r in 1:R) {
-    b[r,] = beta[r] + b_std[r,] * L_Omega_b[r];  // b ~ mvNorm(beta, L_Omega)
+    // b ~ mvNorm(beta, sigma_b * L_Omega_b * sigma_b);  
+    b[r,] = beta[r] + b_std[r,] * diag_pre_multiply(sigma_b[r], L_Omega_b[r]);
   }
   // cell level
   lLAMBDA = X * b;
@@ -68,6 +70,7 @@ model {
   for(r in 1:R) {
     b_std[r,] ~ normal(0, 1);
     L_Omega_b[r] ~ lkj_corr_cholesky(2);
+    sigma_b[r] ~ cauchy(0, 5);
   }
   
   // likelihood
@@ -87,7 +90,9 @@ generated quantities {
   matrix<lower=0, upper=1>[K_+J_,S] p_;
   vector[K+J] ShannonH;
   vector[K_+J_] ShannonH_;
+  cov_matrix[S] Sigma_b[R];
 
+  // calculated predicted LAMBDA and lambda
   {
     matrix[J_,S] lLAMBDA_Y_ = block(lLAMBDA_, K_+1, 1, J_, S);
     llambda_ = log(h) + lLAMBDA_Y_[IJ_,];
@@ -97,6 +102,8 @@ generated quantities {
       log_lik_lambda_[i,s] = poisson_log_lpmf(Y_[i,s] | llambda_[i,s]);
     }
   }
+  
+  // Shannon H: calculate p, then H
   for(i in 1:(K+J)) {
     p[i,] = LAMBDA[i,] / sum(LAMBDA[i,]);
   }
@@ -105,6 +112,12 @@ generated quantities {
   }
   ShannonH = - rows_dot_product(p, log(p));
   ShannonH_ = - rows_dot_product(p_, log(p_));
+  
+  // compose correlation matrices = sigma * LL' * sigma
+  for(r in 1:R) {
+    Sigma_b[r] = quad_form_diag(multiply_lower_tri_self_transpose(L_Omega_b[r]), 
+                                sigma_b[r]);
+  }
 }
 
 

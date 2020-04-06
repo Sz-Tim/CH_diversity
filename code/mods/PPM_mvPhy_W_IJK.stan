@@ -38,16 +38,11 @@ parameters {
   real<lower=0> sigma_b[R];  // conspecific sd 
   matrix[R,G] B_std;  // genus slopes (stdNorm)
   vector[R] beta;  // overall slopes
-  cholesky_factor_corr[G] L_Omega_B;  // genus-level correlation matrix 
+  cholesky_factor_corr[G] L_Omega_B[R];  // genus-level correlation matrix 
+  vector<lower=0>[G] sigma_B[R];  // genus-level correlation matrix 
   
   // slopes: W effort
   vector[Q] eta;  // W sampling effort slopes 
-  
-  // bias: W species random effects
-  // vector<lower=0>[S] D;  // species bias in W
-  
-  // hurdle probability
-  // matrix<lower=0,upper=1>[K+J,S] theta;
 
 }
 
@@ -65,8 +60,10 @@ transformed parameters {
   
   // cell level
   for(r in 1:R) {
-    B[r,] = beta[r] + B_std[r,] * L_Omega_B;  // B ~ mvNorm(beta, L_Omega_B)
-    b[r,] = B[r,tax_i[,2]] + b_std[r,] * sigma_b[r]; // b ~ Norm(B, sigma_b)
+    // B ~ mvNorm(beta, sigma_B * L_Omega_B * sigma_B);  
+    // b ~ Norm(B, sigma_b)
+    B[r,] = beta[r] + B_std[r,] * diag_pre_multiply(sigma_B[r], L_Omega_B[r]);  
+    b[r,] = B[r,tax_i[,2]] + b_std[r,] * sigma_b[r]; 
   }
   lLAMBDA = X * b;
   
@@ -85,31 +82,13 @@ model {
   for(r in 1:R) {
     b_std[r,] ~ normal(0, 1);
     B_std[r,] ~ normal(0, 1);
+    L_Omega_B[r] ~ lkj_corr_cholesky(2);
+    sigma_B[r] ~ cauchy(0,5);
   }
   sigma_b ~ normal(0, 1);
-  L_Omega_B ~ lkj_corr_cholesky(2);
   
   // likelihood
   for(s in 1:S) {
-    // for(k in 1:K) {
-    //   if (W[k,s] == 0){
-    //     target += log_sum_exp(bernoulli_lpmf(1 | theta[k,s]),
-    //     bernoulli_lpmf(0 | theta[k,s]) + 
-    //       poisson_lpmf(W[k,s] | LAMBDA[k,s]*E[k]*D[s]));
-    //   } else {
-    //     target += bernoulli_lpmf(0 | theta[k,s])
-    //     + poisson_lpmf(W[k,s] | LAMBDA[k,s]*E[k]*D[s]);
-    //   }
-    // }
-    //   if (W[k,s] == 0) {
-    //     1 ~ bernoulli(theta[k,s]);
-    //   }
-    //   else {
-    //     0 ~ bernoulli(theta[k,s]);
-    //     W[k,s] ~ poisson(LAMBDA[k,s]*E[k]*D[s]) T[1, ];
-    //   }
-    // }
-    // W[,s] ~ poisson(LAMBDA[1:K,s].*E*D[s]);
     W[,s] ~ poisson_log(lLAMBDA[1:K,s] + log(E));
   }
   
@@ -125,6 +104,7 @@ generated quantities {
   matrix<lower=0, upper=1>[K_+J_,S] p_;
   vector[K+J] ShannonH;
   vector[K_+J_] ShannonH_;
+  cov_matrix[G] Sigma_B[R];
 
   {
     matrix[J_,S] lLAMBDA_Y_ = block(lLAMBDA_, K_+1, 1, J_, S);
@@ -143,6 +123,10 @@ generated quantities {
   }
   ShannonH = - rows_dot_product(p, log(p));
   ShannonH_ = - rows_dot_product(p_, log(p_));
+  for(r in 1:R) {
+    Sigma_B[r] = quad_form_diag(multiply_lower_tri_self_transpose(L_Omega_B[r]), 
+                                sigma_B[r]);
+  }
 }
 
 
