@@ -74,7 +74,6 @@ stan_data <- list(K=K$W, J=K$Y, K_=K$W_, J_=K$Y_,
                   S=S, G=G, tax_i=tax_i[,-3], D_prior=tax_i[,3], R=R, L=L, Q=Q, 
                   W=obs$W, Y=obs$Y, Y_=obs$Y_,
                   X=rbind(X$W, X$Y), X_=rbind(X$W_, X$Y_), 
-                  # X_W=X$W, X_Y=X$Y, X_W_=X$W_, X_Y_=X$Y_,
                   V=V$Y, V_=V$Y_, U=U_W, U_=U_W_, h=h)
 
 out.ls <- list(
@@ -88,15 +87,16 @@ out.ls <- list(
 
 
 ## plot output: compare W, Y, WY ###############################################
-mod_cols <- c(W="#e41a1c", Y="#377eb8", WY="#984ea3", "WY_con"="black")
+mod_cols <- c(W="#1f78b4", Y="#33a02c", WY="#e31a1c", 
+              W_2="#a6cee3", Y_2="#b2df8a", WY_2="#fb9a99")
 
 # lpd (Y_ | lambda_)
 gg.ll <- map_dfr(out.ls, ~ggs(., "log_lik_lambda_"), .id="model")
 gg.ll.lpd <- gg.ll %>% group_by(model, Parameter) %>% 
-  summarise(mn=log(mean(exp(value)))) %>% 
+  summarise(mn=mean(value)) %>% 
   group_by(model) %>% 
   summarise(lpd=-2*sum(mn)/n())
-gg.ll.lpd
+gg.ll.lpd %>% arrange(lpd)
 
 library(loo)
 map(out.ls, ~loo::waic(loo::extract_log_lik(., "log_lik_lambda_"))) %>%
@@ -105,32 +105,45 @@ map(out.ls, ~loo::loo(loo::extract_log_lik(., "log_lik_lambda_"))) %>%
   loo::loo_compare()
 
 
+mod <- names(mod_cols)[6]
 
-H.out <- ggs(out.ls$W, "ShannonH") %>%
+H.out <- ggs(out.ls[[mod]], "ShannonH") %>%
   mutate(site=str_remove(str_split_fixed(Parameter, "\\[", n=2)[,2], "]"),
          site=as.numeric(site),
-         par=str_split_fixed(Parameter, "\\[", n=2)[,1]) %>%
+         par=str_split_fixed(Parameter, "\\[", n=2)[,1],
+         test=grepl("_", par)) %>%
   arrange(par, site)
 
-H.out <- rbind(H.out %>% filter(par=="ShannonH") %>%
-                 mutate(true=c(ShannonH$W, ShannonH$Y)[site]),
-               H.out %>% filter(par=="ShannonH_") %>%
-                 mutate(true=c(ShannonH$W_, ShannonH$Y_)[site]))
+H.out <- rbind(H.out %>% filter(!test) %>%
+                 mutate(true=c(ShannonH$W, ShannonH$Y)[site],
+                        set=c("Y", "W")[1+(site<=K$W)]),
+               H.out %>% filter(test) %>%
+                 mutate(true=c(ShannonH$W_, ShannonH$Y_)[site],
+                        set=c("Y", "W")[1+(site<=K$W_)]))
 H.out$diff <- H.out$value - H.out$true
 
-ggs_caterpillar(H.out) + facet_grid(.~par, scales="free_y") + 
-  geom_point(aes(x=true, y=Parameter), colour="red", size=0.5, shape=1)
+# ggs_caterpillar(H.out) + facet_grid(.~par, scales="free_y") + 
+#   geom_point(aes(x=true, y=Parameter), colour="red", size=0.5, shape=1)
+# 
+# ggplot(H.out, aes(x=diff)) + geom_density() 
+# ggplot(H.out, aes(true, diff, colour=site)) + geom_point(alpha=0.05) +
+#   facet_wrap(~par) 
 
-ggplot(H.out, aes(x=diff)) + geom_density() 
-ggplot(H.out, aes(true, diff, colour=site)) + geom_point(alpha=0.05) +
-  facet_wrap(~par) 
+# ggplot(H.out, aes(true, value, colour=set)) + geom_point(alpha=0.05) +
+#   geom_abline(colour="red", linetype=2) + facet_wrap(~par) + ylim(0,3) + 
+#   ggtitle("Y")
+H.out %>% group_by(Parameter, par, site, set) %>%
+  summarise(true=mean(true), postmn=mean(value), 
+            postq025=quantile(value, probs=.025),
+            postq975=quantile(value, probs=.975)) %>%
+  ggplot(aes(true, postmn)) +  geom_point(alpha=0.5) +
+  geom_linerange(aes(ymin=postq025, ymax=postq975), alpha=0.5) +
+  geom_abline(colour="red", linetype=2) + facet_grid(set~par) + ylim(0,3) + 
+  scale_colour_manual(values=mod_cols) + ggtitle(mod)
 
-ggplot(H.out, aes(true, value, colour=site)) + geom_point(alpha=0.05) +
-  geom_abline(colour="red", linetype=2) + facet_wrap(~par) + ylim(0,3)
-H.out %>% group_by(Parameter, par, site) %>% 
-  summarise(true=mean(true), postmn=mean(value)) %>%
-  ggplot(aes(true, postmn, colour=site)) +  geom_point(alpha=0.5) +
-  geom_abline(colour="red", linetype=2) + facet_wrap(~par) + ylim(0,3)
+ggplot(H.out, aes(true, diff)) + geom_point(alpha=0.5) + facet_grid(test~set) +
+  geom_hline(yintercept=0, colour="red", linetype=2)
+
 
 
 
@@ -140,7 +153,8 @@ ggplot(beta.out$gg, aes(x=value, colour=model)) +
   facet_wrap(~Parameter, scales="free") + 
   geom_rug(data=beta.out$post_mns, aes(x=mean), sides="b") +
   geom_vline(data=beta.out$true, aes(xintercept=value), linetype=2) +
-  geom_density() + scale_colour_manual(values=mod_cols) 
+  geom_density(aes(group=paste(model, Chain))) + 
+  scale_colour_manual(values=mod_cols) 
 ggsave("eda/beta_density.pdf", width=8, height=3, units="in")
 
 # alpha
@@ -290,6 +304,10 @@ lam.out$sum.gg %>%
   facet_grid(model~train) + geom_hline(yintercept=0) + 
   geom_point(alpha=0.2) + scale_colour_manual(values=mod_cols) +
   labs(x="pP", y="log(true  lambda)")
+
+
+
+
 
 
 
