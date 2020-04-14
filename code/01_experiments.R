@@ -10,7 +10,135 @@ options(mc.cores=parallel::detectCores())
 rstan_options(auto_write = TRUE)
 source("code/00_fn.R")
 
-opfo.dir <- "../1_opfo/data/"
+################################################################################
+# Simulations based on real data
+# LAMBDA, lambda as true abundance
+# 1 km2 grid cells and 0.75 m2 soil plots
+
+true.ls <- read_rdump("data/stan_data/test_realData.Rdump")
+p.fit <- read_csv("out/test_realWY.csv") %>% rename(Parameter=X1)
+tax_i <- read_csv("data/tax_i.csv") %>% filter(., sNum<=true.ls$S) %>% 
+  dplyr::select(sNum, gNum, Dprior) %>% as.matrix
+tax.df <- tax_i <- read_csv("data/tax_i.csv") %>% filter(., sNum<=true.ls$S) 
+
+# slopes
+# beta.ls <- make_slopes(agg_true=p.fit$mean[grepl("beta", p.fit$Parameter)],
+#                        nCov=true.ls$R, G=true.ls$G, S=true.ls$S, tax_i=tax_i,
+#                        sd_sp=p.fit$mean[grepl("sigma_b", p.fit$Parameter)],
+#                        L_Omega=matrix(p.fit$mean[grepl("L_Omega_B",
+#                                                        p.fit$Parameter)],
+#                                       ncol=true.ls$G, byrow=T))
+# alpha.ls <- make_slopes(agg_true=p.fit$mean[grepl("alpha", p.fit$Parameter)],
+#                        nCov=true.ls$L, G=true.ls$G, S=true.ls$S, tax_i=tax_i,
+#                        sd_sp=p.fit$mean[grepl("sigma_a", p.fit$Parameter)],
+#                        L_Omega=matrix(p.fit$mean[grepl("L_Omega_A",
+#                                                        p.fit$Parameter)],
+#                                       ncol=true.ls$G, byrow=T))
+beta.ls <- list(agg=p.fit$mean[grepl("beta", p.fit$Parameter)],
+                gen=matrix(p.fit$mean[grepl("^B\\[", p.fit$Parameter)],
+                           ncol=true.ls$G, byrow=T),
+                sp=matrix(p.fit$mean[grepl("^b\\[", p.fit$Parameter)], 
+                          ncol=true.ls$S, byrow=T))
+alpha.ls <- list(agg=p.fit$mean[grepl("alpha", p.fit$Parameter)],
+                gen=matrix(p.fit$mean[grepl("^A\\[", p.fit$Parameter)],
+                           ncol=true.ls$G, byrow=T),
+                sp=matrix(p.fit$mean[grepl("^a\\[", p.fit$Parameter)], 
+                          ncol=true.ls$S, byrow=T))
+
+# predicted intensities
+LAMBDA <- exp(true.ls$X %*% beta.ls$sp)  # rbind(W, Y.km2)
+LAMBDA_ <- exp(true.ls$X_ %*% beta.ls$sp)  # rbind(W_, Y_.km2)
+lambda <- exp(true.ls$V %*% alpha.ls$sp + 
+                log(true.ls$h*LAMBDA[true.ls$IJ + true.ls$K,]))
+lambda_ <- exp(true.ls$V_ %*% alpha.ls$sp + 
+                log(true.ls$h*LAMBDA_[true.ls$IJ_ + true.ls$K_,]))
+
+# W effort and bias
+E <- inv.logit(true.ls$U %*% p.fit$mean[grepl("^eta", p.fit$Parameter)])
+E_ <- inv.logit(true.ls$U_ %*% p.fit$mean[grepl("^eta", p.fit$Parameter)])
+D <- p.fit$mean[grepl("D", p.fit$Parameter)]
+
+# counts
+obs <- list(W=matrix(NA, nrow=true.ls$K, ncol=true.ls$S), 
+            W_=matrix(NA, nrow=true.ls$K_, ncol=true.ls$S),
+            Yj=matrix(NA, nrow=true.ls$J, ncol=true.ls$S),
+            Yj_=matrix(NA, nrow=true.ls$J_, ncol=true.ls$S),
+            Y=matrix(NA, nrow=true.ls$I, ncol=true.ls$S), 
+            Y_=matrix(NA, nrow=true.ls$I_, ncol=true.ls$S))
+for(s in 1:true.ls$S) {
+  obs$W[,s] <- rpois(true.ls$K, LAMBDA[1:true.ls$K,s]*E*D[s])
+  obs$W_[,s] <- rpois(true.ls$K_, LAMBDA_[1:true.ls$K_,s]*E_*D[s])
+  obs$Yj[,s] <- rpois(true.ls$J, LAMBDA[(1:true.ls$J)+true.ls$K,s])
+  obs$Yj_[,s] <- rpois(true.ls$J_, LAMBDA_[(1:true.ls$J_)+true.ls$K_,s])
+  obs$Y[,s] <- rpois(true.ls$I, lambda[,s])
+  obs$Y_[,s] <- rpois(true.ls$I_, lambda_[,s])
+}
+map(obs, ~summary(c(.)))
+map(obs, ~sum(c(.)>0)/length(c(.)))
+
+ShannonH <- prop.table(LAMBDA, 1) %>%
+  apply(., 1, function(x) -sum(x * log(x)))
+ShannonH_ <- prop.table(LAMBDA_, 1) %>%
+  apply(., 1, function(x) -sum(x * log(x)))
+ShannonH.obs <- prop.table(rbind(obs$W, obs$Yj), 1) %>%
+  apply(., 1, function(x) -sum(x * log(x)))
+ShannonH.obs_ <- prop.table(rbind(obs$W_, obs$Yj_), 1) %>%
+  apply(., 1, function(x) -sum(x * log(x)))
+
+plot(p.fit$mean[grepl("ShannonH_\\[", p.fit$Parameter)], ShannonH_); abline(0,1)
+plot(true.ls$X_[,2], p.fit$mean[grepl("ShannonH_\\[", p.fit$Parameter)])
+
+
+p.fit %>% filter(grepl("^a\\[", Parameter)) %>% 
+  mutate(covariate=str_sub(Parameter, 3,3), 
+         species=str_remove(str_split_fixed(Parameter, ",", 2)[,2], "]"), 
+         genus=as.character(tax_i[,2][as.numeric(species)]),
+         genName=tax.df$genus[as.numeric(species)]) %>% 
+  ggplot(aes(x=species, y=mean, ymin=`2.5%`, ymax=`97.5%`)) + 
+  geom_point(alpha=0.5) + geom_linerange(alpha=0.5) + 
+  facet_grid(covariate~genName, scales="free", space="free_x") + 
+  geom_hline(yintercept=0, linetype=2, size=0.5)
+p.fit %>% filter(grepl("^b\\[", Parameter)) %>% 
+  mutate(covariate=str_sub(Parameter, 3,3), 
+         species=str_remove(str_split_fixed(Parameter, ",", 2)[,2], "]"), 
+         genus=as.character(tax_i[,2][as.numeric(species)]),
+         genName=tax.df$genus[as.numeric(species)]) %>% 
+  ggplot(aes(x=species, y=mean, ymin=`2.5%`, ymax=`97.5%`)) + 
+  geom_point(alpha=0.5) + geom_linerange(alpha=0.5) + 
+  facet_grid(covariate~genName, scales="free", space="free_x") + 
+  geom_hline(yintercept=0, linetype=2, size=0.5)
+p.fit %>% filter(grepl("^a\\[", Parameter)) %>% 
+  mutate(covariate=str_sub(Parameter, 3,3), 
+         species=str_remove(str_split_fixed(Parameter, ",", 2)[,2], "]"), 
+         genus=as.character(tax_i[,2][as.numeric(species)])) %>% 
+  ggplot(aes(x=mean)) + geom_histogram() + facet_wrap(~covariate, scales="free")
+p.fit %>% filter(grepl("^b\\[", Parameter)) %>% 
+  mutate(covariate=str_sub(Parameter, 3,3), 
+         species=str_remove(str_split_fixed(Parameter, ",", 2)[,2], "]"), 
+         genus=as.character(tax_i[,2][as.numeric(species)])) %>% 
+  ggplot(aes(x=mean)) + geom_histogram() + facet_wrap(~covariate, scales="free")
+
+
+
+d.trueSim <- list(K=true.ls$K, J=true.ls$J, K_=true.ls$K_, J_=true.ls$J_, 
+                  IJ=true.ls$IJ, IJ_=true.ls$IJ_, I=true.ls$I, I_=true.ls$I_,
+                  S=true.ls$S, G=true.ls$G, tax_i=true.ls$tax_i, 
+                  D_prior=true.ls$D_prior,
+                  R=true.ls$R, L=true.ls$L, Q=true.ls$Q, 
+                  W=obs$W, W_=obs$W_, Y=obs$Y, Y_=obs$Y_,
+                  X=true.ls$X, X_=true.ls$X_, 
+                  V=true.ls$V, V_=true.ls$V_, U=true.ls$U, U_=true.ls$U_, 
+                  h=true.ls$h)
+
+out.ls <- list(
+  WY=stan(file="code/mods/PPM_mvPhy_WY_IJK.stan", chains=2,
+          data=d.trueSim, thin=5, warmup=500, iter=1000, init=0),
+  W=stan(file="code/mods/PPM_mvPhy_W_IJK.stan", chains=2,
+         data=d.trueSim, thin=5, warmup=500, iter=1000, init=0),
+  Y=stan(file="code/mods/PPM_mvPhy_Y_IJK.stan", chains=2,
+         data=d.trueSim, thin=5, warmup=500, iter=1000, init=0)
+)
+
 
 
 
@@ -19,18 +147,18 @@ opfo.dir <- "../1_opfo/data/"
 # 1 km2 grid cells and 0.75 m2 soil plots
 
 ## make up parameters ##########################################################
-S <- 16#74  # number of species
+S <- 16  # number of species
 R <- 3  # number of regional covariates
 L <- 2
 Q <- 2  # number of W effort covariates
 K <- list(W=200, Y=35, W_=2, Y_=9)  # number of cells (W: 1252, Y: 44)
 IJ <- list(Y=rep(1:K$Y, each=25), Y_=rep(1:K$Y_, each=25))
 I <- list(Y=length(IJ$Y), Y_=length(IJ$Y_))  # number of soil plots
-Lambda_0 <- 10.5
-effort_0 <- -11
+Lambda_0 <- 6.56#10.5
+effort_0 <- -12.16#-11
 h <- 7.5e-7  # (6*pi*(0.2)^2)/(1000*1000)
-sigma_a <- 0.57
-sigma_b <- 1.3
+sigma_a <- 0.33
+sigma_b <- 0.93
 tax_i <- read_csv("data/tax_i.csv") %>% filter(., sNum<=S) %>% 
   dplyr::select(sNum, gNum, Dprior) %>% as.matrix
 G <- max(tax_i[,2])
@@ -41,8 +169,8 @@ quadratic_R <- TRUE
 # covariates, slopes, true Lambda, true lambda
 X <- make_X(K, R, quadratic_R)
 V <- make_V(I, L)
-beta.ls <- make_slopes(Lambda_0, R, G, S, tax_i, sigma_b, quadratic_R)
-alpha.ls <- make_slopes(NULL, L, G, S, tax_i, sigma_a, FALSE)
+beta.ls <- make_slopes(NULL, Lambda_0, R, G, S, tax_i, sigma_b, quadratic_R)
+alpha.ls <- make_slopes(NULL, NULL, L, G, S, tax_i, sigma_a, FALSE)
 LAMBDA <- map(X, ~exp(. %*% beta.ls$sp))
 lambda <- map(names(IJ), ~exp(V[[.]] %*% alpha.ls$sp + log(h*LAMBDA[[.]][IJ[[.]],])))
 names(lambda) <- names(IJ)
