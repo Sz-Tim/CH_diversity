@@ -80,6 +80,8 @@ transformed parameters {
   
 }
 
+
+
 model {
   
   // cell level priors
@@ -105,6 +107,8 @@ model {
   }
   
 }
+
+
 
 generated quantities {
   matrix[K_+J_,S] lLAMBDA_ = X_ * b;

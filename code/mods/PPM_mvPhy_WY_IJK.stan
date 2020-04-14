@@ -151,8 +151,8 @@ generated quantities {
   matrix<lower=0, upper=1>[K_+J_,S] p_;
   vector[K+J] ShannonH;
   vector[K_+J_] ShannonH_;
-  cov_matrix[G] Sigma_B[R];
-  cov_matrix[G] Sigma_A[L];
+  matrix[G,G] Sigma_B[R];
+  matrix[G,G] Sigma_A[L];
 
   // calculated predicted LAMBDA and lambda
   {

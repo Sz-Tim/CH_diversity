@@ -104,7 +104,7 @@ generated quantities {
   matrix<lower=0, upper=1>[K_+J_,S] p_;
   vector[K+J] ShannonH;
   vector[K_+J_] ShannonH_;
-  cov_matrix[G] Sigma_B[R];
+  matrix[G,G] Sigma_B[R];
 
   {
     matrix[J_,S] lLAMBDA_Y_ = block(lLAMBDA_, K_+1, 1, J_, S);
