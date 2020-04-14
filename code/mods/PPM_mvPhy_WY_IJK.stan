@@ -44,14 +44,16 @@ parameters {
   real<lower=0> sigma_b[R];  // conspecific sd 
   matrix[R,G] B_std;  // genus slopes (stdNorm)
   vector[R] beta;  // overall slopes
-  cholesky_factor_corr[G] L_Omega_B;  // genus-level correlation matrix 
+  cholesky_factor_corr[G] L_Omega_B[R];  // genus-level correlation matrix 
+  vector<lower=0>[G] sigma_B[R];  // genus-level correlation matrix 
   
   // slopes: plot level
   matrix[L,S] a_std;  // species slopes (stdNorm)
   real<lower=0> sigma_a[L];  // conspecific sd 
   matrix[L,G] A_std;  // genus slopes (stdNorm)
   vector[L] alpha;  // overall slopes
-  cholesky_factor_corr[G] L_Omega_A;  // genus-level correlation matrix 
+  cholesky_factor_corr[G] L_Omega_A[L];  // genus-level correlation matrix 
+  vector<lower=0>[G] sigma_A[L];  // genus-level correlation matrix 
   
   // slopes: W effort
   vector[Q] eta;  // W sampling effort slopes 
@@ -78,16 +80,20 @@ transformed parameters {
   
   // cell level
   for(r in 1:R) {
-    B[r,] = beta[r] + B_std[r,] * L_Omega_B;  // B ~ mvNorm(beta, L_Omega_B)
-    b[r,] = B[r,tax_i[,2]] + b_std[r,] * sigma_b[r]; // b ~ Norm(B, sigma_b)
+    // B ~ mvNorm(beta, sigma_B * L_Omega_B * sigma_B);  
+    // b ~ Norm(B, sigma_b)
+    B[r,] = beta[r] + B_std[r,] * diag_pre_multiply(sigma_B[r], L_Omega_B[r]);  
+    b[r,] = B[r,tax_i[,2]] + b_std[r,] * sigma_b[r]; 
   }
   lLAMBDA = X * b;
   
   
   // plot level
   for(l in 1:L) {
-    A[l,] = alpha[l] + A_std[l,] * L_Omega_A;  // A ~ mvNorm(alpha, L_Omega_A)
-    a[l,] = A[l,tax_i[,2]] + a_std[l,] * sigma_a[l]; // a ~ Norm(A, sigma_a)
+    // A ~ mvNorm(alpha, sigma_A * L_Omega_A * sigma_A);  
+    // a ~ Norm(A, sigma_a)
+    A[l,] = alpha[l] + A_std[l,] * diag_pre_multiply(sigma_A[l], L_Omega_A[l]);  
+    a[l,] = A[l,tax_i[,2]] + a_std[l,] * sigma_a[l]; 
   }
   {
     matrix[J,S] lLAMBDA_Y = block(lLAMBDA, K+1, 1, J, S);  // cell level Y
@@ -109,18 +115,20 @@ model {
   for(r in 1:R) {
     b_std[r,] ~ normal(0, 1);
     B_std[r,] ~ normal(0, 1);
+    L_Omega_B[r] ~ lkj_corr_cholesky(2);
+    sigma_B[r] ~ cauchy(0,5);
   }
   sigma_b ~ normal(0, 1);
-  L_Omega_B ~ lkj_corr_cholesky(2);
   
   // plot level priors
   alpha ~ normal(0, 1);
   for(l in 1:L) {
     a_std[l,] ~ normal(0, 1);
     A_std[l,] ~ normal(0, 1);
+    L_Omega_A[l] ~ lkj_corr_cholesky(2);
+    sigma_A[l] ~ cauchy(0,5);
   }
   sigma_a ~ normal(0, 1);
-  L_Omega_A ~ lkj_corr_cholesky(2);
   
   // likelihood
   {
@@ -143,7 +151,10 @@ generated quantities {
   matrix<lower=0, upper=1>[K_+J_,S] p_;
   vector[K+J] ShannonH;
   vector[K_+J_] ShannonH_;
+  cov_matrix[G] Sigma_B[R];
+  cov_matrix[G] Sigma_A[L];
 
+  // calculated predicted LAMBDA and lambda
   {
     matrix[J_,S] lLAMBDA_Y_ = block(lLAMBDA_, K_+1, 1, J_, S);
     llambda_ = V_ * a + log(h) + lLAMBDA_Y_[IJ_,];
@@ -153,6 +164,8 @@ generated quantities {
      log_lik_lambda_[i,s] = poisson_log_lpmf(Y_[i,s] | llambda_[i,s]);  
     }
   }
+  
+  // Shannon H: calculate p, then H
   for(i in 1:(K+J)) {
     p[i,] = LAMBDA[i,] / sum(LAMBDA[i,]);
   }
@@ -161,6 +174,16 @@ generated quantities {
   }
   ShannonH = - rows_dot_product(p, log(p));
   ShannonH_ = - rows_dot_product(p_, log(p_));
+  
+  // compose correlation matrices = sigma * LL' * sigma
+  for(r in 1:R) {
+    Sigma_B[r] = quad_form_diag(multiply_lower_tri_self_transpose(L_Omega_B[r]), 
+                                sigma_B[r]);
+  }
+  for(l in 1:L) {
+    Sigma_A[l] = quad_form_diag(multiply_lower_tri_self_transpose(L_Omega_A[l]), 
+                                sigma_A[l]);
+  }
 }
 
 
