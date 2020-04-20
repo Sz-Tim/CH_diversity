@@ -5,7 +5,9 @@ data {
   int<lower=0> K_; // grid cells for W (test)
   int<lower=0> J; // grid cells for Y (train)
   int<lower=0> J_; // grid cells for Y (test)
+  int<lower=0> I; // plots (train)
   int<lower=0> I_; // plots (test)
+  int<lower=0> IJ[I]; // plot to grid cell lookup (train)
   int<lower=0> IJ_[I_]; // plot to grid cell lookup (test)
   int<lower=0> S;  // number of species
   int<lower=0> R;  // number of cell-scale covariates (incl. intercept)
@@ -13,6 +15,7 @@ data {
   
   // observed data
   int<lower=0> W[K,S];  // W counts (train)
+  int<lower=0> Y[I,S];  // Y counts (train)
   int<lower=0> Y_[I_,S];  // Y counts (test)
   
   // covariates
@@ -65,12 +68,12 @@ model {
   eta[2:Q] ~ normal(0, 1);
   
   // cell level priors
-  beta[1] ~ normal(6.5, 1);
+  beta[1] ~ normal(6, 1);
   beta[2:R] ~ normal(0, 1);
   for(r in 1:R) {
     b_std[r,] ~ normal(0, 1);
     L_Omega_b[r] ~ lkj_corr_cholesky(2);
-    sigma_b[r] ~ cauchy(0, 5);
+    sigma_b[r] ~ cauchy(0, 2);
   }
   
   // likelihood
@@ -81,25 +84,31 @@ model {
 }
 
 generated quantities {
+  
   matrix[K_+J_,S] lLAMBDA_ = X_ * b;
+  matrix[I,S] llambda;
   matrix[I_,S] llambda_;
   matrix[I_,S] log_lik_lambda_;
-  matrix[K+J,S] LAMBDA = exp(lLAMBDA);
-  matrix[K_+J_,S] LAMBDA_ = exp(lLAMBDA_);
+  matrix<lower=0>[K+J,S] LAMBDA = exp(lLAMBDA);
+  matrix<lower=0>[K_+J_,S] LAMBDA_ = exp(lLAMBDA_);
   matrix<lower=0, upper=1>[K+J,S] p;
   matrix<lower=0, upper=1>[K_+J_,S] p_;
   vector[K+J] ShannonH;
   vector[K_+J_] ShannonH_;
   cov_matrix[S] Sigma_b[R];
+  matrix<lower=0>[I,S] Y_rep;
 
   // calculated predicted LAMBDA and lambda
   {
+    matrix[J,S] lLAMBDA_Y = block(lLAMBDA, K+1, 1, J, S);
     matrix[J_,S] lLAMBDA_Y_ = block(lLAMBDA_, K_+1, 1, J_, S);
+    llambda = log(h) + lLAMBDA_Y[IJ,];
     llambda_ = log(h) + lLAMBDA_Y_[IJ_,];
   }
   for(s in 1:S) {
     for(i in 1:I_) {
       log_lik_lambda_[i,s] = poisson_log_lpmf(Y_[i,s] | llambda_[i,s]);
+      Y_rep[i,s] = poisson_log_rng(llambda[i,s]);
     }
   }
   
@@ -118,6 +127,7 @@ generated quantities {
     Sigma_b[r] = quad_form_diag(multiply_lower_tri_self_transpose(L_Omega_b[r]), 
                                 sigma_b[r]);
   }
+  
 }
 
 
