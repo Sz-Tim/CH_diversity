@@ -16,24 +16,12 @@ source("code/00_fn.R")
 # 1 km2 grid cells and 0.75 m2 soil plots
 
 true.ls <- read_rdump("data/stan_data/test_realData.Rdump")
-p.fit <- read_csv("out/test_realWY.csv") %>% rename(Parameter=X1)
+p.fit <- readRDS("out/tests/testSum_WY.rds") %>% as_tibble(rownames="Parameter")
 tax_i <- read_csv("data/tax_i.csv") %>% filter(., sNum<=true.ls$S) %>% 
   dplyr::select(sNum, gNum, Dprior) %>% as.matrix
 tax.df <- tax_i <- read_csv("data/tax_i.csv") %>% filter(., sNum<=true.ls$S) 
 
 # slopes
-# beta.ls <- make_slopes(agg_true=p.fit$mean[grepl("beta", p.fit$Parameter)],
-#                        nCov=true.ls$R, G=true.ls$G, S=true.ls$S, tax_i=tax_i,
-#                        sd_sp=p.fit$mean[grepl("sigma_b", p.fit$Parameter)],
-#                        L_Omega=matrix(p.fit$mean[grepl("L_Omega_B",
-#                                                        p.fit$Parameter)],
-#                                       ncol=true.ls$G, byrow=T))
-# alpha.ls <- make_slopes(agg_true=p.fit$mean[grepl("alpha", p.fit$Parameter)],
-#                        nCov=true.ls$L, G=true.ls$G, S=true.ls$S, tax_i=tax_i,
-#                        sd_sp=p.fit$mean[grepl("sigma_a", p.fit$Parameter)],
-#                        L_Omega=matrix(p.fit$mean[grepl("L_Omega_A",
-#                                                        p.fit$Parameter)],
-#                                       ncol=true.ls$G, byrow=T))
 beta.ls <- list(agg=p.fit$mean[grepl("beta", p.fit$Parameter)],
                 gen=matrix(p.fit$mean[grepl("^B\\[", p.fit$Parameter)],
                            ncol=true.ls$G, byrow=T),
