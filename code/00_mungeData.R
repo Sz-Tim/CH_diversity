@@ -15,20 +15,24 @@ plot_i <- read_csv(paste0(ant.dir, "opfo_envDataProcessed.csv")) %>%
   group_by(BDM) %>% 
   mutate(SoilTSt=(SoilTemp-mean(SoilTemp,na.rm=T))/sd(SoilTemp,na.rm=T),
          CnpyOpn=(lc_i$Canopy[match(Categorie, lc_i$LC)]=="Open")*1,
-         CnpyMxd=(lc_i$Canopy[match(Categorie, lc_i$LC)]=="Mixed")*1) %>%
+         CnpyMxd=(lc_i$Canopy[match(Categorie, lc_i$LC)]=="Mixed")*1,
+         Pasture=(TypeOfOpen=="pasture")*1,
+         Crop=(TypeOfOpen=="crop")*1) %>%
   mutate_at(c("Grass", "Forb", "Shrub", "Bare", "Litter", "Moss"), 
             ~veg_i$Pct[match(., veg_i$class)]) %>%
   mutate(VegTot=Grass + Forb + Shrub)
+plot_i$Pasture[is.na(plot_i$Pasture)] <- 0
+plot_i$Crop[is.na(plot_i$Crop)] <- 0
 source("code/00_fn.R"); source(paste0(ant.dir, "../code/00_fn.R"))
 
 
 
 ##--- settings
-test_prop_W <- 0.1 # proportion of W data to use for testing models
-test_prop_Y <- 0.1 # proportion of Y data to use for testing models
+test_prop_W <- 0.2 # proportion of W data to use for testing models
+test_prop_Y <- 0.2 # proportion of Y data to use for testing models
 X_vars <- c("MAT", "Iso", "AP", "lcH", "npp", "MAT_sq", "AP_sq")
-V_vars <- c("SoilTSt", "CnpyOpn", "CnpyMxd", "VegTot")
-U_vars <- c("pop", "rdLen")
+V_vars <- c("SoilTSt", "CnpyOpn", "CnpyMxd", "Pasture", "Crop", "VegTot")
+U_vars <- c("pop", "rdLen", "bldgs")
 
 
 
@@ -50,9 +54,11 @@ site.sf <- agg_str_site_data() %>% arrange(BDM)
 
 ##--- testing / training
 grd_W.sf <- grd_W.sf %>% 
+  # mutate(K_orig=row_number(), K_rand=K_orig) %>%
   mutate(K_orig=row_number(), K_rand=sample(1:n())) %>%
   arrange(K_rand)
 site.sf <- site.sf %>%
+  # mutate(J_orig=row_number(), J_rand=J_orig) %>%
   mutate(J_orig=row_number(), J_rand=sample(1:n())) %>%
   arrange(J_rand)
 plot_i <- plot_i %>% ungroup %>%
@@ -70,7 +76,8 @@ grid.W <- st_join(ants$pub, grd_W.sf) %>%
   summarise(nObs=n()) %>% ungroup %>%
   filter(inbd) %>%
   arrange(K_rand)
-W <- matrix(0, nrow=nrow(grd_W.sf), ncol=max(tax_i$sNum))
+W <- matrix(0, nrow=nrow(grd_W.sf), ncol=max(tax_i$sNum), 
+            dimnames=list(grd_W.sf$K_rand, tax_i$species))
 for(s in 1:max(tax_i$sNum)) {
   sp.occ <- filter(grid.W, SPECIESID==tax_i$species[s])
   if(nrow(sp.occ)>0) W[sp.occ$K_rand,s] <- sp.occ$nObs
@@ -85,8 +92,9 @@ box.Y <- ants$str %>% group_by(BDM, Plot_id, SPECIESID) %>%
   left_join(., select(plot_i, BDM, Plot_id, J_orig, J_rand, I_rand), 
             by=c("BDM", "Plot_id")) %>%
   arrange(I_rand)
-# Y: ordered by plot_i$Plot_id = arrange(BDM, Plot_id)
-Y <- matrix(0, nrow=sum(site.sf$nPlot_Total), ncol=max(tax_i$sNum))
+# Y: ordered by plot_i$Plot_id = arrange(I_rand)
+Y <- matrix(0, nrow=nrow(plot_i), ncol=max(tax_i$sNum),
+            dimnames=list(plot_i$Plot_id, tax_i$species))
 for(s in 1:max(tax_i$sNum)) {
   sp.occ <- filter(box.Y, SPECIESID==tax_i$species[s])
   if(nrow(sp.occ)>0) Y[which(plot_i$Plot_id %in% sp.occ$Plot_id),s] <- sp.occ$nObs
@@ -99,28 +107,15 @@ K <- list(W=floor(length(W_id)*(1-test_prop_W)),
           W_=ceiling(length(W_id)*test_prop_W))
 J <- list(Y=floor(nrow(site.sf)*(1-test_prop_Y)), 
           Y_=ceiling(nrow(site.sf)*test_prop_Y))
-IJ <- list(Y=rep(1:J$Y, times=site.sf$nPlot_Total[1:J$Y]), 
-           Y_=rep(1:J$Y_, times=site.sf$nPlot_Total[(1:J$Y_)+J$Y]))
+if(all(J>0)) {  # test/train
+  IJ <- list(Y=rep(1:J$Y, times=site.sf$nPlot_Total[1:J$Y]), 
+             Y_=rep(1:J$Y_, times=site.sf$nPlot_Total[(1:J$Y_)+J$Y]))
+} else {  # no test
+  IJ <- list(Y=rep(1:J$Y, times=site.sf$nPlot_Total[1:J$Y]),
+             Y_=NULL)
+}
 I <- list(Y=length(IJ$Y),
           Y_=length(IJ$Y_))
-
-
-# ##--- testing / training randomization
-# K_ord <- tibble(orig=1:length(W_id), rand=1:length(W_id)) %>%#rand=sample(orig)) %>%
-#   arrange(rand) %>% mutate(train=row_number()<=K$W)
-# J_ord <- tibble(orig=1:nrow(site.sf), rand=1:nrow(site.sf)) %>%#rand=sample(orig)) %>%
-#   arrange(rand) %>% mutate(train=row_number()<=J$Y)
-# IJ_ord <- list(Y_ord=rep(J_ord$orig[J_ord$train], 
-#                          times=site.sf$nPlot_Total[J_ord$orig[J_ord$train]]),
-#                Y_ord_=rep(J_ord$orig[!J_ord$train], 
-#                           times=site.sf$nPlot_Total[J_ord$orig[!J_ord$train]]),
-#                Y=rep(1:J$Y, 
-#                      times=site.sf$nPlot_Total[J_ord$orig[J_ord$train]]),
-#                Y_=rep(1:J$Y_, 
-#                       times=site.sf$nPlot_Total[J_ord$orig[!J_ord$train]]))
-# I_ord <- list(Y=length(IJ_ord$Y),
-#               Y_=length(IJ_ord$Y_))
-
 
 
 
@@ -150,7 +145,7 @@ lc.Y <- st_read(paste0(gis.dir, "site_lcZones_21781.shp")) %>%
   arrange(BDM) %>% st_set_geometry(NULL) %>% select(3:17)
 pop <- raster::raster(paste0(gis.dir, "popDensity_VD_21781.tif")) 
 roads <- st_read(paste0(gis.dir, "roads_VD_21781.shp")) %>% st_set_crs(21781)
-# bldgs <- st_read(paste0(gis.dir, "buildings_VD_21781.shp")) %>% st_set_crs(21781)
+bldgs <- st_read(paste0(gis.dir, "buildings_VD_21781.shp")) %>% st_set_crs(21781)
 
 
 
@@ -167,25 +162,30 @@ roads <- st_read(paste0(gis.dir, "roads_VD_21781.shp")) %>% st_set_crs(21781)
 #   arrange(id)
 # write_sf(X_W.df, "data/cov/X_W-df.shp")
 X_W.df <- st_read("data/cov/X_W-df.shp") %>%
-  mutate(J_rand=match(id, grd_W.sf$id)) %>% 
+  mutate(J_rand=grd_W.sf$K_rand[match(id, grd_W.sf$id)]) %>% 
   arrange(J_rand)
 # select covariates and add quadratic terms
 X_W.mx <- as.matrix(X_W.df %>% st_set_geometry(NULL) %>% 
                       select(-inbd) %>% 
                       mutate_if(is.numeric, .funs=list(sq=~.^2)) %>%
-                      select("J_rand", "el", one_of(X_vars)))
+                      select("id", "J_rand", "el", one_of(X_vars)))
 X_Y.mx <- as.matrix(site.sf %>% st_set_geometry(NULL) %>% 
-                      select(-region, -BDM_id, -Sample_date,
+                      select(-region, -Sample_date,
                              -contains("nPlot")) %>%
                       mutate(lcH=vegan::diversity(as.matrix(lc.Y))) %>%
                       mutate_if(is.numeric, .funs=list(sq=~.^2)) %>%
-                      select("BDM", "el", one_of(X_vars)))
+                      select("BDM_id", "BDM", "el", one_of(X_vars)))
 # scale and carefully combine
-X.mx <- rbind(X_W.mx[1:K$W,], 
-              X_Y.mx[1:J$Y,],
-              X_W.mx[K$W+(1:K$W_),], 
-              X_Y.mx[J$Y+(1:J$Y_),])
-X.scale <- scale(X.mx[,-(1:2)])
+if(all(K>0, J>0)) {  # test/train
+  X.mx <- rbind(X_W.mx[1:K$W,], 
+                X_Y.mx[1:J$Y,],
+                X_W.mx[K$W+(1:K$W_),], 
+                X_Y.mx[J$Y+(1:J$Y_),])
+} else {  # no test
+  X.mx <- rbind(X_W.mx, 
+                X_Y.mx)
+}
+X.scale <- scale(X.mx[,-(1:3)])
 X.all <- cbind(1, X.scale)
 
 
@@ -203,15 +203,19 @@ X.all <- cbind(1, X.scale)
 #   arrange(BDM, Plot_id)
 # write_sf(V.df, "data/cov/V-df.shp")
 V.df <- st_read("data/cov/V-df.shp") %>% 
-  mutate(J_rand=site.sf$J_rand[match(BDM, site.sf$BDM)],
+  mutate(J_rand=plot_i$J_rand[match(Plot_id, plot_i$Plot_id)],
          I_rand=plot_i$I_rand[match(Plot_id, plot_i$Plot_id)]) %>% 
   arrange(I_rand)
 V_Y.mx <- as.matrix(V.df %>% st_set_geometry(NULL) %>% 
                       mutate_if(is.numeric, .funs=list(sq=~.^2)) %>%
                       mutate(Plot_id=as.numeric(as.character(Plot_id))) %>%
                       select("Plot_id", "el", all_of(V_vars)))
-V.mx <- rbind(V_Y.mx[1:I$Y,], 
-              V_Y.mx[I$Y+(1:I$Y_),])
+if(all(I>0)) {  # test/train
+  V.mx <- rbind(V_Y.mx[1:I$Y,], 
+                V_Y.mx[I$Y+(1:I$Y_),]) 
+} else {  # no test
+  V.mx <- V_Y.mx
+}
 V.scale <- scale(V.mx[,-(1:2)])
 if("CnpyOpn" %in% V_vars) {
   V.scale[,"CnpyOpn"] <- V.scale[,"CnpyOpn"] * 
@@ -223,6 +227,16 @@ if("CnpyMxd" %in% V_vars) {
     attr(V.scale, "scaled:scale")["CnpyMxd"] + 
     attr(V.scale, "scaled:center")["CnpyMxd"]
 }
+if("Pasture" %in% V_vars) {
+  V.scale[,"Pasture"] <- V.scale[,"Pasture"] * 
+    attr(V.scale, "scaled:scale")["Pasture"] + 
+    attr(V.scale, "scaled:center")["Pasture"]
+}
+if("Crop" %in% V_vars) {
+  V.scale[,"Crop"] <- V.scale[,"Crop"] * 
+    attr(V.scale, "scaled:scale")["Crop"] + 
+    attr(V.scale, "scaled:center")["Crop"]
+}
 
 
 
@@ -233,11 +247,11 @@ if("CnpyMxd" %in% V_vars) {
 #   mutate(length=st_length(.)) %>%
 #   group_by(id) %>%
 #   summarise(rdLen=as.numeric(sum(length)))
-# bldgs.grd_W <- bldgs %>%
-#   st_intersection(., filter(grd_W.sf, id %in% W_id)) %>%
-#   mutate(area=st_area(.)) %>%
-#   group_by(id) %>%
-#   summarise(bldgArea=as.numeric(sum(area)))
+bldgs.grd_W <- bldgs %>%
+  st_intersection(., filter(grd_W.sf, id %in% W_id)) %>%
+  mutate(area=st_area(.)) %>%
+  group_by(id) %>%
+  summarise(bldgArea=as.numeric(sum(area)))
 # 
 # # calculate means within W cells
 # U_W.df <- grd_W.sf %>% filter(id %in% W_id) %>%
@@ -248,7 +262,8 @@ if("CnpyMxd" %in% V_vars) {
 # U_W.df[is.na(U_W.df)] <- 0
 # write_sf(U_W.df, "data/cov/U_W-df.shp")
 U_W.df <- st_read("data/cov/U_W-df.shp") %>%
-  mutate(J_rand=match(id, grd_W.sf$id)) %>% 
+  mutate(pop=log(pop+1), rdLen=log(rdLen+1)) %>%
+  mutate(J_rand=grd_W.sf$K_rand[match(id, grd_W.sf$id)]) %>% 
   arrange(J_rand)
 U_W.mx <- as.matrix(st_set_geometry(U_W.df, NULL) %>% 
                       select("J_rand", all_of(U_vars)))
@@ -260,47 +275,90 @@ U.all <- cbind(1, U.scale)
 ##--- NA's
 # identify NA cells
 na.W <- which(is.na(rowSums(X_W.mx)[1:K$W]))
-na.W_ <- which(is.na(rowSums(X_W.mx)[K$W+(1:K$W_)]))
 na.Y <- which(is.na(rowSums(V.mx)[1:I$Y]))
-na.Y_ <- which(is.na(rowSums(V.mx)[I$Y+(1:I$Y_)]))
+if(all(K>0, J>0)) {  # test/train
+  na.W_ <- which(is.na(rowSums(X_W.mx)[K$W+(1:K$W_)]))
+  na.Y_ <- which(is.na(rowSums(V.mx)[I$Y+(1:I$Y_)]))
+}
 
 
-
-# d.ls <- read_rdump("data/stan_data/test_realData.Rdump")
-# d.ls$V <- V.scale[1:I$Y,][-na.Y,]
-# d.ls$V_ <- V.scale[I$Y+(1:I$Y_),][-na.Y_,]
-# d.ls$L <- dim(V.scale)[2]
 
 ##--- export stan data
-d.ls <- list(K=K$W-length(na.W), K_=K$W_-length(na.W_), 
-             J=J$Y, J_=J$Y_, 
-             IJ=IJ$Y[-na.Y], IJ_=IJ$Y_[-na.Y_], 
-             I=I$Y-length(na.Y), I_=I$Y_-length(na.Y_),
-             S=max(tax_i$sNum), 
-             G=max(tax_i$gNum), 
-             tax_i=tax_i[,c("sNum", "gNum")], 
-             D_prior=tax_i$Dprior, 
-             R=dim(X.all)[2], 
-             L=dim(V.scale)[2],
-             Q=dim(U.all)[2], 
-             W=W[(1:K$W)[-na.W],], 
-             W_=W[(K$W+(1:K$W_))[-na.W_],], 
-             Y=Y[1:I$Y,][-na.Y,],
-             Y_=Y[I$Y+(1:I$Y_),][-na.Y_,],
-             X=X.all[(1:(K$W+J$Y))[-na.W],], 
-             X_=X.all[((K$W+J$Y)+(1:(K$W_+J$Y_)))[-na.W_],], 
-             V=V.scale[1:I$Y,][-na.Y,], 
-             V_=V.scale[I$Y+(1:I$Y_),][-na.Y_,],
-             U=U.all[(1:K$W)[-na.W],], 
-             U_=U.all[(K$W+(1:K$W_))[-na.W_],], 
-             h=7.5e-7)
-d.i <- list(X=X.mx[(1:(K$W+J$Y))[-na.W],],
-            X_=X.mx[((K$W+J$Y)+(1:(K$W_+J$Y_)))[-na.W_],],
-            V=V.mx[1:I$Y,][-na.Y,],
-            V_=V.mx[I$Y+(1:I$Y_),][-na.Y_,],
-            U=U_W.mx[(1:K$W)[-na.W],],
-            U_=U_W.mx[(K$W+(1:K$W_))[-na.W_],],
-            tax_i=tax_i)
+if(all(K>0, J>0)) {  # test/train
+  d.ls <- list(K=K$W-length(na.W), K_=K$W_-length(na.W_), 
+               J=J$Y, J_=J$Y_, 
+               IJ=IJ$Y[-na.Y], IJ_=IJ$Y_[-na.Y_], 
+               I=I$Y-length(na.Y), I_=I$Y_-length(na.Y_),
+               S=max(tax_i$sNum), 
+               G=max(tax_i$gNum), 
+               tax_i=tax_i[,c("sNum", "gNum")], 
+               D_prior=tax_i$Dprior, 
+               R=dim(X.all)[2], 
+               L=dim(V.scale)[2],
+               Q=dim(U.all)[2], 
+               W=W[W_id,][(1:K$W)[-na.W],], 
+               W_=W[W_id,][(K$W+(1:K$W_))[-na.W_],], 
+               Y=Y[1:I$Y,][-na.Y,],
+               Y_=Y[I$Y+(1:I$Y_),][-na.Y_,],
+               X=X.all[(1:(K$W+J$Y))[-na.W],], 
+               X_=X.all[((K$W+J$Y)+(1:(K$W_+J$Y_)))[-na.W_],], 
+               V=V.scale[1:I$Y,][-na.Y,], 
+               V_=V.scale[I$Y+(1:I$Y_),][-na.Y_,],
+               U=U.all[(1:K$W)[-na.W],], 
+               U_=U.all[(K$W+(1:K$W_))[-na.W_],], 
+               h=7.5e-7)
+  d.i <- list(X=X.mx[(1:(K$W+J$Y))[-na.W],],
+              X_=X.mx[((K$W+J$Y)+(1:(K$W_+J$Y_)))[-na.W_],],
+              V=V.mx[1:I$Y,][-na.Y,],
+              V_=V.mx[I$Y+(1:I$Y_),][-na.Y_,],
+              U=U_W.mx[(1:K$W)[-na.W],],
+              U_=U_W.mx[(K$W+(1:K$W_))[-na.W_],],
+              tax_i=tax_i,
+              grd_W.sf=grd_W.sf)
+  d.f <- paste0("data/stan_data/opfo_split", test_prop_Y*100)
+  saveRDS(d.ls, paste0(d.f, "_ls.rds"))
+  saveRDS(d.i, paste0(d.f, "_i.rds"))
+  rstan::stan_rdump(ls(d.ls),
+                    file=paste0(d.f, ".Rdump"),
+                    envir=list2env(d.ls))
+} else {  # no test
+  d.ls <- list(K=K$W-length(na.W), 
+               J=J$Y, 
+               IJ=IJ$Y[-na.Y], 
+               I=I$Y-length(na.Y),
+               S=max(tax_i$sNum), 
+               G=max(tax_i$gNum), 
+               tax_i=tax_i[,c("sNum", "gNum")], 
+               D_prior=tax_i$Dprior, 
+               R=dim(X.all)[2], 
+               L=dim(V.scale)[2],
+               Q=dim(U.all)[2], 
+               W=W[W_id,][-na.W,], 
+               Y=Y[-na.Y,],
+               X=X.all[-na.W,], 
+               V=V.scale[-na.Y,], 
+               U=U.all[-na.W,], 
+               h=7.5e-7)
+  d.i <- list(X=X.mx[-na.W,],
+              V=V.mx[-na.Y,],
+              U=U_W.mx[-na.W,],
+              tax_i=tax_i,
+              grd_W.sf=grd_W.sf)
+  d.f <- "data/stan_data/opfo_full"
+  saveRDS(d.ls, paste0(d.f, "_ls.rds"))
+  saveRDS(d.i, paste0(d.f, "_i.rds"))
+  rstan::stan_rdump(ls(d.ls),
+                    file=paste0(d.f, ".Rdump"),
+                    envir=list2env(d.ls))
+}
+
+
+
+
+
+
+
+
 # d.ls <- list(K=K$W, K_=K$W_,
 #              J=J$Y, J_=J$Y_,
 #              IJ=IJ$Y, IJ_=IJ$Y_,
@@ -323,12 +381,7 @@ d.i <- list(X=X.mx[(1:(K$W+J$Y))[-na.W],],
 #              U=U.all[1:K$W,],
 #              U_=U.all[K$W+(1:K$W_),],
 #              h=7.5e-7)
-d.f <- "data/stan_data/test_realData"
-saveRDS(d.ls, paste0(d.f, "_ls.rds"))
-saveRDS(d.i, paste0(d.f, "_i.rds"))
-rstan::stan_rdump(ls(d.ls),
-                  file="data/stan_data/test_realData.Rdump",
-                  envir=list2env(d.ls))
+
 
 
 
