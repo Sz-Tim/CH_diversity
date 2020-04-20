@@ -102,7 +102,7 @@ model {
   eta[2:Q] ~ normal(0, 1);
   
   // cell level priors
-  beta[1] ~ normal(6, 1);
+  beta[1] ~ normal(6, 2);
   beta[2:R] ~ normal(0, 1);
   for(r in 1:R) {
     b_std[r,] ~ normal(0, 1);
@@ -139,21 +139,21 @@ generated quantities {
   matrix<lower=0>[K+J,S] LAMBDA = exp(lLAMBDA);
   matrix<lower=0, upper=1>[K+J,S] p;
   vector[K+J] ShannonH;
+  matrix[K+J,S] prPres;
   matrix[G,G] Sigma_B[R];
   matrix[G,G] Sigma_A[L];
-  matrix<lower=0>[I,S] Y_rep;
 
   // calculated predicted LAMBDA and lambda
   for(s in 1:S) {
     for(i in 1:I) {
      log_lik_lambda[i,s] = poisson_log_lpmf(Y[i,s] | llambda[i,s]);  
-     Y_rep[i,s] = poisson_log_rng(llambda[i,s]);
     }
   }
   
   // Shannon H: calculate p, then H
   for(i in 1:(K+J)) {
     p[i,] = LAMBDA[i,] / sum(LAMBDA[i,]);
+    prPres[i,] = 1-exp(-LAMBDA[i,]);
   }
   ShannonH = - rows_dot_product(p, log(p));
   

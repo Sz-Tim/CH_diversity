@@ -43,7 +43,6 @@ parameters {
   vector[R] beta;  // overall slopes
   cholesky_factor_corr[G] L_Omega_B[R];  // genus-level correlation matrix 
   vector<lower=0>[G] sigma_B[R];  // genus-level correlation matrix 
-  matrix[K+J,S] lLAM_err;
   
   // slopes: W effort
   vector[Q] eta;  // W sampling effort slopes 
@@ -69,7 +68,7 @@ transformed parameters {
     B[r,] = beta[r] + B_std[r,] * diag_pre_multiply(sigma_B[r], L_Omega_B[r]);  
     b[r,] = B[r,tax_i[,2]] + b_std[r,] * sigma_b[r]; 
   }
-  lLAMBDA = X * b + lLAM_err;
+  lLAMBDA = X * b;
   
 }
 
@@ -81,7 +80,7 @@ model {
   eta[2:Q] ~ normal(0, 1);
   
   // cell level priors
-  beta[1] ~ normal(6, 1);
+  beta[1] ~ normal(6, 2);
   beta[2:R] ~ normal(0, 1);
   for(r in 1:R) {
     b_std[r,] ~ normal(0, 1);
@@ -90,7 +89,6 @@ model {
     sigma_B[r] ~ cauchy(0, 2);
   }
   sigma_b ~ cauchy(0, 2);
-  to_vector(lLAM_err) ~ normal(0, 1);
   
   // likelihood
   for(s in 1:S) {
@@ -111,8 +109,8 @@ generated quantities {
   matrix<lower=0, upper=1>[K_+J_,S] p_;
   vector[K+J] ShannonH;
   vector[K_+J_] ShannonH_;
-  // matrix[K+J,S] prPres;
-  // matrix[K_+J_,S] prPres_;
+  matrix[K+J,S] prPres;
+  matrix[K_+J_,S] prPres_;
   matrix[G,G] Sigma_B[R];
 
   {
@@ -128,11 +126,11 @@ generated quantities {
   }
   for(i in 1:(K+J)) {
     p[i,] = LAMBDA[i,] / sum(LAMBDA[i,]);
-    // prPres[i,] = 1-exp(-LAMBDA[i,]);
+    prPres[i,] = 1-exp(-LAMBDA[i,]);
   }
   for(i in 1:(K_+J_)) {
     p_[i,] = LAMBDA_[i,] / sum(LAMBDA_[i,]);
-    // prPres_[i,] = 1-exp(-LAMBDA_[i,]);
+    prPres_[i,] = 1-exp(-LAMBDA_[i,]);
   }
   ShannonH = - rows_dot_product(p, log(p));
   ShannonH_ = - rows_dot_product(p_, log(p_));

@@ -100,7 +100,7 @@ model {
   eta[2:Q] ~ normal(0, 1);
   
   // cell level priors
-  beta[1] ~ normal(6, 1);
+  beta[1] ~ normal(6, 2);
   beta[2:R] ~ normal(0, 1);
   for(r in 1:R) {
     b_std[r,] ~ normal(0, 1);
@@ -138,9 +138,10 @@ generated quantities {
   matrix<lower=0, upper=1>[K_+J_,S] p_;
   vector[K+J] ShannonH;
   vector[K_+J_] ShannonH_;
+  matrix[K+J,S] prPres;
+  matrix[K_+J_,S] prPres_;
   cov_matrix[S] Sigma_b[R];
   cov_matrix[S] Sigma_a[L];
-  matrix<lower=0>[I,S] Y_rep;
 
   // calculated predicted LAMBDA and lambda
   {
@@ -149,17 +150,18 @@ generated quantities {
   }
   for(s in 1:S) {
     for(i in 1:I_) {
-     log_lik_lambda_[i,s] = poisson_log_lpmf(Y_[i,s] | llambda_[i,s]);  
-     Y_rep[i,s] = poisson_log_rng(llambda[i,s]);
+     log_lik_lambda_[i,s] = poisson_log_lpmf(Y_[i,s] | llambda_[i,s]); 
     }
   }
   
   // Shannon H: calculate p, then H
   for(i in 1:(K+J)) {
     p[i,] = LAMBDA[i,] / sum(LAMBDA[i,]);
+    prPres[i,] = 1-exp(-LAMBDA[i,]);
   }
   for(i in 1:(K_+J_)) {
     p_[i,] = LAMBDA_[i,] / sum(LAMBDA_[i,]);
+    prPres_[i,] = 1-exp(-LAMBDA_[i,]);
   }
   ShannonH = - rows_dot_product(p, log(p));
   ShannonH_ = - rows_dot_product(p_, log(p_));
