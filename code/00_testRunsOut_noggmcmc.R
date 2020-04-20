@@ -1,13 +1,15 @@
 
 
-library(tidyverse); library(rstan)
-theme_set(theme_bw())
+library(tidyverse); library(rstan); theme_set(theme_bw())
+source("code/00_fn.R"); source("../1_opfo/code/00_fn.R")
 
-d.ls <- readRDS("data/stan_data/test_realData_ls.rds")
-d.i <- readRDS("data/stan_data/test_realData_i.rds")
+dataset <- c("full", "split20")[2]
 
-mods <- c("W", "WY")
-pars.any <- c("H", "lLAMBDA", "beta", "alpha", "eta", "b", "a", "B", "A", "D")
+d.ls <- readRDS(paste0("data/stan_data/opfo_", dataset, "_ls.rds"))
+d.i <- readRDS(paste0("data/stan_data/opfo_", dataset, "_i.rds"))
+
+mods <- c("W", "Y", "WY")
+pars.any <- c("H", "lLAMBDA", "beta", "alpha", "eta", "b", "a", "B", "A", "D", "llambda")
 out.pars <- imap(setNames(pars.any, pars.any), ~vector("list", length(mods)))
 
 Y.J <- matrix(0, ncol=d.ls$S, nrow=d.ls$J)
@@ -20,7 +22,8 @@ for(i in 1:d.ls$J_) {
 }
 obs <- data.frame(el=c(d.i$X[,2], d.i$X_[,2]), 
                   H.obs=vegan::diversity(rbind(d.ls$W, Y.J, d.ls$W_, Y.J_)),
-                  tot.obs=rowSums(rbind(d.ls$W, Y.J, d.ls$W_, Y.J_)),
+                  N.obs=rowSums(rbind(d.ls$W, Y.J, d.ls$W_, Y.J_)),
+                  S.obs=rowSums(rbind(d.ls$W, Y.J, d.ls$W_, Y.J_)>0),
                   site=c(1:nrow(d.i$X), 1:nrow(d.i$X_)),
                   set=rep(c("train", "test"), 
                           times=c(nrow(d.i$X), nrow(d.i$X_))),
@@ -29,7 +32,7 @@ obs <- data.frame(el=c(d.i$X[,2], d.i$X_[,2]),
   mutate(set=as.character(set), source=as.character(source))
 
 for(i in seq_along(mods)) {
-  out <- readRDS(paste0("out/tests/testSum_2_", mods[i], ".rds"))
+  out <- readRDS(paste0("out/tests/", dataset, "_", mods[i], "_summary.rds"))
   pars <- unique(str_split_fixed(rownames(out), "\\[", 2)[,1])
   pars <- pars[grep("lp__", pars, value=F, invert=T)]
   
@@ -51,14 +54,14 @@ for(i in seq_along(mods)) {
              site=as.numeric(site),
              set="train") %>%
       arrange(site) %>%
-      mutate(id=d.i$X[,"id"], el=d.i$X[,"el"], 
+      mutate(id=d.i$X[,"J_rand"], el=d.i$X[,"el"], 
              source=ifelse(id<100000, "W", "Y")),
     out.ls$ShannonH_ %>% 
       mutate(site=str_remove(str_split_fixed(Parameter, "\\[", 2)[,2], "]"),
              site=as.numeric(site),
              set="test") %>%
       arrange(site) %>%
-      mutate(id=d.i$X_[,"id"], el=d.i$X_[,"el"], 
+      mutate(id=d.i$X_[,"J_rand"], el=d.i$X_[,"el"], 
              source=ifelse(id<100000, "W", "Y"))
   ) %>% mutate(Parameter=as.character(Parameter), model=as.character(model))
   out.pars$lLAMBDA[[i]] <- rbind(
@@ -69,7 +72,7 @@ for(i in seq_along(mods)) {
              set="train") %>%
       mutate(site=as.numeric(site), spp=as.numeric(spp)) %>%
       arrange(site, spp) %>%
-      mutate(id=d.i$X[site,"id"], el=d.i$X[site,"el"],
+      mutate(id=d.i$X[site,"J_rand"], el=d.i$X[site,"el"],
              source=ifelse(id<100000, "W", "Y")),
     out.ls$lLAMBDA_ %>%
       mutate(site=str_split_fixed(str_split_fixed(Parameter, "\\[", n=2)[,2],
@@ -78,7 +81,7 @@ for(i in seq_along(mods)) {
              set="test") %>%
       mutate(site=as.numeric(site), spp=as.numeric(spp)) %>%
       arrange(site, spp) %>%
-      mutate(id=d.i$X_[site,"id"], el=d.i$X_[site,"el"],
+      mutate(id=d.i$X_[site,"J_rand"], el=d.i$X_[site,"el"],
              source=ifelse(id<100000, "W", "Y"))
   ) %>% mutate(Parameter=as.character(Parameter), model=as.character(model))
   out.pars$beta[[i]] <- out.ls$beta %>%
@@ -137,6 +140,28 @@ for(i in seq_along(mods)) {
              Parameter=as.character(Parameter), 
              model=as.character(model))
   }
+  if("llambda" %in% pars) {
+    out.pars$llambda[[i]] <- rbind(
+      out.ls$llambda %>%
+        mutate(plot=str_split_fixed(str_split_fixed(Parameter, "\\[", n=2)[,2],
+                                    ",", n=2)[,1],
+               spp=str_sub(str_split_fixed(Parameter, ",", n=2)[,2], 1, -2),
+               set="train") %>%
+        mutate(plot=as.numeric(plot), spp=as.numeric(spp)) %>%
+        arrange(plot, spp) %>%
+        mutate(Plot_id=d.i$V[plot,"Plot_id"], el=d.i$V[plot,"el"],
+               source="Y"),
+      out.ls$llambda_ %>%
+        mutate(plot=str_split_fixed(str_split_fixed(Parameter, "\\[", n=2)[,2],
+                                    ",", n=2)[,1],
+               spp=str_sub(str_split_fixed(Parameter, ",", n=2)[,2], 1, -2),
+               set="test") %>%
+        mutate(plot=as.numeric(plot), spp=as.numeric(spp)) %>%
+        arrange(plot, spp) %>%
+        mutate(Plot_id=d.i$V_[plot,"Plot_id"], el=d.i$V_[plot,"el"],
+               source="Y")
+    ) %>% mutate(Parameter=as.character(Parameter), model=as.character(model))
+  }
 }
 
 all.pars <- map(out.pars, ~do.call('rbind', .))
@@ -150,20 +175,29 @@ ggplot(all.pars$H, aes(x=el, y=mn, ymin=q025, ymax=q975, colour=model)) +
   geom_linerange(size=0.2, alpha=0.75) + 
   stat_smooth(method="loess", se=F) +
   scale_colour_manual(values=mod_cols) + scale_shape_manual(values=c(1,19)) + 
-  facet_grid(.~source) + 
+  facet_grid(.~source) + ylim(0, NA) + 
   labs(x="Elevation (m)", y=expression(Predicted~Shannon~H~(1~km^2)))
 ggsave("eda/all_H.pdf", width=8.5, height=4)
 
 all.pars$lLAMBDA %>% group_by(model, site, set, id, el, source) %>%
-  summarise(tot=sum(mn), tot_q025=sum(q025), tot_q975=sum(q975)) %>%
+  summarise(tot=sum(exp(mn)), tot_q025=sum(q025), tot_q975=sum(q975)) %>%
   ggplot(aes(el, tot, ymin=tot_q025, ymax=tot_q975, colour=model)) + 
   geom_point(alpha=0.75, aes(shape=set)) + 
-  geom_linerange(size=0.2, alpha=0.75) + 
+  # geom_linerange(size=0.2, alpha=0.75) + 
   stat_smooth(method="loess", se=F) +
   scale_colour_manual(values=mod_cols) + scale_shape_manual(values=c(1,19)) + 
   facet_grid(.~source) + #coord_trans(y="exp") + 
   labs(x="Elevation (m)", y=expression(Predicted~total~log(Lambda)~(1~km^2)))
 ggsave("eda/all_LAMBDA.pdf", width=8.5, height=4)
+
+all.pars$lLAMBDA %>% group_by(model, site, set, id, el, source) %>%
+  summarise(med_mn=median(mn), min_mn=min(mn), max_mn=max(mn)) %>%
+  ggplot(aes(el, exp(med_mn), colour=model)) + 
+  geom_point(alpha=0.75, aes(shape=set)) + 
+  stat_smooth(method="loess", se=F) +
+  scale_colour_manual(values=mod_cols) + scale_shape_manual(values=c(1,19)) + 
+  facet_grid(.~source) +  
+  labs(x="Elevation (m)", y=expression(Predicted~median~Lambda~(1~km^2)))
 
 ggplot(filter(all.pars$beta, ParName!="intercept"), 
        aes(x=model, y=mn, colour=model)) + 
@@ -219,11 +253,9 @@ all.pars$H %>% left_join(., obs, by=c("site", "el", "set", "source")) %>%
   geom_linerange() + geom_point() + facet_grid(.~source)
 
 
-ggplot(all.pars$lLAMBDA, aes(x=mn, colour=el, group=el)) + 
-  geom_density() + facet_wrap(~model, scales="free")
 
 all.pars$lLAMBDA %>% group_by(model, set, source, site, el) %>% 
-  summarise(S=sum(mn > 0)) %>% 
+  summarise(S=sum(mn > 4)) %>% 
   ggplot(aes(el, S, colour=model)) + 
   geom_point(aes(shape=set)) + facet_grid(.~source) + 
   labs(x="Elevation (m)", y="Predicted richness (1km2)") + 
@@ -232,9 +264,77 @@ all.pars$lLAMBDA %>% group_by(model, set, source, site, el) %>%
 
 
 all.pars$lLAMBDA %>% group_by(model, set, source, site, el) %>% 
-  summarise(S=sum(1-exp(-exp(mn)) > 0.95)) %>% 
-  ggplot(aes(el, S, colour=model)) + ylim(0, d.ls$S) + 
-  geom_point(aes(shape=set)) + facet_grid(.~source) + 
+  summarise(S.mn=sum(1-exp(-exp(mn)) > 0.95),
+            S.025=sum(1-exp(-exp(q025)) > 0.95),
+            S.25=sum(1-exp(-exp(q25)) > 0.95),
+            S.75=sum(1-exp(-exp(q75)) > 0.95),
+            S.975=sum(1-exp(-exp(q975)) > 0.95)) %>% 
+  ggplot(aes(el, S.mn, colour=model, fill=model)) + 
+  ylim(0, d.ls$S) + 
+  geom_point(aes(shape=set)) + 
+  stat_smooth(aes(y=S.025), method="loess", se=F, linetype=2, size=0.5) +
+  stat_smooth(aes(y=S.975), method="loess", se=F, linetype=2, size=0.5) +
+  facet_grid(.~source) + 
   labs(x="Elevation (m)", y="Predicted richness (1km2)") + 
   scale_colour_manual(values=mod_cols) + stat_smooth(method="loess", se=F) + 
   scale_shape_manual(values=c(1, 19))
+
+
+all.pars$llambda %>% group_by(model, set, source, plot, el) %>% 
+  summarise(S=sum(mn > 0)) %>% 
+  ggplot(aes(el, S, colour=model)) + 
+  geom_point(aes(shape=set)) + facet_grid(.~source) + 
+  labs(x="Elevation (m)", y="Predicted richness (0.75m2)") + 
+  scale_colour_manual(values=mod_cols) + stat_smooth(method="loess", se=F) + 
+  scale_shape_manual(values=c(1, 19))
+
+all.pars$llambda %>% group_by(model, set, source, plot, el) %>% 
+  summarise(S.mn=sum(1-exp(-exp(mn)) > 0.5),
+            S.025=sum(1-exp(-exp(q025)) > 0.5),
+            S.25=sum(1-exp(-exp(q25)) > 0.5),
+            S.75=sum(1-exp(-exp(q75)) > 0.5),
+            S.975=sum(1-exp(-exp(q975)) > 0.5)) %>% 
+  ggplot(aes(el, S.mn, colour=model, fill=model)) + 
+  # ylim(0, d.ls$S) + 
+  geom_point(aes(shape=set)) + 
+  stat_smooth(aes(y=S.025), method="loess", se=F, linetype=2, size=0.5) +
+  stat_smooth(aes(y=S.975), method="loess", se=F, linetype=2, size=0.5) +
+  facet_grid(.~source) + 
+  labs(x="Elevation (m)", y="Predicted richness (.75m2)") + 
+  scale_colour_manual(values=mod_cols) + stat_smooth(method="loess", se=F) + 
+  scale_shape_manual(values=c(1, 19))
+
+all.pars$llambda %>% group_by(model, plot, set, el, source) %>%
+  summarise(tot=sum(mn), tot_q025=sum(q025), tot_q975=sum(q975)) %>%
+  ggplot(aes(el, tot, ymin=tot_q025, ymax=tot_q975, colour=model)) + 
+  geom_point(alpha=0.75, aes(shape=set)) + 
+  geom_linerange(size=0.2, alpha=0.75) + 
+  stat_smooth(method="loess", se=F) +
+  scale_colour_manual(values=mod_cols) + scale_shape_manual(values=c(1,19)) + 
+  facet_grid(.~source) + #coord_trans(y="exp") + 
+  labs(x="Elevation (m)", y=expression(Predicted~total~log(Lambda)~(.75~m^2)))
+
+
+
+
+
+
+
+# generate some predicted W & Y...
+site.sf <- agg_str_site_data()
+library(viridis)
+all.pars$lLAMBDA %>% filter(source=="Y") %>% 
+  rename(BDM=id) %>%
+  group_by(BDM, model) %>%
+  summarise(S.pr=sum(1-exp(-exp(mn)) > 0.95),
+            S.ct=sum(mn>4)) %>%
+  full_join(site.sf, ., by="BDM") %>%
+  ggplot(aes(fill=S.ct, colour=S.ct)) + geom_sf() + 
+  scale_fill_viridis(option="B") + scale_colour_viridis(option="B") + 
+  facet_wrap(~model, ncol=2)
+
+
+
+
+S = cA^z
+log(S) = log(c) + z*log(A)
