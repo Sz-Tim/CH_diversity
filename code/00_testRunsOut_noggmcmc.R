@@ -8,8 +8,8 @@ dataset <- c("full", "split20")[2]
 d.ls <- readRDS(paste0("data/stan_data/opfo_", dataset, "_ls.rds"))
 d.i <- readRDS(paste0("data/stan_data/opfo_", dataset, "_i.rds"))
 
-mods <- c("W", "Y", "WY")
-pars.any <- c("H", "lLAMBDA", "beta", "alpha", "eta", "b", "a", "B", "A", "D", "llambda")
+mods <- c("Y", "W", "W_Mnom", "W_Mnom_noEta", "WY", "WY_Mnom", "WY_Mnom_noEta")
+pars.any <- c("H", "lLAMBDA", "beta", "alpha", "eta", "b", "a", "B", "A", "D", "llambda", "prPres")
 out.pars <- imap(setNames(pars.any, pars.any), ~vector("list", length(mods)))
 
 Y.J <- matrix(0, ncol=d.ls$S, nrow=d.ls$J)
@@ -20,7 +20,7 @@ for(i in 1:d.ls$J) {
 for(i in 1:d.ls$J_) {
   Y.J_[i,] <- colSums(d.ls$Y_[d.ls$IJ_==i,])
 }
-obs <- data.frame(el=c(d.i$X[,2], d.i$X_[,2]), 
+obs <- data.frame(el=c(d.i$X[,3], d.i$X_[,3]), 
                   H.obs=vegan::diversity(rbind(d.ls$W, Y.J, d.ls$W_, Y.J_)),
                   N.obs=rowSums(rbind(d.ls$W, Y.J, d.ls$W_, Y.J_)),
                   S.obs=rowSums(rbind(d.ls$W, Y.J, d.ls$W_, Y.J_)>0),
@@ -32,6 +32,8 @@ obs <- data.frame(el=c(d.i$X[,2], d.i$X_[,2]),
   mutate(set=as.character(set), source=as.character(source))
 
 for(i in seq_along(mods)) {
+  cat("\nBeginning model", mods[i])
+  cat("\nReading", paste0("out/tests/", dataset, "_", mods[i], "_summary.rds"))
   out <- readRDS(paste0("out/tests/", dataset, "_", mods[i], "_summary.rds"))
   pars <- unique(str_split_fixed(rownames(out), "\\[", 2)[,1])
   pars <- pars[grep("lp__", pars, value=F, invert=T)]
@@ -41,6 +43,7 @@ for(i in seq_along(mods)) {
                        se=out[,2],
                        q025=out[,4], 
                        q25=out[,5],
+                       q50=out[,6],
                        q75=out[,7],
                        q975=out[,8],
                        model=mods[i],
@@ -85,14 +88,14 @@ for(i in seq_along(mods)) {
              source=ifelse(id<100000, "W", "Y"))
   ) %>% mutate(Parameter=as.character(Parameter), model=as.character(model))
   out.pars$beta[[i]] <- out.ls$beta %>%
-    mutate(ParName=c("intercept", colnames(d.i$X)[-(1:2)])) %>% 
+    mutate(ParName=c("intercept", colnames(d.i$X)[-(1:3)])) %>% 
     mutate(Parameter=as.character(Parameter), model=as.character(model))
   out.pars$B[[i]] <- out.ls$B %>%
     mutate(ParNum=str_sub(str_split_fixed(Parameter, ",", 2)[,1], -1, -1),
            GenNum=str_sub(str_split_fixed(Parameter, ",", 2)[,2], 1, -2)) %>%
     mutate(ParNum=as.numeric(ParNum),
            GenNum=as.numeric(GenNum),
-           ParName=c("intercept", colnames(d.i$X)[-(1:2)])[ParNum],
+           ParName=c("intercept", colnames(d.i$X)[-(1:3)])[ParNum],
            GenName=unique(d.i$tax_i$genus)[GenNum]) %>% 
     mutate(Parameter=as.character(Parameter), model=as.character(model))
   out.pars$b[[i]] <- out.ls$b %>%
@@ -100,7 +103,7 @@ for(i in seq_along(mods)) {
            SpNum=str_sub(str_split_fixed(Parameter, ",", 2)[,2], 1, -2)) %>%
     mutate(ParNum=as.numeric(ParNum),
            SpNum=as.numeric(SpNum),
-           ParName=c("intercept", colnames(d.i$X)[-(1:2)])[ParNum],
+           ParName=c("intercept", colnames(d.i$X)[-(1:3)])[ParNum],
            SpName=d.i$tax_i$species[SpNum],
            GenName=str_split_fixed(SpName, "_", 2)[,1]) %>% 
     mutate(Parameter=as.character(Parameter), model=as.character(model))
@@ -162,13 +165,37 @@ for(i in seq_along(mods)) {
                source="Y")
     ) %>% mutate(Parameter=as.character(Parameter), model=as.character(model))
   }
+  if("prPres" %in% pars) {
+    out.pars$prPres[[i]] <- rbind(
+      out.ls$prPres %>%
+        mutate(site=str_split_fixed(str_split_fixed(Parameter, "\\[", n=2)[,2],
+                                    ",", n=2)[,1],
+               spp=str_sub(str_split_fixed(Parameter, ",", n=2)[,2], 1, -2),
+               set="train") %>%
+        mutate(site=as.numeric(site), spp=as.numeric(spp)) %>%
+        arrange(site, spp) %>%
+        mutate(id=d.i$X[site,"J_rand"], el=d.i$X[site,"el"],
+               source=ifelse(id<100000, "W", "Y")),
+      out.ls$prPres_ %>%
+        mutate(site=str_split_fixed(str_split_fixed(Parameter, "\\[", n=2)[,2],
+                                    ",", n=2)[,1],
+               spp=str_sub(str_split_fixed(Parameter, ",", n=2)[,2], 1, -2),
+               set="test") %>%
+        mutate(site=as.numeric(site), spp=as.numeric(spp)) %>%
+        arrange(site, spp) %>%
+        mutate(id=d.i$X_[site,"J_rand"], el=d.i$X_[site,"el"],
+               source=ifelse(id<100000, "W", "Y"))
+    ) %>% mutate(Parameter=as.character(Parameter), model=as.character(model))
+  }
 }
 
 all.pars <- map(out.pars, ~do.call('rbind', .))
 saveRDS(all.pars, "out/tests/allPars.rds")
 
 
-mod_cols <- c(W="#33a02c", Y="#1f78b4", WY="#e31a1c")
+mod_cols <- c(W="#006d2c", Y="#1f78b4", WY="#a50f15", 
+              W_Mnom="#31a354", WY_Mnom="#de2d26",
+              W_Mnom_noEta="#74c476", WY_Mnom_noEta="#fb6a4a")
 
 ggplot(all.pars$H, aes(x=el, y=mn, ymin=q025, ymax=q975, colour=model)) + 
   geom_point(alpha=0.75, aes(shape=set)) + 
@@ -188,7 +215,6 @@ all.pars$lLAMBDA %>% group_by(model, site, set, id, el, source) %>%
   scale_colour_manual(values=mod_cols) + scale_shape_manual(values=c(1,19)) + 
   facet_grid(.~source) + #coord_trans(y="exp") + 
   labs(x="Elevation (m)", y=expression(Predicted~total~log(Lambda)~(1~km^2)))
-ggsave("eda/all_LAMBDA.pdf", width=8.5, height=4)
 
 all.pars$lLAMBDA %>% group_by(model, site, set, id, el, source) %>%
   summarise(med_mn=median(mn), min_mn=min(mn), max_mn=max(mn)) %>%
@@ -198,41 +224,64 @@ all.pars$lLAMBDA %>% group_by(model, site, set, id, el, source) %>%
   scale_colour_manual(values=mod_cols) + scale_shape_manual(values=c(1,19)) + 
   facet_grid(.~source) +  
   labs(x="Elevation (m)", y=expression(Predicted~median~Lambda~(1~km^2)))
+ggsave("eda/all_LAMBDA.pdf", width=8.5, height=4)
 
 ggplot(filter(all.pars$beta, ParName!="intercept"), 
-       aes(x=model, y=mn, colour=model)) + 
-  # geom_point(data=filter(all.pars$b, ParName !="intercept"), 
-  #            size=0.5, alpha=0.3) +
-  # geom_point(data=filter(all.pars$B, ParName !="intercept"), 
-  #            size=1.5, shape=1, alpha=0.5) +
-  geom_point(size=3.5, shape=1) + 
-  geom_linerange(aes(ymin=q025, ymax=q975)) + 
+       aes(x=ParName, y=mn, colour=model, group=model,
+           shape=sign(q025)==sign(q975))) + 
   geom_hline(yintercept=0, linetype=2) +
-  scale_colour_manual(values=mod_cols) + facet_wrap(~ParName) +
-  labs(x="Model", y=expression(Slope~posterior~distribution~(beta~B~b)))
-ggsave("eda/all_beta.pdf", width=5, height=4)
+  geom_point(position=position_dodge(width=0.5)) + 
+  geom_linerange(aes(ymin=q025, ymax=q975), 
+                 position=position_dodge(width=0.5)) +
+  scale_colour_manual(values=mod_cols) + coord_flip() +
+  scale_shape_manual("Non-zero", values=c(1, 19)) +
+  labs(x="Variable", y=expression(Slope~posterior~distribution~(beta)))
+ggsave("eda/all_beta.pdf", width=6, height=5)
+ggplot(filter(all.pars$B, ParName!="intercept"), 
+       aes(x=ParName, y=mn, colour=model, group=model, 
+           shape=sign(q025)==sign(q975))) + 
+  geom_hline(yintercept=0, linetype=2) +
+  geom_point(size=1, alpha=0.7, position=position_dodge(width=0.5)) +
+  scale_shape_manual("Non-zero", values=c(1, 19)) +
+  scale_colour_manual(values=mod_cols) + coord_flip() +
+  labs(x="Variable", y=expression(Slope~posterior~distribution~(B)))
+ggsave("eda/all_B.pdf", width=6, height=5)
 
 ggplot(filter(all.pars$eta, ParName!="intercept"), 
-       aes(x=model, y=mn, ymin=q025, ymax=q975, colour=model)) + 
-  geom_point(size=3.5, shape=1) + 
-  geom_linerange(colour="gray30") + 
+       aes(x=ParName, y=mn, colour=model, shape=sign(q025)==sign(q975))) + 
   geom_hline(yintercept=0, linetype=2) +
-  scale_colour_manual(values=mod_cols) + facet_wrap(~ParName) +
-  labs(x="Model", y=expression(Slope~posterior~distribution~(eta)))
-ggsave("eda/all_eta.pdf", width=4, height=4)
+  geom_point(position=position_dodge(width=0.5)) + 
+  geom_linerange(aes(ymin=q025, ymax=q975), 
+                 position=position_dodge(width=0.5)) +
+  scale_shape_manual("Non-zero", values=c(1, 19)) +
+  scale_colour_manual(values=mod_cols) + coord_flip() +
+  labs(x="Variable", y=expression(Slope~posterior~distribution~(eta)))
+ggsave("eda/all_eta.pdf", width=6, height=5)
 
-ggplot(filter(all.pars$alpha, ParName!="intercept"), 
-       aes(x=model, y=mn, ymin=q025, ymax=q975, colour=model)) + 
-  # geom_point(data=filter(all.pars$a, ParName !="intercept"), 
-             # size=0.5, alpha=0.3) +
-  # geom_point(data=filter(all.pars$A, ParName !="intercept"), 
-             # size=1.5, shape=1, alpha=0.5) +
-  geom_point(size=3.5, shape=1) + 
-  geom_linerange(colour="gray30") + 
+
+ggplot(all.pars$alpha, 
+       aes(x=ParName, y=mn, colour=model, group=model,
+           shape=sign(q025)==sign(q975))) + 
   geom_hline(yintercept=0, linetype=2) +
-  scale_colour_manual(values=mod_cols) + facet_wrap(~ParName, scales="free_y") +
-  labs(x="Model", y=expression(Slope~posterior~distribution~(alpha~A~a)))
-ggsave("eda/all_alpha.pdf", width=4, height=4)
+  geom_point(position=position_dodge(width=0.5)) + 
+  geom_linerange(aes(ymin=q025, ymax=q975), 
+                 position=position_dodge(width=0.5)) +
+  scale_colour_manual(values=mod_cols) + coord_flip() +
+  scale_shape_manual("Non-zero", values=c(1, 19)) +
+  labs(x="Variable", y=expression(Slope~posterior~distribution~(alpha)))
+ggsave("eda/all_alpha.pdf", width=6, height=5)
+ggplot(all.pars$A, 
+       aes(x=ParName, y=mn, colour=model, group=model, 
+           shape=sign(q025)==sign(q975))) + 
+  geom_hline(yintercept=0, linetype=2) +
+  geom_point(size=1, alpha=0.7, position=position_dodge(width=0.5)) +
+  scale_shape_manual("Non-zero", values=c(1, 19)) +
+  scale_colour_manual(values=mod_cols) + coord_flip() +
+  labs(x="Variable", y=expression(Slope~posterior~distribution~(A)))
+ggsave("eda/all_A.pdf", width=6, height=5)
+
+
+
 
 
 D.cols <- c("red3", "gray30")[(sign(all.pars$D$q025-1) != sign(all.pars$D$q975-1))+1]
@@ -242,42 +291,67 @@ ggplot(all.pars$D, aes(x=SpName, y=mn, ymin=q025, ymax=q975,
   geom_linerange() + geom_point() + 
   scale_colour_manual(values=c("red3", "gray50"), guide=F) +
   labs(x="", y="Proportional taxonomic bias (D)") +
-  theme(axis.text.x=element_text(angle=270, vjust=0.5, hjust=0, size=7,
-                                 colour=D.cols))
+  # theme(axis.text.x=element_text(angle=270, vjust=0.5, hjust=0, size=7,
+  #                                colour=D.cols)) + 
+  facet_wrap(~model)
 ggsave("eda/all_D.pdf", width=7, height=5)
-
-
-all.pars$H %>% left_join(., obs, by=c("site", "el", "set", "source")) %>%
-  ggplot(aes(x=H.obs, y=mn, ymin=q025, ymax=q975, colour=model)) + 
-  stat_smooth(method="lm") +
-  geom_linerange() + geom_point() + facet_grid(.~source)
 
 
 
 all.pars$lLAMBDA %>% group_by(model, set, source, site, el) %>% 
-  summarise(S=sum(mn > 4)) %>% 
-  ggplot(aes(el, S, colour=model)) + 
+  summarise(S=sum(1-exp(-exp(mn)) > 0.95)) %>% 
+  ggplot(aes(el, S, colour=model)) + ylim(0, d.ls$S) +
   geom_point(aes(shape=set)) + facet_grid(.~source) + 
   labs(x="Elevation (m)", y="Predicted richness (1km2)") + 
   scale_colour_manual(values=mod_cols) + stat_smooth(method="loess", se=F) + 
   scale_shape_manual(values=c(1, 19))
 
-
-all.pars$lLAMBDA %>% group_by(model, set, source, site, el) %>% 
-  summarise(S.mn=sum(1-exp(-exp(mn)) > 0.95),
-            S.025=sum(1-exp(-exp(q025)) > 0.95),
-            S.25=sum(1-exp(-exp(q25)) > 0.95),
-            S.75=sum(1-exp(-exp(q75)) > 0.95),
-            S.975=sum(1-exp(-exp(q975)) > 0.95)) %>% 
-  ggplot(aes(el, S.mn, colour=model, fill=model)) + 
-  ylim(0, d.ls$S) + 
-  geom_point(aes(shape=set)) + 
-  stat_smooth(aes(y=S.025), method="loess", se=F, linetype=2, size=0.5) +
-  stat_smooth(aes(y=S.975), method="loess", se=F, linetype=2, size=0.5) +
-  facet_grid(.~source) + 
+all.pars$prPres %>% group_by(model, set, source, site, el) %>% 
+  summarise(S=sum(mn > 0.95)) %>% 
+  ggplot(aes(el, S, colour=model)) + 
+  geom_point(aes(shape=set)) + facet_grid(.~source) + ylim(0, d.ls$S) +
   labs(x="Elevation (m)", y="Predicted richness (1km2)") + 
   scale_colour_manual(values=mod_cols) + stat_smooth(method="loess", se=F) + 
   scale_shape_manual(values=c(1, 19))
+ggsave("eda/all_S.pdf", width=8.5, height=4)
+
+
+all.pars$prPres %>% filter(el>2000 & source=="Y" & mn>0.975) %>% 
+  mutate(SpName=d.i$tax_i$species[as.numeric(spp)]) %>%
+  group_by(model) %>% select(model, SpName) %>% print.AsIs
+
+
+
+
+l.p <- ggplot(filter(all.pars$lLAMBDA, source=="Y"),
+              aes(x=el, y=exp(mn), colour=model)) + 
+  geom_point(alpha=0.5) + facet_wrap(~spp, scales="free_y") +
+  stat_smooth(method="loess", se=F, size=1) +
+  scale_colour_manual(values=mod_cols)
+ggsave("eda/lLAMBDA_spp.jpg", l.p, width=17, height=15)
+
+
+
+
+
+ggplot(filter(obs, S.obs>0), aes(el, S.obs)) + 
+  geom_point(alpha=0.5) + 
+  stat_smooth(method="loess", se=F, colour="gray30") + 
+  facet_grid(.~source) + labs(x="Elevation (m)", y="Richness (observed)")
+ggsave("eda/obs_S.pdf", width=8.5, height=4)
+
+ggplot(filter(obs, S.obs>0), aes(el, H.obs)) + 
+  geom_point(alpha=0.5) + 
+  stat_smooth(method="loess", se=F, colour="gray30") + 
+  facet_grid(.~source) + labs(x="Elevation (m)", y="Shannon H (observed)")
+ggsave("eda/obs_H.pdf", width=8.5, height=4)
+
+ggplot(filter(obs, S.obs>0), aes(el, N.obs)) + 
+  geom_point(alpha=0.5) + 
+  stat_smooth(method="loess", se=F, colour="gray30") + 
+  facet_grid(.~source) + labs(x="Elevation (m)", y="Total detections (observed)")
+ggsave("eda/obs_N.pdf", width=8.5, height=4)
+
 
 
 all.pars$llambda %>% group_by(model, set, source, plot, el) %>% 
@@ -305,14 +379,19 @@ all.pars$llambda %>% group_by(model, set, source, plot, el) %>%
   scale_shape_manual(values=c(1, 19))
 
 all.pars$llambda %>% group_by(model, plot, set, el, source) %>%
-  summarise(tot=sum(mn), tot_q025=sum(q025), tot_q975=sum(q975)) %>%
-  ggplot(aes(el, tot, ymin=tot_q025, ymax=tot_q975, colour=model)) + 
-  geom_point(alpha=0.75, aes(shape=set)) + 
-  geom_linerange(size=0.2, alpha=0.75) + 
+  summarise(tot=median(mn), tot_q025=sum(q025), tot_q975=sum(q975)) %>%
+  ggplot(aes(el, tot, colour=model)) + 
+  geom_point(alpha=0.3, aes(shape=set)) + 
+  # geom_linerange(aes(ymin=tot_q025, ymax=tot_q975), size=0.2, alpha=0.75) + 
   stat_smooth(method="loess", se=F) +
   scale_colour_manual(values=mod_cols) + scale_shape_manual(values=c(1,19)) + 
   facet_grid(.~source) + #coord_trans(y="exp") + 
-  labs(x="Elevation (m)", y=expression(Predicted~total~log(Lambda)~(.75~m^2)))
+  labs(x="Elevation (m)", y=expression(Predicted~total~log(lambda)~(.75~m^2)))
+ggsave()
+
+
+
+
 
 
 
@@ -331,7 +410,7 @@ all.pars$lLAMBDA %>% filter(source=="Y") %>%
   full_join(site.sf, ., by="BDM") %>%
   ggplot(aes(fill=S.ct, colour=S.ct)) + geom_sf() + 
   scale_fill_viridis(option="B") + scale_colour_viridis(option="B") + 
-  facet_wrap(~model, ncol=2)
+  facet_wrap(~model)
 
 
 
