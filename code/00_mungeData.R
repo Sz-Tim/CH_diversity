@@ -17,7 +17,8 @@ plot_i <- read_csv(paste0(ant.dir, "opfo_envDataProcessed.csv")) %>%
          CnpyOpn=(lc_i$Canopy[match(Categorie, lc_i$LC)]=="Open")*1,
          CnpyMxd=(lc_i$Canopy[match(Categorie, lc_i$LC)]=="Mixed")*1,
          Pasture=(TypeOfOpen=="pasture")*1,
-         Crop=(TypeOfOpen=="crop")*1) %>%
+         Crop=(TypeOfOpen=="crop")*1,
+         Meadow=(TypeOfOpen=="meadow")*1) %>%
   mutate_at(c("Grass", "Forb", "Shrub", "Bare", "Litter", "Moss"), 
             ~veg_i$Pct[match(., veg_i$class)]) %>%
   mutate(VegTot=Grass + Forb + Shrub)
@@ -28,17 +29,22 @@ source("code/00_fn.R"); source(paste0(ant.dir, "../code/00_fn.R"))
 
 
 ##--- settings
-test_prop_W <- 0.2 # proportion of W data to use for testing models
+test_prop_W <- 0 # proportion of W data to use for testing models
 test_prop_Y <- 0.2 # proportion of Y data to use for testing models
-X_vars <- c("MAT", "Iso", "AP", "lcH", "npp", "MAT_sq", "AP_sq")
-V_vars <- c("SoilTSt", "CnpyOpn", "CnpyMxd", "Pasture", "Crop", "VegTot")
-U_vars <- c("pop", "rdLen", "bldgs")
+X_vars <- c("MAT", "AP", "PwarmQ",
+            "lcH", "npp", "aspect", "bldgPeri", "rdLen",
+            "MAT_sq", "AP_sq")
+V_vars <- c("SoilTSt", "CnpyOpn", "CnpyMxd", 
+            "Pasture", "Crop", "VegTot")
+U_vars <- c("rdLen", "bldgPeri")
+pred_VD <- TRUE
 
 
 
 ##--- grids
 # W: 1km2 grid of Vaud
-VD_raw <- st_read("../2_gis/data/VD_21781/Vaud_boundaries.shp")
+VD_raw <- st_read("../2_gis/data/VD_21781/Vaud_boundaries.shp") %>%
+  filter(!grepl("Lac ", NAME)) 
 VD <- st_union(VD_raw)
 VD_ext <- raster::extent(matrix(st_bbox(VD), ncol=2))
 grd_W <- raster::raster(ext=VD_ext, crs=st_crs(VD), resolution=1000) %>%
@@ -51,47 +57,49 @@ grd_W.sf <- st_as_sf(grd_W) %>% st_set_crs(st_crs(VD)) %>% rename(id=layer) %>%
 site.sf <- agg_str_site_data() %>% arrange(BDM)
 
 
-
-##--- testing / training
-grd_W.sf <- grd_W.sf %>% 
-  # mutate(K_orig=row_number(), K_rand=K_orig) %>%
-  mutate(K_orig=row_number(), K_rand=sample(1:n())) %>%
-  arrange(K_rand)
-site.sf <- site.sf %>%
-  # mutate(J_orig=row_number(), J_rand=J_orig) %>%
-  mutate(J_orig=row_number(), J_rand=sample(1:n())) %>%
-  arrange(J_rand)
-plot_i <- plot_i %>% ungroup %>%
-  mutate(J_orig=site.sf$J_orig[match(plot_i$BDM, site.sf$BDM)],
-         J_rand=site.sf$J_rand[match(plot_i$BDM, site.sf$BDM)]) %>%
-  arrange(J_rand, Plot_id) %>%
-  mutate(I_rand=row_number())
+# MOVE DOWN --------------------------------------------------------------------
+# ##--- testing / training
+# grd_W.sf <- grd_W.sf %>% 
+#   # mutate(K_orig=row_number(), K_rand=K_orig) %>%
+#   mutate(K_orig=row_number(), K_rand=sample(1:n())) %>%
+#   arrange(K_rand)
+# site.sf <- site.sf %>%
+#   # mutate(J_orig=row_number(), J_rand=J_orig) %>%
+#   mutate(J_orig=row_number(), J_rand=sample(1:n())) %>%
+#   arrange(J_rand)
+# plot_i <- plot_i %>% ungroup %>%
+#   mutate(J_orig=site.sf$J_orig[match(plot_i$BDM, site.sf$BDM)],
+#          J_rand=site.sf$J_rand[match(plot_i$BDM, site.sf$BDM)]) %>%
+#   arrange(J_rand, Plot_id) %>%
+#   mutate(I_rand=row_number())
 
 
 
 ##--- W
 ants <- load_ant_data(str_type="soil", clean_spp=T)
 grid.W <- st_join(ants$pub, grd_W.sf) %>%
-  group_by(SPECIESID, id, inbd, K_orig, K_rand) %>% st_set_geometry(NULL) %>%
+  group_by(SPECIESID, id, inbd) %>% st_set_geometry(NULL) %>%
   summarise(nObs=n()) %>% ungroup %>%
-  filter(inbd) %>%
-  arrange(K_rand)
+  filter(inbd) %>% arrange(id)
 W <- matrix(0, nrow=nrow(grd_W.sf), ncol=max(tax_i$sNum), 
-            dimnames=list(grd_W.sf$K_rand, tax_i$species))
+            dimnames=list(grd_W.sf$id, tax_i$species))
 for(s in 1:max(tax_i$sNum)) {
   sp.occ <- filter(grid.W, SPECIESID==tax_i$species[s])
-  if(nrow(sp.occ)>0) W[sp.occ$K_rand,s] <- sp.occ$nObs
+  if(nrow(sp.occ)>0) W[sp.occ$id,s] <- sp.occ$nObs
 }
 W_id <- which(rowSums(W)>0)
+W_inbd <- which(grd_W.sf$inbd)
+grd_W.sf$W_obs <- rowSums(W)>0
+
 
 
 
 ##--- Y
 box.Y <- ants$str %>% group_by(BDM, Plot_id, SPECIESID) %>%
   summarise(nObs=n()) %>% 
-  left_join(., select(plot_i, BDM, Plot_id, J_orig, J_rand, I_rand), 
+  left_join(., select(plot_i, BDM, Plot_id), 
             by=c("BDM", "Plot_id")) %>%
-  arrange(I_rand)
+  arrange(BDM, Plot_id)
 # Y: ordered by plot_i$Plot_id = arrange(I_rand)
 Y <- matrix(0, nrow=nrow(plot_i), ncol=max(tax_i$sNum),
             dimnames=list(plot_i$Plot_id, tax_i$species))
@@ -103,19 +111,38 @@ for(s in 1:max(tax_i$sNum)) {
 
 
 ##--- indexes
-K <- list(W=floor(length(W_id)*(1-test_prop_W)), 
-          W_=ceiling(length(W_id)*test_prop_W))
-J <- list(Y=floor(nrow(site.sf)*(1-test_prop_Y)), 
-          Y_=ceiling(nrow(site.sf)*test_prop_Y))
-if(all(J>0)) {  # test/train
-  IJ <- list(Y=rep(1:J$Y, times=site.sf$nPlot_Total[1:J$Y]), 
-             Y_=rep(1:J$Y_, times=site.sf$nPlot_Total[(1:J$Y_)+J$Y]))
+if(pred_VD) {
+  K <- list(id_W=W_id,  # row of W, row/id of grd_W.sf
+            id_W_=W_inbd[-which(W_inbd %in% W_id)])
+  K$W <- length(K$id_W)
+  K$W_ <- length(K$id_W_)
+} else {
+  K <- list(W=floor(length(W_id)*(1-test_prop_W)),
+            W_=ceiling(length(W_id)*test_prop_W))
+}
+J <- list(id_Y=sample(1:nrow(site.sf), floor(nrow(site.sf)*(1-test_prop_Y))))
+J$id_Y_ <- (1:nrow(site.sf))[-J$id_Y]
+J$BDM_Y <- site.sf$BDM[J$id_Y]
+J$BDM_Y_ <- site.sf$BDM[J$id_Y_]
+J$Y <- length(J$id_Y)
+J$Y_ <- length(J$id_Y_)
+
+if(J$Y>0 & J$Y_>0) {  # test/train
+  IJ.ls <- list(Y=map(J$BDM_Y, ~which(plot_i$BDM==.x)),
+                Y_=map(J$BDM_Y_, ~which(plot_i$BDM==.x)))
+  IJ <- list(id_Y=unlist(IJ.ls$Y),   # row of plot_i
+             id_Y_=unlist(IJ.ls$Y_),
+             Y=unlist(imap(IJ.ls$Y, ~rep(.y, length(.x)))),
+             Y_=unlist(imap(IJ.ls$Y_, ~rep(.y, length(.x)))))
 } else {  # no test
   IJ <- list(Y=rep(1:J$Y, times=site.sf$nPlot_Total[1:J$Y]),
              Y_=NULL)
 }
-I <- list(Y=length(IJ$Y),
-          Y_=length(IJ$Y_))
+I <- list(Y=length(IJ$id_Y),
+          Y_=length(IJ$id_Y_))
+
+
+
 
 
 
@@ -133,59 +160,99 @@ if(is.null(tax_i)) {
 
 ##--- covariates
 clim <- dir(gis.dir, "chelsa") %>%
-  setNames(str_remove(., "_chelsa_VD_21781.tif")) %>%
+  setNames(str_remove(., "_chelsa_VD_21781.tif$")) %>%
   magrittr::extract(names(.) %in% X_vars) %>%
   map(., ~raster::raster(paste0(gis.dir, .x)))
 dem <- raster::raster(paste0(gis.dir, "dem_VD_21781.tif"))
+aspect <- raster::raster(paste0(gis.dir, "aspect_VD_21781.tif"))
 slope <- raster::raster(paste0(gis.dir, "slope_VD_21781.tif"))
 npp <- raster::raster(paste0(gis.dir, "MODIS_2010-2019_VD_21781.tif"))
-lc.W <- st_read(paste0(gis.dir, "lc_1kmZones_21781.shp")) %>%
-  filter(id %in% W_id) %>% st_set_geometry(NULL) %>% select(4:18) 
+# lc.W <- st_read(paste0(gis.dir, "lc_1kmZones_21781.shp")) %>%
+#   st_set_geometry(NULL) %>% filter(inbd==1) %>%
+#   mutate(K_rand=grd_W.sf$K_rand[match(id, grd_W.sf$id)]) %>% 
+#   arrange(K_rand) %>% select(3:17)
 lc.Y <- st_read(paste0(gis.dir, "site_lcZones_21781.shp")) %>% 
   arrange(BDM) %>% st_set_geometry(NULL) %>% select(3:17)
 pop <- raster::raster(paste0(gis.dir, "popDensity_VD_21781.tif")) 
-roads <- st_read(paste0(gis.dir, "roads_VD_21781.shp")) %>% st_set_crs(21781)
-bldgs <- st_read(paste0(gis.dir, "buildings_VD_21781.shp")) %>% st_set_crs(21781)
+roads <- st_read(paste0(gis.dir, "roads_VD_21781.shp")) %>% st_set_crs(21781) 
+# rdLen.W <- roads %>% st_intersection(., filter(grd_W.sf, inbd)) %>%
+#   mutate(length=st_length(.)) %>% st_set_geometry(NULL) %>%
+#   group_by(id) %>% summarise(rdLen=as.numeric(sum(length)))
+rdLen.Y <- roads %>% st_intersection(., site.sf %>% st_set_crs(21781)) %>%
+  mutate(length=st_length(.)) %>% st_set_geometry(NULL) %>%
+  group_by(BDM) %>% summarise(rdLen=as.numeric(sum(length)))
+# bldgs.W <- st_read(paste0(gis.dir, "bldgs_1km_21781.shp")) %>% 
+#   mutate(area=st_area(.), perimeter=lwgeom::st_perimeter(.)) %>% 
+#   st_set_geometry(NULL) %>% group_by(id) %>%
+#   summarise(area=as.numeric(sum(area)), 
+#             perimeter=as.numeric(sum(perimeter)))
+bldgs.Y <- st_read(paste0(gis.dir, "bldgs_site_21781.shp")) %>% 
+  mutate(area=st_area(.), perimeter=lwgeom::st_perimeter(.)) %>% 
+  st_set_geometry(NULL) %>% group_by(BDM) %>%
+  summarise(area=as.numeric(sum(area)), 
+            perimeter=as.numeric(sum(perimeter)))
 
 
 
 ##--- X
-# !!! Need to store all covariate df's, including _sq terms (XW, XY, V, U)
 # calculate means within W cells
-# X_W.df <- filter(grd_W.sf, id %in% W_id) %>%
-#   mutate(el=raster::extract(dem, ., fun=mean),
+# X_W.df <- filter(grd_W.sf, inbd) %>% 
+#   mutate(lcH=vegan::diversity(as.matrix(lc.W)),
+#          bldgArea=bldgs.W$area[match(id, bldgs.W$id)],
+#          bldgArea=replace(bldgArea, is.na(bldgArea), 0),
+#          bldgPeri=bldgs.W$perimeter[match(id, bldgs.W$id)],
+#          bldgPeri=replace(bldgPeri, is.na(bldgPeri), 0),
+#          rdLen=rdLen.W$rdLen[match(id, rdLen.W$id)],
+#          rdLen=replace(rdLen, is.na(rdLen), 0),
+#          el=raster::extract(dem, ., fun=mean),
+#          aspect=raster::extract(aspect, ., fun=mean, na.rm=T),
 #          slope=raster::extract(slope, ., fun=mean),
-#          npp=raster::extract(npp, ., fun=mean, na.rm=T),
-#          lcH=vegan::diversity(as.matrix(lc.W))) %>%
-#   bind_cols(., map_dfc(clim, ~raster::extract(., filter(grd_W.sf, id%in%W_id), 
+#          npp=raster::extract(npp, ., fun=mean, na.rm=T)) %>%
+#   bind_cols(., map_dfc(clim, ~raster::extract(., filter(grd_W.sf, inbd),
 #                                                 fun=mean))) %>%
 #   arrange(id)
 # write_sf(X_W.df, "data/cov/X_W-df.shp")
-X_W.df <- st_read("data/cov/X_W-df.shp") %>%
-  mutate(J_rand=grd_W.sf$K_rand[match(id, grd_W.sf$id)]) %>% 
-  arrange(J_rand)
+X_W.df <- st_read("data/cov/X_W-df.shp") %>% arrange(id)
+if(!pred_VD) { X_W.df %>% filter(id %in% W_id) }
+X_W.df <- X_W.df %>%
+  mutate(bldgArea=log(bldgArea+1),
+         bldgPeri=log(bldgPeri+1), 
+         rdLen=log(rdLen+1)) 
 # select covariates and add quadratic terms
-X_W.mx <- as.matrix(X_W.df %>% st_set_geometry(NULL) %>% 
-                      select(-inbd) %>% 
-                      mutate_if(is.numeric, .funs=list(sq=~.^2)) %>%
-                      select("id", "J_rand", "el", one_of(X_vars)))
-X_Y.mx <- as.matrix(site.sf %>% st_set_geometry(NULL) %>% 
-                      select(-region, -Sample_date,
-                             -contains("nPlot")) %>%
-                      mutate(lcH=vegan::diversity(as.matrix(lc.Y))) %>%
-                      mutate_if(is.numeric, .funs=list(sq=~.^2)) %>%
-                      select("BDM_id", "BDM", "el", one_of(X_vars)))
+X_W.mx <- as.matrix(
+  X_W.df %>% st_set_geometry(NULL) %>% 
+    select(-inbd) %>% 
+    mutate_if(is.numeric, .funs=list(sq=~.^2)) %>%
+    select("id", "el", one_of(X_vars))
+  )
+X_Y.mx <- as.matrix(
+  site.sf %>% select(-region, -Sample_date, -contains("nPlot")) %>%
+    mutate(lcH=vegan::diversity(as.matrix(lc.Y)),
+           bldgArea=bldgs.Y$area[match(BDM, bldgs.Y$BDM)],
+           bldgArea=replace(bldgArea, is.na(bldgArea), 0),
+           bldgPeri=bldgs.Y$perimeter[match(BDM, bldgs.Y$BDM)],
+           bldgPeri=replace(bldgPeri, is.na(bldgPeri), 0),
+           rdLen=rdLen.Y$rdLen[match(BDM, rdLen.Y$BDM)],
+           aspect=raster::extract(aspect, ., fun=mean, na.rm=T)) %>%
+    mutate_if(is.numeric, .funs=list(sq=~.^2)) %>%
+    st_set_geometry(NULL) %>% 
+    select("BDM", "el", one_of(X_vars))
+  )
 # scale and carefully combine
-if(all(K>0, J>0)) {  # test/train
-  X.mx <- rbind(X_W.mx[1:K$W,], 
-                X_Y.mx[1:J$Y,],
-                X_W.mx[K$W+(1:K$W_),], 
-                X_Y.mx[J$Y+(1:J$Y_),])
+if(all(K$W>0, K$W_>0, J$Y>0, J$Y_>0)) {  # test/train
+  X.mx <- rbind(X_W.mx[match(K$id_W, X_W.mx[,'id']),], 
+                X_Y.mx[match(J$BDM_Y, X_Y.mx[,'BDM']),],
+                X_W.mx[match(K$id_W_, X_W.mx[,'id']),], 
+                X_Y.mx[match(J$BDM_Y_, X_Y.mx[,'BDM']),])
 } else {  # no test
   X.mx <- rbind(X_W.mx, 
                 X_Y.mx)
 }
-X.scale <- scale(X.mx[,-(1:3)])
+X.scale <- scale(X.mx[,-(1:2)])
+if(any(grep("_sq", X_vars))) {
+  sqX <- grep("_sq", X_vars, value=T) %>% list(base=str_sub(., 1, -4), sq=.)
+  X.scale[,sqX$sq] <- X.scale[,sqX$base]^2 
+}
 X.all <- cbind(1, X.scale)
 
 
@@ -203,16 +270,14 @@ X.all <- cbind(1, X.scale)
 #   arrange(BDM, Plot_id)
 # write_sf(V.df, "data/cov/V-df.shp")
 V.df <- st_read("data/cov/V-df.shp") %>% 
-  mutate(J_rand=plot_i$J_rand[match(Plot_id, plot_i$Plot_id)],
-         I_rand=plot_i$I_rand[match(Plot_id, plot_i$Plot_id)]) %>% 
-  arrange(I_rand)
+  arrange(BDM, Plot_id)
 V_Y.mx <- as.matrix(V.df %>% st_set_geometry(NULL) %>% 
                       mutate_if(is.numeric, .funs=list(sq=~.^2)) %>%
                       mutate(Plot_id=as.numeric(as.character(Plot_id))) %>%
                       select("Plot_id", "el", all_of(V_vars)))
 if(all(I>0)) {  # test/train
-  V.mx <- rbind(V_Y.mx[1:I$Y,], 
-                V_Y.mx[I$Y+(1:I$Y_),]) 
+  V.mx <- rbind(V_Y.mx[IJ$id_Y,], 
+                V_Y.mx[IJ$id_Y_,]) 
 } else {  # no test
   V.mx <- V_Y.mx
 }
@@ -242,79 +307,96 @@ if("Crop" %in% V_vars) {
 
 ##--- U
 # # load covariates
-# rdLen.grd_W <- roads %>%
-#   st_intersection(., filter(grd_W.sf, id %in% W_id)) %>%
-#   mutate(length=st_length(.)) %>%
-#   group_by(id) %>%
-#   summarise(rdLen=as.numeric(sum(length)))
-bldgs.grd_W <- bldgs %>%
-  st_intersection(., filter(grd_W.sf, id %in% W_id)) %>%
-  mutate(area=st_area(.)) %>%
-  group_by(id) %>%
-  summarise(bldgArea=as.numeric(sum(area)))
-# 
-# # calculate means within W cells
-# U_W.df <- grd_W.sf %>% filter(id %in% W_id) %>%
-#   mutate(slope=raster::extract(slope, ., fun=mean),
-#          pop=raster::extract(pop, ., fun=mean, na.rm=T)) %>%
-#   arrange(id)
-# U_W.df <- left_join(U_W.df, st_set_geometry(rdLen.grd_W, NULL), by="id")
-# U_W.df[is.na(U_W.df)] <- 0
-# write_sf(U_W.df, "data/cov/U_W-df.shp")
-U_W.df <- st_read("data/cov/U_W-df.shp") %>%
-  mutate(pop=log(pop+1), rdLen=log(rdLen+1)) %>%
-  mutate(J_rand=grd_W.sf$K_rand[match(id, grd_W.sf$id)]) %>% 
-  arrange(J_rand)
+U_W.df <- st_read("data/cov/X_W-df.shp") %>% arrange(id)
+if(!pred_VD) { U_W.df %>% filter(id %in% W_id) }
+U_W.df <- U_W.df %>%
+  mutate(bldgArea=log(bldgArea+1),
+         bldgPeri=log(bldgPeri+1), 
+         rdLen=log(rdLen+1)) 
 U_W.mx <- as.matrix(st_set_geometry(U_W.df, NULL) %>% 
-                      select("J_rand", all_of(U_vars)))
-U.scale <- scale(U_W.mx[,-1])
+                      select("id", all_of(U_vars)))
+U.scale <- scale(U_W.mx[match(c(K$id_W, K$id_W_), X_W.mx[,'id']),-1])
 U.all <- cbind(1, U.scale)
 
 
 
 ##--- NA's
 # identify NA cells
-na.W <- which(is.na(rowSums(X_W.mx)[1:K$W]))
-na.Y <- which(is.na(rowSums(V.mx)[1:I$Y]))
-if(all(K>0, J>0)) {  # test/train
-  na.W_ <- which(is.na(rowSums(X_W.mx)[K$W+(1:K$W_)]))
-  na.Y_ <- which(is.na(rowSums(V.mx)[I$Y+(1:I$Y_)]))
+na.W <- which(is.na(rowSums(X.mx[1:K$W,])))
+na.Y <- which(is.na(rowSums(V.mx[1:I$Y,])))
+if(all(K$W_>0, J$Y_>0)) {  # test/train
+  na.W_ <- which(is.na(rowSums(X.mx[K$W+J$Y+(1:K$W_),])))
+  na.W_ <- unique(c(na.W_, (200:K$W_)))
+  na.Y_ <- which(is.na(rowSums(V.mx[I$Y+(1:I$Y_),])))
 }
 
 
 
 ##--- export stan data
-if(all(K>0, J>0)) {  # test/train
-  d.ls <- list(K=K$W-length(na.W), K_=K$W_-length(na.W_), 
-               J=J$Y, J_=J$Y_, 
-               IJ=IJ$Y[-na.Y], IJ_=IJ$Y_[-na.Y_], 
-               I=I$Y-length(na.Y), I_=I$Y_-length(na.Y_),
-               S=max(tax_i$sNum), 
-               G=max(tax_i$gNum), 
-               tax_i=tax_i[,c("sNum", "gNum")], 
-               D_prior=tax_i$Dprior, 
-               R=dim(X.all)[2], 
-               L=dim(V.scale)[2],
-               Q=dim(U.all)[2], 
-               W=W[W_id,][(1:K$W)[-na.W],], 
-               W_=W[W_id,][(K$W+(1:K$W_))[-na.W_],], 
-               Y=Y[1:I$Y,][-na.Y,],
-               Y_=Y[I$Y+(1:I$Y_),][-na.Y_,],
-               X=X.all[(1:(K$W+J$Y))[-na.W],], 
-               X_=X.all[((K$W+J$Y)+(1:(K$W_+J$Y_)))[-na.W_],], 
-               V=V.scale[1:I$Y,][-na.Y,], 
-               V_=V.scale[I$Y+(1:I$Y_),][-na.Y_,],
-               U=U.all[(1:K$W)[-na.W],], 
-               U_=U.all[(K$W+(1:K$W_))[-na.W_],], 
-               h=7.5e-7)
-  d.i <- list(X=X.mx[(1:(K$W+J$Y))[-na.W],],
-              X_=X.mx[((K$W+J$Y)+(1:(K$W_+J$Y_)))[-na.W_],],
-              V=V.mx[1:I$Y,][-na.Y,],
-              V_=V.mx[I$Y+(1:I$Y_),][-na.Y_,],
-              U=U_W.mx[(1:K$W)[-na.W],],
-              U_=U_W.mx[(K$W+(1:K$W_))[-na.W_],],
-              tax_i=tax_i,
-              grd_W.sf=grd_W.sf)
+if(all(K$W>0, K$W_>0, J$Y>0, J$Y_>0)) {  # test/train
+  if(pred_VD) {
+    d.ls <- list(K=K$W-length(na.W), K_=K$W_-length(na.W_), 
+                 J=J$Y, J_=J$Y_, 
+                 IJ=IJ$Y[-na.Y], IJ_=IJ$Y_[-na.Y_], 
+                 I=I$Y-length(na.Y), I_=I$Y_-length(na.Y_),
+                 S=max(tax_i$sNum), 
+                 G=max(tax_i$gNum), 
+                 tax_i=tax_i[,c("sNum", "gNum")], 
+                 D_prior=tax_i$Dprior, 
+                 R=dim(X.all)[2], 
+                 L=dim(V.scale)[2],
+                 Q=dim(U.all)[2], 
+                 W=W[K$id_W,][-na.W,], 
+                 W_=W[K$id_W_,][-na.W_,], 
+                 Y=Y[IJ$id_Y,][-na.Y,],
+                 Y_=Y[IJ$id_Y_,][-na.Y_,],
+                 X=X.all[1:(K$W+J$Y),][-na.W,], 
+                 X_=X.all[K$W+J$Y+(1:(K$W_+J$Y_)),][-na.W_,], 
+                 V=V.scale[1:I$Y,][-na.Y,], 
+                 V_=V.scale[I$Y+(1:I$Y_),][-na.Y_,],
+                 U=U.all[1:K$W,][-na.W,], 
+                 U_=U.all[K$W+(1:K$W_),][-na.W_,], 
+                 h=7.5e-7)
+    d.i <- list(X=X.mx[1:(K$W+J$Y),][-na.W,],
+                X_=X.mx[K$W+J$Y+(1:(K$W_+J$Y_)),][-na.W_,],
+                V=V.mx[1:I$Y,][-na.Y,],
+                V_=V.mx[I$Y+(1:I$Y_),][-na.Y_,],
+                U=U_W.mx[1:K$W,][-na.W,],
+                U_=U_W.mx[K$W+(1:K$W_),][-na.W_,],
+                tax_i=tax_i,
+                grd_W.sf=grd_W.sf)
+  } else {
+    d.ls <- list(K=K$W-length(na.W), K_=K$W_-length(na.W_), 
+                 J=J$Y, J_=J$Y_, 
+                 IJ=IJ$Y[-na.Y], IJ_=IJ$Y_[-na.Y_], 
+                 I=I$Y-length(na.Y), I_=I$Y_-length(na.Y_),
+                 S=max(tax_i$sNum), 
+                 G=max(tax_i$gNum), 
+                 tax_i=tax_i[,c("sNum", "gNum")], 
+                 D_prior=tax_i$Dprior, 
+                 R=dim(X.all)[2], 
+                 L=dim(V.scale)[2],
+                 Q=dim(U.all)[2], 
+                 W=W[W_id,][(1:K$W)[-na.W],], 
+                 W_=W[W_id,][(K$W+(1:K$W_))[-na.W_],], 
+                 Y=Y[1:I$Y,][-na.Y,],
+                 Y_=Y[I$Y+(1:I$Y_),][-na.Y_,],
+                 X=X.all[(1:(K$W+J$Y))[-na.W],], 
+                 X_=X.all[((K$W+J$Y)+(1:(K$W_+J$Y_)))[-na.W_],], 
+                 V=V.scale[1:I$Y,][-na.Y,], 
+                 V_=V.scale[I$Y+(1:I$Y_),][-na.Y_,],
+                 U=U.all[(1:K$W)[-na.W],], 
+                 U_=U.all[(K$W+(1:K$W_))[-na.W_],], 
+                 h=7.5e-7) 
+    d.i <- list(X=X.mx[(1:(K$W+J$Y))[-na.W],],
+                X_=X.mx[((K$W+J$Y)+(1:(K$W_+J$Y_)))[-na.W_],],
+                V=V.mx[1:I$Y,][-na.Y,],
+                V_=V.mx[I$Y+(1:I$Y_),][-na.Y_,],
+                U=U_W.mx[(1:K$W)[-na.W],],
+                U_=U_W.mx[(K$W+(1:K$W_))[-na.W_],],
+                tax_i=tax_i,
+                grd_W.sf=grd_W.sf)
+  }
   d.f <- paste0("data/stan_data/opfo_split", test_prop_Y*100)
   saveRDS(d.ls, paste0(d.f, "_ls.rds"))
   saveRDS(d.i, paste0(d.f, "_i.rds"))
@@ -389,7 +471,7 @@ if(all(K>0, J>0)) {  # test/train
 library(rstan)
 options(mc.cores=parallel::detectCores())
 rstan_options(auto_write=TRUE)
-mods <- "W" #c("W", "Y", "WY")
+mods <- "WY" #c("W", "Y", "WY")
 pars.exc <- c("a_std", "A_std", "b_std", "B_std", 
               "LAMBDA", "LAMBDA_", "lambda", "lambda_",
               "lLAMBDA", "lLAMBDA_", "llambda", "llambda_",
@@ -397,11 +479,10 @@ pars.exc <- c("a_std", "A_std", "b_std", "B_std",
               "p", "p_")
 out.ls <- setNames(vector("list", length(mods)), mods)
 for(i in seq_along(mods)) {
-  out.ls[i] <- stan(file=paste0("code/mods/PPM_mvPhy_", mods[i], "_IJK.stan"),
-                    # sample_file=paste0("out/tests/", i), 
+  out.ls[i] <- stan(file=paste0("code/mods/", mods[i], "_Phy.stan"),
                     pars=pars.exc, include=F, chains=1,
-                    data=read_rdump("data/stan_data/test_realData.Rdump"), 
-                    thin=1, warmup=500, iter=750)
+                    data=read_rdump("data/stan_data/opfo_split20.Rdump"), 
+                    thin=1, warmup=10, iter=20)
 }
 # out.ls <- map(mods, ~read_stan_csv(dir("out/tests", ., full.names=T)))
 
