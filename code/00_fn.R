@@ -157,12 +157,12 @@ aggregate_Lambda <- function(out.ls, LAMBDA) {
   sum.gg <- gg %>% group_by(model, Parameter) %>%
     summarise(mn=mean(value), 
               med=median(value),
-              q025=quantile(value, probs=0.025),
-              q975=quantile(value, probs=0.975),
+              q025=quantile(value, probs=0.025, na.rm=T),
+              q975=quantile(value, probs=0.975, na.rm=T),
               lmn=mean(log(value)), 
               lmed=median(log(value)),
-              lq025=quantile(log(value), probs=0.025),
-              lq975=quantile(log(value), probs=0.975)) %>%
+              lq025=quantile(log(value), probs=0.025, na.rm=T),
+              lq975=quantile(log(value), probs=0.975, na.rm=T)) %>%
     full_join(., true, by="Parameter") %>%
     mutate(train=c("train", "test")[grepl("_", dataset)+1])
   return(list(gg=gg, sum.gg=sum.gg, true=true))
