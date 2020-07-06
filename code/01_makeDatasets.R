@@ -4,11 +4,11 @@
 
 
 ##--- set up
-set_type <- c("full", "vs")[2]  # full = all of VD; vs = variable selection
+set_type <- c("vs", "pred")[1]  # vs = variable selection; pred = all of VD
 library(tidyverse); library(sf); library(googlesheets)
 gis.dir <- "../2_gis/data/VD_21781/"
 ant.dir <- "../1_opfo/data/"
-tax_i <- read_csv("data/tax_i.csv") #%>% filter(sNum<50)
+tax_i <- read_csv("data/tax_i.csv") 
 veg_i <- read_csv(paste0(ant.dir, "vegcover_id.csv")) # van der Maarel 2007
 lc_i <- readxl::read_xlsx(paste0(ant.dir, "landcover_id.xlsx"), 1)
 plot_i <- read_csv(paste0(ant.dir, "opfo_envDataProcessed.csv")) %>% 
@@ -105,7 +105,7 @@ for(s in 1:max(tax_i$sNum)) {
 
 
 ##--- indexes
-if(set_type=="full") {
+if(set_type=="pred") {
   K <- list(id_W=W_id,  # row of W, row/id of grd_W.sf
             id_W_=W_inbd[-which(W_inbd %in% W_id)])
   K$W <- length(K$id_W)
@@ -252,7 +252,7 @@ X_Y.mx <- as.matrix(
 # scale and carefully combine
 X.mx <- rbind(X_W.mx[match(K$id_W, X_W.mx[,'id']),], 
               X_Y.mx[match(J$BDM_Y, X_Y.mx[,'BDM']),])
-if(set_type=="full") {
+if(set_type=="pred") {
   X.mx <- rbind(X.mx,
                 X_W.mx[match(K$id_W_, X_W.mx[,'id']),])
 } 
@@ -338,7 +338,7 @@ U.all <- cbind(1, U.scale)
 # identify NA cells
 na.W <- which(is.na(rowSums(X.mx[1:K$W,]))) # rows of X with NA
 na.Y <- which(is.na(rowSums(V.mx[1:I$Y,]))) # rows of V with NA
-if(set_type=="full") {
+if(set_type=="pred") {
   na.W_ <- which(is.na(rowSums(X.mx[K$W+J$Y+(1:K$W_),]))) # rows of X_ with NA
 } else {
   na.W_ <- numeric(0)

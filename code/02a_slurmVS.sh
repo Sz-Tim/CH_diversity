@@ -9,7 +9,7 @@
 ## tasks should be 1.  This reflects how many processes are running (1), and
 ## not how many threads that process will use.
 #SBATCH --ntasks=1
-#SBATCH --cpus-per-task=12
+#SBATCH --cpus-per-task=24
 
 ## If it's likely your job will use more than 128GB of RAM, be sure
 ## to specify a minimum above this to ensure you are allocated a node
@@ -18,8 +18,8 @@
 
 ## Normal Slurm options
 ## SBATCH -p shared
-#SBATCH --job-name="opfo"
-#SBATCH --output=logs/opfo.output
+#SBATCH --job-name="vs"
+#SBATCH --output=logs/vs.output
 
 ## Load the appropriate modules first.  Linuxbrew/colsa contains most
 ## programs, though some are contained within the anaconda/colsa
@@ -30,4 +30,4 @@ module load linuxbrew/colsa
 ## Instruct your program to make use of the number of desired threads.
 ## As your job will be allocated an entire node, this should normally
 ## be 24.
-srun Rscript code/00_testRuns.R
+srun bash code/02_runVS.sh
