@@ -62,6 +62,62 @@ subset_vs_data <- function(d.base, d.new, X_vars, V_vars, U_vars) {
 
 
 
+
+#' Update rstanarm object with fitted hierarchical model output
+#' @param fit_glmer rstanarm::glmer output
+#' @param fit_hm stanfit object of hierarchical model output
+#' @param d.ls List of data for fit_hm
+#' @return Updated rstanarm object
+subset_vs_data <- function(fit_glmer, fit_hm, d.ls) {
+  library(tidyverse); library(rstan); library(rstanarm)
+  
+  R <- d.ls$R
+  L <- d.ls$L
+  S <- d.ls$S
+  
+  names_glmer <- names(fit_glmer$stanfit@sim$samples[[1]])
+  names_hm <- names(fit_hm@sim$samples[[1]])
+  name_lookup <- tibble(glmer=c("alpha[1]", 
+                                paste0("beta[", 1:(R+L), "]"),
+                                paste0("b[", 1:((R+L+1)*S), "]"),
+                                "lp__"),
+                        hm=c(paste0("beta[", 1:(R+L+1), "]"),
+                             paste0(rep(paste0("b[", 1:(R+L+1)), times=S), ",", 
+                                    rep(1:S, each=(R+L+1)), "]"),
+                             "lp__"))
+  
+  
+  # extract and align predicted values
+  llam.summary <- rstan::summary(fit_hm, pars="llambda")$summary
+  llam_hm.df <- tibble(llam=llam.summary[,1],
+                       par=rownames(llam.summary),
+                       site=str_split_fixed(str_remove(par, "llambda\\["), 
+                                            ",", 2)[,1],
+                       spp=str_split_fixed(str_remove(par, "]"), ",", 2)[,2]) %>%
+    mutate(site=as.numeric(site), spp=as.numeric(spp)) %>%
+    arrange(spp, site)
+  
+  
+  # reference model: take structure of glmer and replace values with fitted hm
+  fit_ref <- fit_glmer
+  fit_ref$linear.predictors <- llam_hm.df$llam
+  fit_ref$fitted.values <- exp(fit_ref$linear.predictors)
+  iter_hm <- length(fit_hm@sim$samples[[1]][[1]])
+  iter_glmer <- length(fit_glmer$stanfit@sim$samples[[1]][[1]])
+  iter_index <- (iter_hm-iter_glmer+1):iter_hm 
+  for(i in 1:nrow(name_lookup)) {
+    for(j in 1:length(fit_glmer$stanfit@sim$samples)) {
+      post_i <- fit_hm@sim$samples[[j]][[name_lookup$hm[i]]]
+      fit_ref$stanfit@sim$samples[[j]][[name_lookup$glmer[i]]] <- post_i[iter_index]
+    }
+  }
+  
+  return(fit_ref)
+}
+
+
+
+
 #### simulation functions ######################################################
 
 #' Simulate regional covariates
