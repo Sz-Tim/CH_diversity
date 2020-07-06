@@ -139,7 +139,7 @@ S <- 16  # number of species
 R <- 3  # number of regional covariates
 L <- 2
 Q <- 2  # number of W effort covariates
-K <- list(W=200, Y=35, W_=2, Y_=9)  # number of cells (W: 1252, Y: 44)
+K <- list(W=200, Y=20, W_=2, Y_=2)  # number of cells (W: 1252, Y: 44)
 IJ <- list(Y=rep(1:K$Y, each=25), Y_=rep(1:K$Y_, each=25))
 I <- list(Y=length(IJ$Y), Y_=length(IJ$Y_))  # number of soil plots
 Lambda_0 <- 6.56#10.5
@@ -185,26 +185,55 @@ ShannonH <- map(LAMBDA[-1], ~prop.table(., 1)) %>%
   map(~apply(., 1, function(x) -sum(x * log(x))))
 
 ## run stan model ##############################################################
-stan_data <- list(K=K$W, J=K$Y, K_=K$W_, J_=K$Y_, 
-                  IJ=IJ$Y, IJ_=IJ$Y_, I=I$Y, I_=I$Y_,
+# stan_data <- list(K=K$W, J=K$Y, K_=K$W_, J_=K$Y_, 
+#                   IJ=IJ$Y, IJ_=IJ$Y_, I=I$Y, I_=I$Y_,
+#                   S=S, G=G, tax_i=tax_i[,-3], D_prior=tax_i[,3], R=R, L=L, Q=Q, 
+#                   W=obs$W, Y=obs$Y, Y_=obs$Y_,
+#                   X=rbind(X$W, X$Y), X_=rbind(X$W_, X$Y_), 
+#                   V=V$Y, V_=V$Y_, U=U_W, U_=U_W_, h=h)
+
+stan_data <- list(K=K$W, J=K$Y, K_=K$W_, 
+                  IJ=IJ$Y, I=I$Y,
                   S=S, G=G, tax_i=tax_i[,-3], D_prior=tax_i[,3], R=R, L=L, Q=Q, 
-                  W=obs$W, Y=obs$Y, Y_=obs$Y_,
-                  X=rbind(X$W, X$Y), X_=rbind(X$W_, X$Y_), 
-                  V=V$Y, V_=V$Y_, U=U_W, U_=U_W_, h=h)
+                  W=obs$W, Y=obs$Y, 
+                  X=rbind(X$W, X$Y), X_=X$W_,
+                  V=V$Y, U=U_W, U_=U_W_, h=h)
 
 out.ls <- list(
-  WY=stan(file="code/mods/PPM_mvPhy_WY_IJK.stan",
-          data=stan_data, thin=5, warmup=1500, iter=2000)#,
-  # W=stan(file="code/mods/PPM_mvPhy_W_IJK.stan",
-  #        data=stan_data, thin=5, warmup=1500, iter=2000),
-  # Y=stan(file="code/mods/PPM_mvPhy_Y_IJK.stan",
-  #        data=stan_data, thin=5, warmup=1500, iter=2000)
+  # WY=stan(file="code/mods/WY_Phy_full.stan", chains=1,
+  #         data=stan_data, warmup=1000, iter=1100),
+  # WY_2=stan(file="code/mods/WY_Mnom_full.stan", chains=1,
+  #        data=stan_data, warmup=1000, iter=1100),
+  # WY_3=stan(file="code/mods/WY_Mnom_CMPois_full.stan", chains=1,
+  #          data=stan_data, warmup=1000, iter=1100),
+  Y=stan(file="code/mods/Y_Pois.stan", chains=1,
+         data=stan_data, warmup=1000, iter=1100),
+  Y_GP=stan(file="code/mods/Y_GP.stan", chains=1,
+         data=stan_data, warmup=1000, iter=1100),
+  Y_NB=stan(file="code/mods/Y_NB.stan", chains=1,
+            data=stan_data, warmup=1000, iter=1100),
+  Y_ZNB=stan(file="code/mods/Y_ZNB.stan", chains=1,
+         data=stan_data, warmup=1000, iter=1100),
+  Y_ZIP=stan(file="code/mods/Y_ZIP.stan", chains=1,
+             data=stan_data, warmup=1000, iter=1100),
+  Y_CMP=stan(file="code/mods/Y_CMP.stan", chains=1,
+         data=stan_data, warmup=1000, iter=1100)
 )
 
 
+# Y: 317 = Phy
+# Y_2: 778 = CMP_full with vectors
+# Y_3: 927 = CMPois with scalars
+# Y_4: 726 = CMP_full with matrices, summing at end
+# Y_5: 571 = CMP_full with matrices, summing each component (462)
+
 ## plot output: compare W, Y, WY ###############################################
-mod_cols <- c(W="#1f78b4", Y="#33a02c", WY="#e31a1c", 
-              W_2="#a6cee3", Y_2="#b2df8a", WY_2="#fb9a99")
+mod_cols <- c(W="#006d2c", Y="#08519c", WY="#54278f", 
+              W_2="#31a354", Y_2="#3182bd", WY_2="#756bb1", 
+              W_3="#74c476", Y_3="#6baed6", WY_3="#9e9ac8")
+
+mod_cols <- c(Y="#006d2c", Y_NB="#08519c", Y_GP="#54278f", 
+              Y_ZIP="#74c476", Y_ZNB="#6baed6", Y_CMP="#9e9ac8")
 
 # lpd (Y_ | lambda_)
 gg.ll <- map_dfr(out.ls, ~ggs(., "log_lik_lambda_"), .id="model")
@@ -215,28 +244,42 @@ gg.ll.lpd <- gg.ll %>% group_by(model, Parameter) %>%
 gg.ll.lpd %>% arrange(lpd)
 
 library(loo)
-map(out.ls, ~loo::waic(loo::extract_log_lik(., "log_lik_lambda_"))) %>%
+map(out.ls, ~loo::waic(loo::extract_log_lik(., "log_lik_lambda"))) %>%
   loo::loo_compare()
-map(out.ls, ~loo::loo(loo::extract_log_lik(., "log_lik_lambda_"))) %>%
+map(out.ls, ~loo::loo(loo::extract_log_lik(., "log_lik_lambda"))) %>%
   loo::loo_compare()
 
 
-mod <- names(mod_cols)[6]
 
-H.out <- ggs(out.ls[[mod]], "ShannonH") %>%
-  mutate(site=str_remove(str_split_fixed(Parameter, "\\[", n=2)[,2], "]"),
-         site=as.numeric(site),
-         par=str_split_fixed(Parameter, "\\[", n=2)[,1],
-         test=grepl("_", par)) %>%
-  arrange(par, site)
+# H.plots <- vector("list", 5) %>% setNames(names(mod_cols[-5]))
+H.plots <- vector("list", 6) %>% setNames(names(out.ls))
+for(i in seq_along(H.plots)) {
+  mod <- names(H.plots)[i]
+  H.out <- ggs(out.ls[[mod]], "ShannonH") %>%
+    mutate(site=str_remove(str_split_fixed(Parameter, "\\[", n=2)[,2], "]"),
+           site=as.numeric(site),
+           par=str_split_fixed(Parameter, "\\[", n=2)[,1],
+           test=grepl("_", par)) %>%
+    arrange(par, site)
+  H.out <- rbind(H.out %>% filter(!test) %>%
+                   mutate(true=c(ShannonH$W, ShannonH$Y)[site],
+                          set=c("Y", "W")[1+(site<=K$W)]),
+                 H.out %>% filter(test) %>%
+                   mutate(true=c(ShannonH$W_, ShannonH$Y_)[site],
+                          set=c("Y", "W")[1+(site<=K$W_)]))
+  H.out$diff <- H.out$value - H.out$true
+  H.plots[[i]] <- H.out %>% group_by(Parameter, par, site, set) %>%
+    summarise(true=mean(true, na.rm=T), postmn=mean(value, na.rm=T), 
+              postq025=quantile(value, probs=.025, na.rm=T),
+              postq975=quantile(value, probs=.975, na.rm=T)) %>%
+    ggplot(aes(true, postmn)) +  geom_point(alpha=0.5) +
+    geom_linerange(aes(ymin=postq025, ymax=postq975), alpha=0.5) +
+    geom_abline(colour="red", linetype=2) + facet_grid(set~par) + ylim(0,3) + 
+    scale_colour_manual(values=mod_cols) + ggtitle(mod) 
+}
+walk(H.plots, print)
 
-H.out <- rbind(H.out %>% filter(!test) %>%
-                 mutate(true=c(ShannonH$W, ShannonH$Y)[site],
-                        set=c("Y", "W")[1+(site<=K$W)]),
-               H.out %>% filter(test) %>%
-                 mutate(true=c(ShannonH$W_, ShannonH$Y_)[site],
-                        set=c("Y", "W")[1+(site<=K$W_)]))
-H.out$diff <- H.out$value - H.out$true
+
 
 # ggs_caterpillar(H.out) + facet_grid(.~par, scales="free_y") + 
 #   geom_point(aes(x=true, y=Parameter), colour="red", size=0.5, shape=1)
@@ -248,14 +291,7 @@ H.out$diff <- H.out$value - H.out$true
 # ggplot(H.out, aes(true, value, colour=set)) + geom_point(alpha=0.05) +
 #   geom_abline(colour="red", linetype=2) + facet_wrap(~par) + ylim(0,3) + 
 #   ggtitle("Y")
-H.out %>% group_by(Parameter, par, site, set) %>%
-  summarise(true=mean(true), postmn=mean(value), 
-            postq025=quantile(value, probs=.025),
-            postq975=quantile(value, probs=.975)) %>%
-  ggplot(aes(true, postmn)) +  geom_point(alpha=0.5) +
-  geom_linerange(aes(ymin=postq025, ymax=postq975), alpha=0.5) +
-  geom_abline(colour="red", linetype=2) + facet_grid(set~par) + ylim(0,3) + 
-  scale_colour_manual(values=mod_cols) + ggtitle(mod)
+
 
 ggplot(H.out, aes(true, diff)) + geom_point(alpha=0.5) + facet_grid(test~set) +
   geom_hline(yintercept=0, colour="red", linetype=2)
@@ -350,7 +386,7 @@ ggplot(D.out$gg, aes(x=value, colour=model)) +
 Lam.out <- aggregate_Lambda(out.ls, LAMBDA)
 lam.out <- aggregate_lambda(out.ls, lambda)
 
-Lam.out$sum.gg %>% mutate(Diff=lmn-log(true)) %>% 
+Lam.out$sum.gg %>% mutate(Diff=lmed-log(true)) %>% 
   group_by(model, train) %>%
   summarise(mnDiff=sqrt(mean(Diff^2)), sd=sd(Diff), se=sd(Diff)/sqrt(n())) %>%
   ggplot(aes(x=model, y=mnDiff, ymin=mnDiff-2*se, 
@@ -394,7 +430,17 @@ Lam.out$sum.gg %>%
   geom_pointrange() + scale_colour_manual(values=mod_cols) + 
   labs(y="RMSE in prP")
 ggsave("eda/prP_1km_RMSE.pdf", width=5, height=4, units="in")
+Lam.out$sum.gg %>% 
+  mutate(pP.mn=1-exp(-mn)) %>% 
+  ggplot(aes(x=pP.mn, y=log(true), colour=model)) + xlim(0,1) +
+  facet_wrap(.~model) + geom_hline(yintercept=0) + 
+  geom_point(alpha=0.2) + scale_colour_manual(values=mod_cols) +
+  labs(x="pP", y="log(LAMBDA)")
 
+ggplot(Lam.out$sum.gg, aes(x=log(true), y=log(med), colour=model)) + 
+  facet_wrap(.~model) + geom_abline() + 
+  geom_point(alpha=0.2) + scale_colour_manual(values=mod_cols) +
+  labs(x="log(LAMBDA.true)", y="log(LAMBDA.pred)")
 lam.out$sum.gg %>% 
   mutate(pP.mn=1-exp(-mn), pP.true=1-exp(-true), Diff=pP.mn-pP.true) %>% 
   group_by(model, train) %>%
@@ -410,16 +456,34 @@ ggsave("eda/prP_075_RMSE.pdf", width=5, height=4, units="in")
 
 Lam.out$sum.gg %>% 
   mutate(pP.mn=1-exp(-mn), pP.true=1-exp(-true), Diff=pP.mn-pP.true) %>% 
-  ggplot(aes(x=pP.mn, y=log(true), colour=model)) + 
-  facet_grid(model~train) + geom_hline(yintercept=0) + 
+  ggplot(aes(x=pP.true, y=pP.mn, colour=model)) + xlim(0,1) + ylim(0,1) +
+  facet_wrap(.~model) + geom_abline() + 
   geom_point(alpha=0.2) + scale_colour_manual(values=mod_cols) +
-  labs(x="pP", y="log(true Lambda)")
+  labs(x="pP.true", y="pP")
+Lam.out$sum.gg %>% 
+  mutate(pP.mn=1-exp(-mn), pP.true=1-exp(-true), Diff=pP.mn-pP.true) %>% 
+  ggplot(aes(x=pP.true, y=pP.mn, colour=model)) + xlim(0,1) + ylim(0,1) +
+  facet_wrap(.~model) + geom_abline() + 
+  geom_point(alpha=0.2) + scale_colour_manual(values=mod_cols) +
+  labs(x="pP.true", y="pP")
 lam.out$sum.gg %>% 
   mutate(pP.mn=1-exp(-mn), pP.true=1-exp(-true), Diff=pP.mn-pP.true) %>% 
   ggplot(aes(x=pP.mn, y=log(true), colour=model)) + 
   facet_grid(model~train) + geom_hline(yintercept=0) + 
   geom_point(alpha=0.2) + scale_colour_manual(values=mod_cols) +
   labs(x="pP", y="log(true  lambda)")
+
+
+
+
+Lam.out$sum.gg %>% filter(!is.na(K)) %>%
+  mutate(pP.mn=1-exp(-mn), pP.true=1-exp(-true), Diff=pP.mn-pP.true) %>% 
+  group_by(model, K, train) %>% 
+  summarise(S.mn=sum(pP.mn > 0.95), S.true=sum(pP.true > 0.95)) %>%
+  ggplot(aes(S.true, S.mn, colour=model)) + geom_point(alpha=0.5) + 
+  geom_abline(linetype=2) + xlim(0,S) + ylim(0,S) +
+  stat_smooth(method="lm") +
+  facet_wrap(~model)
 
 
 
