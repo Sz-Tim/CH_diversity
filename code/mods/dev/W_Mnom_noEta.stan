@@ -12,7 +12,6 @@ data {
   int<lower=0> S;  // number of species
   int<lower=0> G;  // number of genera
   int<lower=0> R;  // number of cell-scale covariates (incl. intercept)
-  int<lower=0> Q;  // number of W effort covariates
   
   // taxonomy
   int<lower=0> tax_i[S,2];  // species-genus lookup
@@ -26,8 +25,6 @@ data {
   // covariates
   matrix[K+J,R] X;  // W grid cell covariates (train)
   matrix[K_+J_,R] X_;  // W grid cell covariates (test)
-  matrix[K,Q] U;  // W effort covariates (train)
-  matrix[K_,Q] U_;  // W effort covariates (test)
   real h;  // Y (plot area)/(cell area)
   
 }
@@ -43,9 +40,6 @@ parameters {
   vector[R] beta;  // overall slopes
   cholesky_factor_corr[G] L_Omega_B[R];  // genus-level correlation matrix 
   vector<lower=0>[G] sigma_B[R];  // genus-level correlation matrix 
-  
-  // slopes: W effort
-  vector[Q] eta;  // W sampling effort slopes 
 
 }
 
@@ -59,7 +53,7 @@ transformed parameters {
   
   // Lambda/lambda
   matrix[K+J,S] lLAMBDA;  // cell level
-  vector<lower=0, upper=1>[K] E = inv_logit(U * eta);  // sampling effort
+  matrix[S,K+J] t_lLAMBDA;
   
   // cell level
   for(r in 1:R) {
@@ -69,15 +63,13 @@ transformed parameters {
     b[r,] = B[r,tax_i[,2]] + b_std[r,] * sigma_b[r]; 
   }
   lLAMBDA = X * b;
+  t_lLAMBDA = lLAMBDA';
   
 }
 
 model {
   
   // effort and species bias priors
-  // D ~ normal(D_prior, 1);
-  eta[1] ~ normal(-12, 1);
-  eta[2:Q] ~ normal(0, 1);
   
   // cell level priors
   beta[1] ~ normal(6, 2);
@@ -91,8 +83,10 @@ model {
   sigma_b ~ cauchy(0, 2);
   
   // likelihood
-  for(s in 1:S) {
-    W[,s] ~ poisson_log(lLAMBDA[1:K,s] + log(E));
+  {
+    for(k in 1:K) {
+      W[k,] ~ multinomial(softmax(t_lLAMBDA[,k]));
+    }
   }
   
 }

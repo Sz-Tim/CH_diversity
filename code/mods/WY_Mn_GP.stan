@@ -1,7 +1,21 @@
+functions {
+  // Conway-Maxwell Poisson model for underdispersion
+  real GP_log_lpdf(matrix y, real lambda, matrix log_theta) {
+    matrix[dims(y)[1],dims(y)[2]] theta = exp(log_theta);
+    matrix[dims(y)[1],dims(y)[2]] y_lambda = y*lambda;
+    return sum(log_theta)
+           + sum(((y-1) .* log(theta + y_lambda)))
+           - sum(lgamma(y+1))
+           - sum(y_lambda)
+           - sum(theta);
+  }
+}
+
 data {
   
   // dimensions and indices
   int<lower=0> K; // grid cells for W (train)
+  int<lower=0> K_; // grid cells for W (test)
   int<lower=0> J; // grid cells for Y (train)
   int<lower=0> I; // plots (train)
   int<lower=0> IJ[I]; // plot to grid cell lookup (train)
@@ -9,7 +23,6 @@ data {
   int<lower=0> G;  // number of genera
   int<lower=0> R;  // number of cell-scale covariates (incl. intercept)
   int<lower=0> L;  // number of plot-scale covariates (no intercept)
-  int<lower=0> Q;  // number of W effort covariates
   
   // taxonomy
   int<lower=0> tax_i[S,2];  // species-genus lookup
@@ -17,12 +30,12 @@ data {
   
   // observed data
   int<lower=0> W[K,S];  // W counts (train)
-  int<lower=0> Y[I,S];  // Y counts (train)
+  matrix<lower=0>[I,S] Y;  // Y counts (train)
   
   // covariates
   matrix[K+J,R] X;  // W grid cell covariates (train)
+  matrix[K_,R] X_;  // W grid cell covariates (test)
   matrix[I,L] V;  // Y plot covariates (train)
-  matrix[K,Q] U;  // W effort covariates (train)
   real h;  // Y (plot area)/(cell area)
   
 }
@@ -47,11 +60,10 @@ parameters {
   cholesky_factor_corr[G] L_Omega_A[L];  // genus-level correlation matrix 
   vector<lower=0>[G] sigma_A[L];  // genus-level correlation matrix 
   
-  // slopes: W effort
-  vector[Q] eta;  // W sampling effort slopes 
-  
   // bias: W species random effects
   vector<lower=0>[S] D;  // species bias in W
+  
+  real<lower=-1, upper=1> disp_lam;
 
 }
 
@@ -68,7 +80,6 @@ transformed parameters {
   // Lambda/lambda
   matrix[K+J,S] lLAMBDA;  // cell level
   matrix[I,S] llambda;  // plot level lambda
-  vector<lower=0, upper=1>[K] E = inv_logit(U * eta);  // sampling effort
   
   // cell level
   for(r in 1:R) {
@@ -96,10 +107,10 @@ transformed parameters {
 
 model {
   
+  disp_lam ~ normal(0, 2);
+  
   // effort and species bias priors
   D ~ normal(D_prior, 1);
-  eta[1] ~ normal(-12, 1);
-  eta[2:Q] ~ normal(0, 1);
   
   // cell level priors
   beta[1] ~ normal(6, 2);
@@ -123,39 +134,48 @@ model {
   sigma_a ~ cauchy(0, 2);
   
   // likelihood
-  {
-    matrix[K,S] lLAMBDA_W = block(lLAMBDA, 1, 1, K, S);  // cell level Y
-    for(s in 1:S) {
-      W[,s] ~ poisson_log(lLAMBDA_W[,s] + log(E*D[s]));
-      Y[,s] ~ poisson_log(llambda[,s]);
-    }
+  for(k in 1:K) {
+    W[k,] ~ multinomial(softmax( lLAMBDA[k,]' .* D ));
   }
+  Y ~ GP_log(disp_lam, llambda);
   
 }
 
 generated quantities {
   
-  matrix[I,S] log_lik_lambda;
-  matrix<lower=0>[K+J,S] LAMBDA = exp(lLAMBDA);
-  matrix<lower=0, upper=1>[K+J,S] p;
-  vector[K+J] ShannonH;
+  matrix[K_,S] lLAMBDA_= X_ * b;
+  // matrix[I,S] log_lik_lambda;
   matrix[K+J,S] prPres;
+  matrix[K_,S] prPres_;
+  vector[K+J] ShannonH;
+  vector[K_] ShannonH_;
   matrix[G,G] Sigma_B[R];
   matrix[G,G] Sigma_A[L];
 
   // calculated predicted LAMBDA and lambda
-  for(s in 1:S) {
-    for(i in 1:I) {
-     log_lik_lambda[i,s] = poisson_log_lpmf(Y[i,s] | llambda[i,s]);  
-    }
-  }
+  // for(s in 1:S) {
+  //   for(i in 1:I) {
+  //    log_lik_lambda[i,s] = generalized_poisson_lpmf(Y[i,s] | disp_lam, llambda[i,s]);  
+  //   }
+  // }
   
   // Shannon H: calculate p, then H
-  for(i in 1:(K+J)) {
-    p[i,] = LAMBDA[i,] / sum(LAMBDA[i,]);
-    prPres[i,] = 1-exp(-LAMBDA[i,]);
+  {
+    matrix[K+J,S] p;
+    matrix[K_,S] p_;
+    matrix[K+J,S] LAMBDA = exp(lLAMBDA);
+    matrix[K_,S] LAMBDA_=exp(lLAMBDA_);
+    for(i in 1:(K+J)) {
+      p[i,] = LAMBDA[i,] / sum(LAMBDA[i,]);
+      prPres[i,] = 1-exp(-LAMBDA[i,]);
+    }
+    for(i in 1:K_) {
+      p_[i,] = LAMBDA_[i,] / sum(LAMBDA_[i,]);
+      prPres_[i,] = 1-exp(-LAMBDA_[i,]);
+    }
+    ShannonH = - rows_dot_product(p, log(p));
+    ShannonH_ = - rows_dot_product(p_, log(p_)); 
   }
-  ShannonH = - rows_dot_product(p, log(p));
   
   // compose correlation matrices = sigma * LL' * sigma
   for(r in 1:R) {
