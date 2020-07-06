@@ -204,7 +204,7 @@ aggregate_D <- function(out.ls, D) {
 aggregate_Lambda <- function(out.ls, LAMBDA) {
   Lam_sim <- list(LAMBDA=rbind(LAMBDA$W, LAMBDA$Y),
                   LAMBDA_=rbind(LAMBDA$W_, LAMBDA$Y_))
-  gg <- map_dfr(out.ls, ~ggs(., "LAMBDA"), .id="model")
+  gg <- map_dfr(out.ls, ~ggs(., "lLAMBDA"), .id="model")
   true <- map_dfr(Lam_sim, 
                   ~tibble(true=c(.), 
                           K=as.character(rep(1:dim(.)[1], times=dim(.)[2])),
@@ -212,14 +212,15 @@ aggregate_Lambda <- function(out.ls, LAMBDA) {
                   .id="dataset") %>%
     mutate(Parameter=paste0(dataset, "[", K, ",", S, "]"))
   sum.gg <- gg %>% group_by(model, Parameter) %>%
-    summarise(mn=mean(value), 
-              med=median(value),
-              q025=quantile(value, probs=0.025, na.rm=T),
-              q975=quantile(value, probs=0.975, na.rm=T),
-              lmn=mean(log(value)), 
-              lmed=median(log(value)),
-              lq025=quantile(log(value), probs=0.025, na.rm=T),
-              lq975=quantile(log(value), probs=0.975, na.rm=T)) %>%
+    summarise(mn=mean(exp(value)), 
+              med=median(exp(value)),
+              q025=quantile(exp(value), probs=0.025, na.rm=T),
+              q975=quantile(exp(value), probs=0.975, na.rm=T),
+              lmn=mean(value), 
+              lmed=median(value),
+              lq025=quantile(value, probs=0.025, na.rm=T),
+              lq975=quantile(value, probs=0.975, na.rm=T)) %>%
+    ungroup %>% mutate(Parameter=str_sub(Parameter, 2L, -1L)) %>%
     full_join(., true, by="Parameter") %>%
     mutate(train=c("train", "test")[grepl("_", dataset)+1])
   return(list(gg=gg, sum.gg=sum.gg, true=true))
