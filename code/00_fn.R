@@ -1,8 +1,65 @@
 # Assorted helper functions
 # Tim Szewczyk
 
+# Variable selection functions
 # Simulation functions
 # Output processing functions
+
+
+#### variable selection functions ##############################################
+
+#' Generate datasets with specified covariates
+#' @param d.base Name & path for full dataset
+#' @param d.new Name & path for new dataset
+#' @param X_vars Vector of X variable names to include
+#' @param V_vars Vector of V variable names to include
+#' @param U_vars Vector of U variable names to include
+#' @return Files created: d.new_ls.rds, d.new_i.rds, d.new.Rdump, d.new_vars.R
+subset_vs_data <- function(d.base, d.new, X_vars, V_vars, U_vars) {
+  library(rstan); library(tidyverse)
+  
+  d.ls <- readRDS(paste0(d.base, "_ls.rds"))
+  d.i <- readRDS(paste0(d.base, "_i.rds"))
+  
+  X_cols <- which(colnames(d.ls$X) %in% X_vars)
+  V_cols <- which(colnames(d.ls$V) %in% V_vars) 
+  U_cols <- which(colnames(d.ls$U) %in% U_vars)
+  
+  d.ls$R <- length(X_cols) + 1
+  d.ls$L <- length(V_cols)
+  d.ls$Q <- length(U_cols) + 1
+  
+  d.ls$X <- d.ls$X[,c(1, X_cols), drop=F]
+  d.ls$X_ <- d.ls$X_[,c(1, X_cols), drop=F]
+  d.ls$V <- d.ls$V[,V_cols, drop=F]
+  d.ls$V_ <- d.ls$V_[,V_cols, drop=F]
+  d.ls$U <- d.ls$U[,c(1, U_cols), drop=F]
+  
+  d.i$X <- d.i$X[,c(1,2, X_cols+1), drop=F]
+  d.i$X_ <- d.i$X_[,c(1,2, X_cols+1), drop=F]
+  d.i$V <- d.i$V[,c(1,2, V_cols+2), drop=F]
+  d.i$V_ <- d.i$V_[,c(1,2, V_cols+2), drop=F]
+  d.i$U <- d.i$U[,c(1, U_cols), drop=F]
+  
+  saveRDS(d.ls, paste0(d.new, "_ls.rds"))
+  saveRDS(d.i, paste0(d.new, "_i.rds"))
+  rstan::stan_rdump(ls(d.ls),
+                    file=paste0(d.new, ".Rdump"),
+                    envir=list2env(d.ls))
+  
+  sink(paste0(d.new, "_vars.R"))
+  cat("X_vars.i <-", paste0("c('", paste0(X_vars, collapse="', '"), "')"), "\n")
+  cat("V_vars.i <-", paste0("c('", paste0(V_vars, collapse="', '"), "')"), "\n")
+  cat("U_vars.i <-", paste0("c('", paste0(U_vars, collapse="', '"), "')"), "\n")
+  sink()
+  
+  return(cat("Created", d.new, "with the following variables:\n",
+             "X:", X_vars, "\n",
+             "V:", V_vars, "\n",
+             "U:", U_vars, "\n"))
+}
+
+
 
 
 #### simulation functions ######################################################
