@@ -4,7 +4,7 @@
 
 
 ##--- set up
-set_type <- c("full", "vs")[2]  # full = all of VD; vs = variable selection
+set_type <- c("full", "vs")[1]  # full = all of VD; vs = variable selection
 library(tidyverse); library(sf); library(googlesheets)
 gis.dir <- "../2_gis/data/VD_21781/"
 ant.dir <- "../1_opfo/data/"
@@ -33,7 +33,7 @@ source("code/00_fn.R"); source(paste0(ant.dir, "../code/00_fn.R"))
 
 
 ##--- settings
-test_prop_Y <- ifelse(set_type=="vs", 0, 0)  # prop BDM to withold
+test_prop_Y <- ifelse(set_type=="vs", 0.3, 0)  # prop BDM to withold
 X_vars <- c("grwnDD0", "grwnDD0_sq", 
             "AP",
             "npp",

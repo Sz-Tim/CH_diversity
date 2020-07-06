@@ -6,8 +6,8 @@
 ##--- set up
 library(rstan); library(tidyverse); library(foreach); library(doSNOW)
 source("code/00_fn.R")
-dataset <- c("full", "split")[1]
-mod.base <- c("code/mods/%s_Phy_NoTest.stan")
+dataset <- c("full", "split20")[2]
+mod.base <- c("code/mods/%s_Phy.stan")
 
 data.f <- paste0("data/stan_data/opfo_", dataset)
 out.f <- paste0("out/tests/", dataset, "_")
@@ -47,13 +47,14 @@ pars.excl <- c("b_std", "B_std",
 
 cat("parallelizing\n")
 p.c <- makeCluster(3); registerDoSNOW(p.c)
-foreach(i=seq_along(mods), .packages="rstan") %dopar% {
-  options(mc.cores=8)
+foreach(i=seq_along(mods)) %dopar% {
+  library(rstan, lib.loc="stan19")
+  options(mc.cores=1)
   rstan_options(auto_write=TRUE)
   out <- stan(file=sprintf(mod.base, mods[i]),
-              pars=pars.excl, include=F, chains=8, save_warmup=F,
+              pars=pars.excl, include=F, chains=1, save_warmup=F,
               data=read_rdump(paste0(data.f, ".Rdump")), 
-              warmup=1000, iter=1100)
+              warmup=50, iter=100)
   saveRDS(out, paste0(out.f, mods[i], ".rds"))
   saveRDS(As.mcmc.list(out), paste0(out.f, mods[i], "_MCMC.rds"))
   saveRDS(summary(out)$summary, paste0(out.f, mods[i], "_summary.rds"))
