@@ -68,27 +68,40 @@ subset_vs_data <- function(d.base, d.new, X_vars, V_vars, U_vars) {
 #' @param fit_hm stanfit object of hierarchical model output
 #' @param d.ls List of data for fit_hm
 #' @return Updated rstanarm object
-subset_vs_data <- function(fit_glmer, fit_hm, d.ls) {
+update_rstanarm_shell <- function(fit_glmer, fit_hm, d.ls) {
   library(tidyverse); library(rstan); library(rstanarm)
   
   R <- d.ls$R
   L <- d.ls$L
   S <- d.ls$S
   
+  
+  # build lookup table to align parameters between glmer and hm
   names_glmer <- names(fit_glmer$stanfit@sim$samples[[1]])
   names_hm <- names(fit_hm@sim$samples[[1]])
-  name_lookup <- tibble(glmer=c("alpha[1]", 
-                                paste0("beta[", 1:(R+L), "]"),
-                                paste0("b[", 1:((R+L+1)*S), "]"),
-                                "lp__"),
-                        hm=c(paste0("beta[", 1:(R+L+1), "]"),
-                             paste0(rep(paste0("b[", 1:(R+L+1)), times=S), ",", 
-                                    rep(1:S, each=(R+L+1)), "]"),
-                             "lp__"))
+  par_lu <- tibble(glmer=c("alpha[1]", 
+                           paste0("beta[", 1:(R+L), "]"),
+                           paste0("b[", 1:((R+L+1)*S), "]"),
+                           "lp__"),
+                   glmer_l=c(
+                     rownames(fit_glmer$stan_summary)[1:((R+L+1)*(S+1))],
+                     "log-posterior"),
+                   hm=c(paste0("beta[", 1:(R+L+1), "]"),
+                        paste0(rep(paste0("b[", 1:(R+L+1)), times=S), ",", 
+                               rep(1:S, each=(R+L+1)), "]"),
+                        "lp__"), 
+                   hm_post=c(paste0("beta.", 1:(R+L+1)),
+                        paste0(rep(paste0("b.", 1:(R+L+1)), times=S), ".", 
+                               rep(1:S, each=(R+L+1))),
+                        "lp__"), 
+                        cov=c(rep(1:(R+L+1), times=S+1), NA))
+  # posterior summaries
+  sum_hm <- summary(fit_hm, 
+                    probs=c(0.025, 0.1, 0.25, 0.5, 0.75, 0.9, 0.975))$summary
   
   
   # extract and align predicted values
-  llam.summary <- rstan::summary(fit_hm, pars="llambda")$summary
+  llam.summary <- sum_hm[grepl("^llambda\\[", rownames(sum_hm)),]
   llam_hm.df <- tibble(llam=llam.summary[,1],
                        par=rownames(llam.summary),
                        site=str_split_fixed(str_remove(par, "llambda\\["), 
@@ -98,17 +111,68 @@ subset_vs_data <- function(fit_glmer, fit_hm, d.ls) {
     arrange(spp, site)
   
   
-  # reference model: take structure of glmer and replace values with fitted hm
-  fit_ref <- fit_glmer
-  fit_ref$linear.predictors <- llam_hm.df$llam
-  fit_ref$fitted.values <- exp(fit_ref$linear.predictors)
+  
+  
+  # extract slope means and translate to effects parameterization for b's
+  beta.summary <- sum_hm[grepl("^beta\\[", rownames(sum_hm)),]
+  beta_hm.df <- tibble(beta=beta.summary[,1],
+                       beta_md=beta.summary[,7],
+                       beta_se=beta.summary[,2],
+                       par=rownames(beta.summary)) %>%
+    mutate(cov=row_number())
+  b.summary <- sum_hm[grepl("^b\\[", rownames(sum_hm)),]
+  b_hm.df <- tibble(b=b.summary[,1],
+                    b_md=b.summary[,7],
+                    b_se=b.summary[,2],
+                    par=rownames(b.summary),
+                    cov=str_split_fixed(str_remove(par, "b\\["), ",", 2)[,1],
+                    spp=str_split_fixed(str_remove(par, "]"), ",", 2)[,2]) %>%
+    mutate(cov=as.numeric(cov), spp=as.numeric(spp)) %>%
+    arrange(spp, cov) %>%
+    left_join(., select(beta_hm.df, beta, beta_md, cov), by='cov') %>%
+    mutate(b_eff=b-beta, 
+           b_eff_md=b_md-beta_md)
+  
+  
+  # iteration indexes
   iter_hm <- length(fit_hm@sim$samples[[1]][[1]])
   iter_glmer <- length(fit_glmer$stanfit@sim$samples[[1]][[1]])
   iter_index <- (iter_hm-iter_glmer+1):iter_hm 
-  for(i in 1:nrow(name_lookup)) {
-    for(j in 1:length(fit_glmer$stanfit@sim$samples)) {
-      post_i <- fit_hm@sim$samples[[j]][[name_lookup$hm[i]]]
-      fit_ref$stanfit@sim$samples[[j]][[name_lookup$glmer[i]]] <- post_i[iter_index]
+  
+  
+  # reference model: take structure of glmer and replace values with fitted hm
+  fit_ref <- fit_glmer
+  
+  
+  # update point estimates
+  fit_ref$linear.predictors <- llam_hm.df$llam
+  fit_ref$fitted.values <- exp(fit_ref$linear.predictors)
+  fit_ref$coefficients[] <- c(beta_hm.df$beta_md, b_hm.df$b_eff_md)
+  fit_ref$ses[] <- c(beta_hm.df$beta_se, b_hm.df$b_se)
+  fit_ref$residuals <- fit_ref$y - fit_ref$fitted.values
+  
+  
+  # update posterior summaries and samples
+  for(i in 1:nrow(par_lu)) {
+    
+    # summaries
+    sum_i <- sum_hm[rownames(sum_hm)==par_lu$hm[i],]
+    if(grepl('b\\[', par_lu$hm[i])) {  # translate to effects parameterization
+      ind <- (1:length(sum_i))[-c(2,length(sum_i)-1, length(sum_i))]
+      sum_i_beta <- sum_hm[rownames(sum_hm)==paste0("beta[", 
+                                                    par_lu$cov[i], "]"),]
+      sum_i[ind] <- sum_i[ind] - sum_i_beta[ind]
+    }
+    fit_ref$stan_summary[rownames(fit_ref$stan_summary)==par_lu$glmer_l[i],] <- sum_i
+    
+    # samples
+    for(j in 1:length(fit_glmer$stanfit@sim$samples)) {  # chains
+      post_i <- fit_hm@sim$samples[[j]][[par_lu$hm_post[i]]]
+      if(grepl('b\\.', par_lu$hm_post[i])) {  # translate to effects parameterization
+        post_i_beta <- fit_hm@sim$samples[[j]][[paste0("beta.", par_lu$cov[i])]]
+        post_i <- post_i - post_i_beta
+      }
+      fit_ref$stanfit@sim$samples[[j]][[par_lu$glmer[i]]] <- post_i[iter_index]
     }
   }
   
