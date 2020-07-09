@@ -18,12 +18,12 @@ d.ls <- readRDS("data/stan_data/vs_no_pred_ls.rds")
 
 # load model outputs
 fit_shell <- readRDS("out/fit_shell.rds")
-fit_Y <- read_stan_csv(dir("out/", paste0("vs_Y"), full.names=T))
+fit_Y <- read_stan_csv(dir("out", "vs_Y", full.names=T))
 
 
 
 # update shell with Y posteriors
-fit_update <- subset_vs_data(fit_shell, fit_Y, d.ls)
+fit_update <- update_rstanarm_shell(fit_shell, fit_Y, d.ls)
 
 
 
