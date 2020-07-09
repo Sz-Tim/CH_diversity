@@ -1,67 +1,11 @@
-# Assorted helper functions
+# 00_fn.R
 # Tim Szewczyk
+#
+# Assorted helper functions
 
-# Variable selection functions
-# Simulation functions
-# Output processing functions
 
 
 #### variable selection functions ##############################################
-
-#' Generate datasets with specified covariates
-#' @param d.base Name & path for full dataset
-#' @param d.new Name & path for new dataset
-#' @param X_vars Vector of X variable names to include
-#' @param V_vars Vector of V variable names to include
-#' @param U_vars Vector of U variable names to include
-#' @return Files created: d.new_ls.rds, d.new_i.rds, d.new.Rdump, d.new_vars.R
-subset_vs_data <- function(d.base, d.new, X_vars, V_vars, U_vars) {
-  library(rstan); library(tidyverse)
-  
-  d.ls <- readRDS(paste0(d.base, "_ls.rds"))
-  d.i <- readRDS(paste0(d.base, "_i.rds"))
-  
-  X_cols <- which(colnames(d.ls$X) %in% X_vars)
-  V_cols <- which(colnames(d.ls$V) %in% V_vars) 
-  U_cols <- which(colnames(d.ls$U) %in% U_vars)
-  
-  d.ls$R <- length(X_cols) + 1
-  d.ls$L <- length(V_cols)
-  d.ls$Q <- length(U_cols) + 1
-  
-  d.ls$X <- d.ls$X[,c(1, X_cols), drop=F]
-  d.ls$X_ <- d.ls$X_[,c(1, X_cols), drop=F]
-  d.ls$V <- d.ls$V[,V_cols, drop=F]
-  d.ls$V_ <- d.ls$V_[,V_cols, drop=F]
-  d.ls$U <- d.ls$U[,c(1, U_cols), drop=F]
-  
-  d.i$X <- d.i$X[,c(1,2, X_cols+1), drop=F]
-  d.i$X_ <- d.i$X_[,c(1,2, X_cols+1), drop=F]
-  d.i$V <- d.i$V[,c(1,2, V_cols+2), drop=F]
-  d.i$V_ <- d.i$V_[,c(1,2, V_cols+2), drop=F]
-  d.i$U <- d.i$U[,c(1, U_cols), drop=F]
-  
-  saveRDS(d.ls, paste0(d.new, "_ls.rds"))
-  saveRDS(d.i, paste0(d.new, "_i.rds"))
-  rstan::stan_rdump(ls(d.ls),
-                    file=paste0(d.new, ".Rdump"),
-                    envir=list2env(d.ls))
-  
-  sink(paste0(d.new, "_vars.R"))
-  cat("X_vars.i <-", paste0("c('", paste0(X_vars, collapse="', '"), "')"), "\n")
-  cat("V_vars.i <-", paste0("c('", paste0(V_vars, collapse="', '"), "')"), "\n")
-  cat("U_vars.i <-", paste0("c('", paste0(U_vars, collapse="', '"), "')"), "\n")
-  sink()
-  
-  return(cat("Created", d.new, "with the following variables:\n",
-             "X:", X_vars, "\n",
-             "V:", V_vars, "\n",
-             "U:", U_vars, "\n"))
-}
-
-
-
-
 
 #' Update rstanarm object with fitted hierarchical model output
 #' @param fit_glmer rstanarm::glmer output
@@ -182,85 +126,7 @@ update_rstanarm_shell <- function(fit_glmer, fit_hm, d.ls) {
 
 
 
-#### simulation functions ######################################################
 
-#' Simulate regional covariates
-#' @param K names list with number of cells in W, W_, Y, Y_
-#' @param R number of covariates, including the intercept
-#' @param quad logical to indicate whether X[,R] = (X[,R-1])^2
-#' @return named list with covariate matrices [K$., R] with elements 'all', 'W',
-#'   'Y', "W_', and 'Y_'
-make_X <- function(K, R, quad) {
-  nTot <- sum(unlist(K))
-  X <- cbind(1,
-             matrix(rnorm(nTot*(R-1), 0, 1), nrow=nTot, ncol=R-1))
-  if(quad) X[,R] <- (X[,R-1])^2
-  return(list(all=X, 
-              W=X[1:K$W,],
-              Y=X[(1:K$Y)+K$W,],
-              W_=X[(1:K$W_)+(K$W+K$Y),],
-              Y_=X[(1:K$Y_)+(K$W+K$Y+K$W_),]))
-}
-
-
-
-#' Simulate local covariates
-#' @param I names list with number of cells in Y, Y_
-#' @param L number of covariates; no intercept for this regression
-#' @return named list with covariate matrices [I$., L] with elements 'all', "Y',
-#'   and 'Y_'
-make_V <- function(I, L) {
-  nTot <- sum(unlist(I)) 
-  V <- matrix(rnorm(nTot*L, 0, 1), nrow=nTot, ncol=L)
-  return(list(all=V,
-              Y=V[1:I$Y,],
-              Y_=V[(1:I$Y_)+I$Y,]))
-}
-
-
-
-#' Simulate phylogenetically structured slopes
-#' @param agg_true NULL, or vector of true values
-#' @param Lam_0 global intercept for Lambda; set to NULL for local env. slopes
-#' @param nCov number of covariates, including the intercept
-#' @param G number of genera
-#' @param S number of species
-#' @param tax_i matrix with taxonomic relationships
-#' @param sd_sp standard deviation in responses within genera
-#' @param quad logical to indicate whether X[,nCov] = (X[,nCov-1])^2
-#' @param L_Omega NULL, or cholesky factor for G genera
-#' @return named list with slopes for 'agg', 'gen', and 'sp'
-make_slopes <- function(agg_true=NULL, Lam_0=NULL, nCov, G, S, tax_i, 
-                        sd_sp, quad, L_Omega=NULL) {
-  # aggregate: alpha[nCov], beta[nCov]
-  if(is.null(agg_true)) {
-    if(!is.null(Lam_0)) {
-      agg <- cbind(c(Lam_0, rnorm(nCov-1, 0, 1)))
-    } else {
-      agg <- cbind(rnorm(nCov, 0, 1))
-    }
-    if(quad) agg[nCov] <- ifelse(agg[nCov] < 0, 2*agg[nCov], -2*agg[nCov])
-  } else {
-    agg <- cbind(agg_true)
-  }
-  
-  # genus-level: A[G,nCov], B[G,nCov]
-  if(is.null(L_Omega)) {
-    phy_covMX <- matrix(runif(G^2)*2-1, ncol=G)/2 
-    diag(phy_covMX) <- diag(phy_covMX)
-    Sigma <- t(phy_covMX) %*% phy_covMX 
-  } else {
-    Sigma <- L_Omega %*% t(L_Omega)
-  }
-  gen <- t(apply(agg, 1, function(x) MASS::mvrnorm(1, rep(x,G), Sigma)))
-  
-  # species-level: a[S,nCov], b[S,nCov]
-  sp <- matrix(ncol=S, nrow=nCov)
-  for(r in 1:nCov) {
-    sp[r,] <- rnorm(S, gen[r,tax_i[,2]], sd_sp)
-  }
-  return(list(agg=agg, gen=gen, sp=sp))
-}
 
 
 
@@ -462,6 +328,164 @@ aggregate_output <- function(d.i, mods, pars_save, out.dir="out") {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+#### deprecated functions ######################################################
+
+#' Generate datasets with specified covariates
+#' @param d.base Name & path for full dataset
+#' @param d.new Name & path for new dataset
+#' @param X_vars Vector of X variable names to include
+#' @param V_vars Vector of V variable names to include
+#' @param U_vars Vector of U variable names to include
+#' @return Files created: d.new_ls.rds, d.new_i.rds, d.new.Rdump, d.new_vars.R
+subset_vs_data <- function(d.base, d.new, X_vars, V_vars, U_vars) {
+  library(rstan); library(tidyverse)
+  
+  d.ls <- readRDS(paste0(d.base, "_ls.rds"))
+  d.i <- readRDS(paste0(d.base, "_i.rds"))
+  
+  X_cols <- which(colnames(d.ls$X) %in% X_vars)
+  V_cols <- which(colnames(d.ls$V) %in% V_vars) 
+  U_cols <- which(colnames(d.ls$U) %in% U_vars)
+  
+  d.ls$R <- length(X_cols) + 1
+  d.ls$L <- length(V_cols)
+  d.ls$Q <- length(U_cols) + 1
+  
+  d.ls$X <- d.ls$X[,c(1, X_cols), drop=F]
+  d.ls$X_ <- d.ls$X_[,c(1, X_cols), drop=F]
+  d.ls$V <- d.ls$V[,V_cols, drop=F]
+  d.ls$V_ <- d.ls$V_[,V_cols, drop=F]
+  d.ls$U <- d.ls$U[,c(1, U_cols), drop=F]
+  
+  d.i$X <- d.i$X[,c(1,2, X_cols+1), drop=F]
+  d.i$X_ <- d.i$X_[,c(1,2, X_cols+1), drop=F]
+  d.i$V <- d.i$V[,c(1,2, V_cols+2), drop=F]
+  d.i$V_ <- d.i$V_[,c(1,2, V_cols+2), drop=F]
+  d.i$U <- d.i$U[,c(1, U_cols), drop=F]
+  
+  saveRDS(d.ls, paste0(d.new, "_ls.rds"))
+  saveRDS(d.i, paste0(d.new, "_i.rds"))
+  rstan::stan_rdump(ls(d.ls),
+                    file=paste0(d.new, ".Rdump"),
+                    envir=list2env(d.ls))
+  
+  sink(paste0(d.new, "_vars.R"))
+  cat("X_vars.i <-", paste0("c('", paste0(X_vars, collapse="', '"), "')"), "\n")
+  cat("V_vars.i <-", paste0("c('", paste0(V_vars, collapse="', '"), "')"), "\n")
+  cat("U_vars.i <-", paste0("c('", paste0(U_vars, collapse="', '"), "')"), "\n")
+  sink()
+  
+  return(cat("Created", d.new, "with the following variables:\n",
+             "X:", X_vars, "\n",
+             "V:", V_vars, "\n",
+             "U:", U_vars, "\n"))
+}
+
+
+
+
+
+
+#' Simulate regional covariates
+#' @param K names list with number of cells in W, W_, Y, Y_
+#' @param R number of covariates, including the intercept
+#' @param quad logical to indicate whether X[,R] = (X[,R-1])^2
+#' @return named list with covariate matrices [K$., R] with elements 'all', 'W',
+#'   'Y', "W_', and 'Y_'
+make_X <- function(K, R, quad) {
+  nTot <- sum(unlist(K))
+  X <- cbind(1,
+             matrix(rnorm(nTot*(R-1), 0, 1), nrow=nTot, ncol=R-1))
+  if(quad) X[,R] <- (X[,R-1])^2
+  return(list(all=X, 
+              W=X[1:K$W,],
+              Y=X[(1:K$Y)+K$W,],
+              W_=X[(1:K$W_)+(K$W+K$Y),],
+              Y_=X[(1:K$Y_)+(K$W+K$Y+K$W_),]))
+}
+
+
+
+#' Simulate local covariates
+#' @param I names list with number of cells in Y, Y_
+#' @param L number of covariates; no intercept for this regression
+#' @return named list with covariate matrices [I$., L] with elements 'all', "Y',
+#'   and 'Y_'
+make_V <- function(I, L) {
+  nTot <- sum(unlist(I)) 
+  V <- matrix(rnorm(nTot*L, 0, 1), nrow=nTot, ncol=L)
+  return(list(all=V,
+              Y=V[1:I$Y,],
+              Y_=V[(1:I$Y_)+I$Y,]))
+}
+
+
+
+#' Simulate phylogenetically structured slopes
+#' @param agg_true NULL, or vector of true values
+#' @param Lam_0 global intercept for Lambda; set to NULL for local env. slopes
+#' @param nCov number of covariates, including the intercept
+#' @param G number of genera
+#' @param S number of species
+#' @param tax_i matrix with taxonomic relationships
+#' @param sd_sp standard deviation in responses within genera
+#' @param quad logical to indicate whether X[,nCov] = (X[,nCov-1])^2
+#' @param L_Omega NULL, or cholesky factor for G genera
+#' @return named list with slopes for 'agg', 'gen', and 'sp'
+make_slopes <- function(agg_true=NULL, Lam_0=NULL, nCov, G, S, tax_i, 
+                        sd_sp, quad, L_Omega=NULL) {
+  # aggregate: alpha[nCov], beta[nCov]
+  if(is.null(agg_true)) {
+    if(!is.null(Lam_0)) {
+      agg <- cbind(c(Lam_0, rnorm(nCov-1, 0, 1)))
+    } else {
+      agg <- cbind(rnorm(nCov, 0, 1))
+    }
+    if(quad) agg[nCov] <- ifelse(agg[nCov] < 0, 2*agg[nCov], -2*agg[nCov])
+  } else {
+    agg <- cbind(agg_true)
+  }
+  
+  # genus-level: A[G,nCov], B[G,nCov]
+  if(is.null(L_Omega)) {
+    phy_covMX <- matrix(runif(G^2)*2-1, ncol=G)/2 
+    diag(phy_covMX) <- diag(phy_covMX)
+    Sigma <- t(phy_covMX) %*% phy_covMX 
+  } else {
+    Sigma <- L_Omega %*% t(L_Omega)
+  }
+  gen <- t(apply(agg, 1, function(x) MASS::mvrnorm(1, rep(x,G), Sigma)))
+  
+  # species-level: a[S,nCov], b[S,nCov]
+  sp <- matrix(ncol=S, nrow=nCov)
+  for(r in 1:nCov) {
+    sp[r,] <- rnorm(S, gen[r,tax_i[,2]], sd_sp)
+  }
+  return(list(agg=agg, gen=gen, sp=sp))
+}
 
 
 
