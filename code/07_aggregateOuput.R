@@ -1,10 +1,39 @@
+# This script aggregates and summarizes the output from the hierarchical models
+# Tim Szewczyk
+# tim.szewczyk@gmail.com
+
 
 library(tidyverse); library(rstan); library(sf); theme_set(theme_bw())
 library(viridis)
 source("code/00_fn.R"); source("../1_opfo/code/00_fn.R")
 
-out.dir <- "cmdstan-2.23.0/opfo/out/"
 
+### Full models ----------------------------------------------------------------
+
+agg_out <- aggregate_output(d.i=readRDS("data/stan_data/vs_no_pred_i.rds"),
+                            mods=c("vs_Y", "vs_WY"), 
+                            pars_save=c(lLAM="lLAMBDA", llam="llambda",
+                                        pP_L="prPresL", 
+                                        beta="beta", B="B", b="b", 
+                                        sig_b="sigma_b", Sig_B="Sigma_B",
+                                        disp="disp_lam", D="D"))
+
+saveRDS(agg_out, "out/vs_aggregated.rds")
+
+
+
+
+
+### Best models ----------------------------------------------------------------
+
+
+
+
+
+
+
+
+#-------------------------------------------------------------------------------
 
 d.ls <- readRDS(paste0("data/stan_data/full_ls.rds"))
 d.i <- readRDS(paste0("data/stan_data/full_i.rds"))
