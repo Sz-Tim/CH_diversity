@@ -1,3 +1,6 @@
+# 03_runShell.R
+# Tim Szewczyk
+#
 # This script creates an rstanarm model to be used as a shell for projpred
 
 
@@ -5,9 +8,9 @@ library(rstanarm); library(tidyverse)
 d.ls <- readRDS("data/stan_data/vs_no_pred_ls.rds")
 
 # sampling parameters
-nWarm=2000
-nSamp=20
-nChain=12
+nWarm <- 2000
+nSamp <- 20
+nChain <- 12
 
 
 # make dataframe

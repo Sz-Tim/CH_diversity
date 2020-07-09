@@ -1,5 +1,8 @@
 #!/bin/bash
 
+# 02_runVS.sh
+# Tim Szewczyk
+#
 # This script runs models with all covariates through cmdstan: 
 #    code/mods/full_Y 
 #    code/mods/full_WY

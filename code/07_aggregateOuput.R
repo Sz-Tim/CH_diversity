@@ -1,6 +1,7 @@
-# This script aggregates and summarizes the output from the hierarchical models
+# 07_aggregateOutput.R
 # Tim Szewczyk
-# tim.szewczyk@gmail.com
+#
+# This script aggregates and summarizes the output from the hierarchical models
 
 
 library(tidyverse); library(rstan); library(sf); theme_set(theme_bw())

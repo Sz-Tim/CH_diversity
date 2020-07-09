@@ -1,5 +1,8 @@
 #!/bin/bash
 
+# 05_runBest.sh
+# Tim Szewczyk
+#
 # This script runs models with the best covariates through cmdstan: 
 #    code/mods/best_Y 
 #    code/mods/best_WY

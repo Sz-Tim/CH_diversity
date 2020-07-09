@@ -1,3 +1,6 @@
+# 04_projpredY.R
+# Tim Szewczyk
+#
 # This script runs projection predictive inference using the structure samples
 
 
