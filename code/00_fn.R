@@ -24,21 +24,21 @@ update_rstanarm_shell <- function(fit_glmer, fit_hm, d.ls) {
   names_glmer <- names(fit_glmer$stanfit@sim$samples[[1]])
   names_hm <- names(fit_hm@sim$samples[[1]])
   par_lu <- tibble(glmer=c("alpha[1]", 
-                           paste0("beta[", 1:(R+L), "]"),
-                           paste0("b[", 1:((R+L+1)*S), "]"),
+                           paste0("beta[", 2:(R+L), "]"),
+                           paste0("b[", 1:((R+L)*S), "]"),
                            "lp__"),
                    glmer_l=c(
-                     rownames(fit_glmer$stan_summary)[1:((R+L+1)*(S+1))],
+                     rownames(fit_glmer$stan_summary)[1:((R+L)*(S+1))],
                      "log-posterior"),
-                   hm=c(paste0("beta[", 1:(R+L+1), "]"),
-                        paste0(rep(paste0("b[", 1:(R+L+1)), times=S), ",", 
-                               rep(1:S, each=(R+L+1)), "]"),
+                   hm=c(paste0("beta[", 1:(R+L), "]"),
+                        paste0(rep(paste0("b[", 1:(R+L)), times=S), ",", 
+                               rep(1:S, each=(R+L)), "]"),
                         "lp__"), 
-                   hm_post=c(paste0("beta.", 1:(R+L+1)),
-                        paste0(rep(paste0("b.", 1:(R+L+1)), times=S), ".", 
-                               rep(1:S, each=(R+L+1))),
+                   hm_post=c(paste0("beta.", 1:(R+L)),
+                        paste0(rep(paste0("b.", 1:(R+L)), times=S), ".", 
+                               rep(1:S, each=(R+L))),
                         "lp__"), 
-                        cov=c(rep(1:(R+L+1), times=S+1), NA))
+                        cov=c(rep(1:(R+L), times=S+1), NA))
   # posterior summaries
   sum_hm <- summary(fit_hm, 
                     probs=c(0.025, 0.1, 0.25, 0.5, 0.75, 0.9, 0.975))$summary
@@ -159,7 +159,7 @@ aggregate_output <- function(d.i, mods, pars_save, out.dir="out") {
     pars.all <- unique(str_split_fixed(names(out.stan[[i]]), "\\[", 2)[,1])
     pars <- pars.all[pars.all %in% pars_save]
     out <- summary(out.stan[[i]], pars=pars,
-                   probs=c(0.025,0.5,0.25,0.5,0.75,0.95,0.975))$summary
+                   probs=c(0.025,0.05,0.25,0.5,0.75,0.95,0.975))$summary
     
     out.ls <- data.frame(Parameter=rownames(out),
                          mn=out[,1], se=out[,2],
