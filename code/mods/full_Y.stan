@@ -68,14 +68,16 @@ transformed data {
 parameters {
   
   // slopes
-  matrix[R+L,S] b_std;
-  real<lower=0> sigma_b[R+L];
-  matrix[R+L,G] B_std;
   vector[R+L] beta;
-  cholesky_factor_corr[G] L_Omega_B[R+L];
-  vector<lower=0>[G] sigma_B[R+L]; 
   vector<lower=0>[R+L-1] beta_lam;  // horseshoe prior
   real<lower=0> beta_tau;  // horseshoe prior
+  
+  matrix[R+L,G] B_std;
+  cholesky_factor_corr[G] L_Omega_B[R+L];
+  vector<lower=0>[G] sigma_B[R+L]; 
+  
+  matrix[R+L,S] b_std;
+  real<lower=0> sigma_b[R+L];
   
   real<lower=0, upper=1> disp_lam;  // implied prior: Uniform(0,1)
 
@@ -86,20 +88,20 @@ parameters {
 transformed parameters {
   
   // slopes
-  matrix[R+L,S] b;  // species level
   matrix[R+L,G] B;  // genus level
+  matrix[R+L,S] b;  // species level
   
   // Lambda/lambda
   matrix[K+J,S] lLAMBDA;  // cell level
   matrix[I,S] llambda;  // plot level
   
-  // cell level
   for(m in 1:(R+L)) {
     // B ~ mvNorm(beta, sigma_B * L_Omega_B * sigma_B);  
     // b ~ Norm(B, sigma_b)
     B[m,] = beta[m] + B_std[m,] * diag_pre_multiply(sigma_B[m], L_Omega_B[m]);  
     b[m,] = B[m,tax_i[,2]] + b_std[m,] * sigma_b[m]; 
   }
+  
   lLAMBDA = X * b[1:R,] - log(h);
   llambda = Z * b;
   
@@ -109,17 +111,18 @@ transformed parameters {
 
 model {
   
-  // cell level priors
+  // priors
   beta[1] ~ normal(-4, 2);
   beta[2:(R+L)] ~ normal(0, beta_tau * beta_lam);
   beta_tau ~ cauchy(0, 2);
   beta_lam ~ student_t(4, 0, 1);
+  
   for(m in 1:(R+L)) {
-    b_std[m,] ~ normal(0, 1);
-    B_std[m,] ~ normal(0, 1);
     sigma_B[m] ~ normal(0, 2);
     L_Omega_B[m] ~ lkj_corr_cholesky(2);
   }
+  to_vector(b_std) ~ normal(0, 1);
+  to_vector(B_std) ~ normal(0, 1);
   sigma_b ~ normal(0, 2);
   
   // likelihood
