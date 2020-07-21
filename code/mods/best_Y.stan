@@ -76,8 +76,6 @@ parameters {
   vector[R+L] beta;
   cholesky_factor_corr[G] L_Omega_B[R+L];
   vector<lower=0>[G] sigma_B[R+L]; 
-  vector<lower=0>[R+L-1] beta_lam;  // horseshoe prior
-  real<lower=0> beta_tau;  // horseshoe prior
   
   real<lower=0, upper=1> disp_lam;  // implied prior: Uniform(0,1)
 
@@ -113,9 +111,7 @@ model {
   
   // cell level priors
   beta[1] ~ normal(-4, 2);
-  beta[2:(R+L)] ~ normal(0, beta_tau * beta_lam);
-  beta_tau ~ cauchy(0, 2);
-  beta_lam ~ student_t(4, 0, 1);
+  beta[2:(R+L)] ~ normal(0, 1);
   for(m in 1:(R+L)) {
     b_std[m,] ~ normal(0, 1);
     B_std[m,] ~ normal(0, 1);
