@@ -20,16 +20,17 @@ d.ls <- readRDS("data/stan_data/vs_no_pred_ls.rds")
 
 
 # load model outputs
-fit_shell <- readRDS("out/fit_shell.rds")
+fit_shell <- readRDS("out/shell.rds")
 fit_WY <- read_stan_csv(dir("out", "vs_WY", full.names=T))
 
 
 
 # update shell with Y posteriors
 fit_update <- update_rstanarm_shell(fit_shell, fit_WY, d.ls)
+saveRDS(fit_update, "out/fit_update_WY.rds")
 
 
 
 # select variables
-vs <- varsel(fit_update, verbose=T)
+vs <- varsel(fit_update, verbose=T, nterms_max=21)
 saveRDS(vs, "out/varsel_WY.rds")
