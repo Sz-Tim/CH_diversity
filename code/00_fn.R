@@ -24,7 +24,7 @@ update_rstanarm_shell <- function(fit_glmer, fit_hm, d.ls) {
   names_glmer <- names(fit_glmer$stanfit@sim$samples[[1]])
   names_hm <- names(fit_hm@sim$samples[[1]])
   par_lu <- tibble(glmer=c("alpha[1]", 
-                           paste0("beta[", 2:(R+L), "]"),
+                           paste0("beta[", 1:(R+L-1), "]"),
                            paste0("b[", 1:((R+L)*S), "]"),
                            "lp__"),
                    glmer_l=c(
@@ -251,6 +251,7 @@ aggregate_output <- function(d.i, mods, pars_save, out.dir="out") {
       mutate(Parameter=as.character(Parameter), model=as.character(model))
     
     # B
+    if("B" %in% pars) {
     out.pars$B[[i]] <- out.ls$B %>%
       mutate(cov=str_split_fixed(str_split_fixed(Parameter, "\\[", n=2)[,2],
                                  ",", n=2)[,1],
@@ -258,6 +259,8 @@ aggregate_output <- function(d.i, mods, pars_save, out.dir="out") {
       mutate(ParName=ParNames[as.numeric(cov)],
              genName=d.i$tax_i$genus[match(gen, d.i$tax_i$gNum)]) %>% 
       mutate(Parameter=as.character(Parameter), model=as.character(model))
+    
+    }
     
     # b
     out.pars$b[[i]] <- out.ls$b %>%
@@ -275,15 +278,17 @@ aggregate_output <- function(d.i, mods, pars_save, out.dir="out") {
       mutate(Parameter=as.character(Parameter), model=as.character(model))
     
     # Sigma_B
-    out.pars$Sig_B[[i]] <- out.ls$Sigma_B %>%
-      mutate(cov=str_split_fixed(str_split_fixed(Parameter, "\\[", n=2)[,2],
-                                 ",", n=3)[,1], 
-             gen1=str_split_fixed(Parameter, ",", n=3)[,2],
-             gen2=str_remove(str_split_fixed(Parameter, ",", n=3)[,3], "]")) %>%
-      mutate(ParName=ParNames[as.numeric(cov)],
-             gen1Name=d.i$tax_i$genus[match(gen1, d.i$tax_i$gNum)],
-             gen2Name=d.i$tax_i$genus[match(gen2, d.i$tax_i$gNum)]) %>% 
-      mutate(Parameter=as.character(Parameter), model=as.character(model))
+    if("Sigma_B" %in% pars) {
+      out.pars$Sig_B[[i]] <- out.ls$Sigma_B %>%
+        mutate(cov=str_split_fixed(str_split_fixed(Parameter, "\\[", n=2)[,2],
+                                   ",", n=3)[,1], 
+               gen1=str_split_fixed(Parameter, ",", n=3)[,2],
+               gen2=str_remove(str_split_fixed(Parameter, ",", n=3)[,3], "]")) %>%
+        mutate(ParName=ParNames[as.numeric(cov)],
+               gen1Name=d.i$tax_i$genus[match(gen1, d.i$tax_i$gNum)],
+               gen2Name=d.i$tax_i$genus[match(gen2, d.i$tax_i$gNum)]) %>% 
+        mutate(Parameter=as.character(Parameter), model=as.character(model))
+    }
     
     # dispersion parameter
     out.pars$disp[[i]] <- out.ls$disp_lam %>% 
@@ -321,7 +326,7 @@ aggregate_output <- function(d.i, mods, pars_save, out.dir="out") {
     }
     
   }
-  return(map(out.pars, ~do.call('rbind', .)))
+  return(list(full=out.stan, summaries=map(out.pars, ~do.call('rbind', .))))
 }
 
 
