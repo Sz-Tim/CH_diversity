@@ -8,7 +8,7 @@ library(rstanarm); library(tidyverse)
 d.ls <- readRDS("data/stan_data/vs_no_pred_ls.rds")
 
 # sampling parameters
-nWarm <- 2000
+nWarm <- 100
 nSamp <- 20
 nChain <- 12
 
@@ -29,7 +29,8 @@ fit <- stan_glmer(
   data=stan_df,
   family=poisson("log"),
   prior=hs(),
-  chains=nChain, cores=nChain, 
+  init_r=0.01,
+  chains=nChain, cores=4, 
   warmup=nWarm, iter=nWarm+nSamp, 
   refresh=1)
 
