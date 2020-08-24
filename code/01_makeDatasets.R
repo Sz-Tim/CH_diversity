@@ -35,20 +35,19 @@ source("code/00_fn.R"); source(paste0(ant.dir, "../code/00_fn.R"))
 
 
 ##--- settings
-test_prop_Y <- ifelse(set_type=="vs", 0, 0)  # prop BDM to withold
+test_prop_Y <- ifelse(set_type=="vs", 0.3, 0)  # prop BDM to withold
 X_vars <- c("grwnDD0", "grwnDD0_sq", 
             "AP",
             "npp",
             "lcH", 
-            "Forest", "Edge",
+            "Edge",
             "bldgPer", "rdLen",
-            "aspctN", "aspctE")
+            "aspctN")
 V_vars <- c("SoilTSt", 
             "VegTot",
             "CnpyOpn", "CnpyMxd", 
-            "Pasture", "Crop", "Built",
-            "aspctN", "aspctE")
-U_vars <- c("rdLen", "bldgPer")
+            "Pasture", "Crop", 
+            "aspctN")
 
 
 
@@ -59,11 +58,12 @@ VD_raw <- st_read("../2_gis/data/VD_21781/Vaud_boundaries.shp") %>%
   filter(!grepl("Lac ", NAME)) 
 VD <- st_union(VD_raw)
 VD_ext <- raster::extent(matrix(st_bbox(VD), ncol=2))
-grd_W <- raster::raster(ext=VD_ext, crs=st_crs(VD), resolution=1000) %>%
+grd_W <- raster::raster(ext=VD_ext, crs=sp::CRS("+init=epsg:21781"), 
+                        resolution=1000) %>%
   raster::rasterize(VD_ext, .) %>% 
   raster::rasterToPolygons(., n=4)
 grd_W@data$layer <- 1:raster::ncell(grd_W)
-grd_W.sf <- st_as_sf(grd_W) %>% st_set_crs(st_crs(VD)) %>% rename(id=layer) %>%
+grd_W.sf <- st_as_sf(grd_W) %>% st_transform(st_crs(VD)) %>% rename(id=layer) %>%
   mutate(inbd=c(st_intersects(., VD, sparse=F)))
 # Y: 44 x 1km2 sampling sites
 site.sf <- agg_str_site_data() %>% arrange(BDM)
@@ -101,6 +101,21 @@ Y <- matrix(0, nrow=nrow(plot_i), ncol=max(tax_i$sNum),
 for(s in 1:max(tax_i$sNum)) {
   sp.occ <- filter(box.Y, SPECIESID==tax_i$species[s])
   if(nrow(sp.occ)>0) Y[which(plot_i$Plot_id %in% sp.occ$Plot_id),s] <- sp.occ$nObs
+}
+
+
+
+
+##--- use only species in Y
+if(set_type=="vs") {
+  in_Y <- which(colSums(Y)>0)
+  W <- W[,in_Y]
+  W_id <- which(rowSums(W)>0)
+  W_inbd <- which(grd_W.sf$inbd)
+  grd_W.sf$W_obs <- rowSums(W)>0
+  Y <- Y[,in_Y]
+  tax_i <- tax_i %>% filter(species %in% names(in_Y)) %>%
+    mutate(sNum=row_number(), gNum=as.numeric(factor(genus)))
 }
 
 
@@ -326,15 +341,6 @@ if("Built" %in% V_vars) {
 
 
 
-##--- U
-# # load covariates
-U_W.df <- st_read("data/cov/X_W-df.shp") %>% arrange(id)
-U_W.mx <- as.matrix(st_set_geometry(U_W.df, NULL) %>% 
-                      select("id", all_of(U_vars)))
-U.scale <- scale(U_W.mx[match(c(K$id_W, K$id_W_), X_W.mx[,'id']),-1])
-U.all <- cbind(1, U.scale)
-
-
 
 ##--- NA's
 # identify NA cells
@@ -363,7 +369,6 @@ if(set_type=="vs") {
                  D_prior=tax_i$Dprior, 
                  R=dim(X.all)[2], 
                  L=dim(V.scale)[2],
-                 Q=dim(U.all)[2], 
                  W=W[K$id_W,][-na.W,],
                  Y=Y[IJ$id_Y,][-na.Y,],
                  Y_=Y[IJ$id_Y_,][-na.Y_,],
@@ -372,13 +377,11 @@ if(set_type=="vs") {
                  X_=X.all[K$W+J$Y+(1:J$Y_),], 
                  V=V.scale[1:I$Y,][-na.Y,], 
                  V_=V.scale[I$Y+(1:I$Y_),][-na.Y_,],
-                 U=U.all[1:K$W,][-na.W,], 
                  h=7.5e-7)
     d.i <- list(X=X.mx[1:(K$W+J$Y),][-na.W,],
                 X_=X.mx[K$W+J$Y+(1:J$Y_),],
                 V=V.mx[1:I$Y,][-na.Y,],
                 V_=V.mx[I$Y+(1:I$Y_),][-na.Y_,],
-                U=U_W.mx[1:K$W,][-na.W,],
                 W=W[K$id_W,][-na.W,], 
                 Y=Y[IJ$id_Y,][-na.Y,],
                 Y_=Y[IJ$id_Y_,][-na.Y_,],
