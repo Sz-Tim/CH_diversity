@@ -2,6 +2,14 @@
 .Rhistory
 .Rapp.history
 
+# slurm scripts
+code/02*slurm*.sh
+
+# intermediate data files
+data/fwdSearch/*.Rdump
+data/fwdSearch/*_i.rds
+data/fwdSearch/*_ls.rds
+
 eda/
 
 # Session Data files
