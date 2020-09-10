@@ -132,6 +132,34 @@ compare_models <- function(fit_dir, mod, mod_size, comp_all=T, save=T) {
 
 
 
+#' Update file containing vector of optimal variables
+#' @param out_dir Directory with 'opt_[WY,Y].rds'
+#' @param mod Model to update (WY, Y)
+#' @param mod_size Model size evaluated
+#' @param comp Comparison from loo::loo_compare()
+#' @return Status message and automatically updated and saved .rds file
+update_opt_vars <- function(out_dir, mod, mod_size, comp) {
+  
+  library(stringr)
+  
+  opt.f <- paste0(out_dir, "/opt_", mod, ".rds")
+  
+  if(grepl(mod_size, rownames(Y_loo$comp)[1])) {
+    opt_var <- str_split_fixed(rownames(Y_loo$comp)[1], "__", 2)[,2]
+    saveRDS(c(readRDS(opt.f), opt_var), opt.f)
+    msg <- paste(opt_var, "  was added to:  ", opt.f, "\n",
+                 " updated size: ", length(readRDS(opt.f))-1, "\n",
+                 " expected size:", mod_size)
+    return(cat(msg))
+  } else {
+    msg <- paste("No new model is better!", "\n",
+                 "Nothing added to", opt.f)
+    return(cat(msg))
+  }
+}
+
+
+
 
 
 
