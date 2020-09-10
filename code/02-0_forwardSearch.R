@@ -4,6 +4,8 @@ library(tidyverse)
 library(rstan)
 source("code/00_fn.R")
 d.f <- "data/stan_data/vs_20"
+fS_out <- "out/fwdSearch/"
+fS_dat <- "data/fwdSearch/"
 
 #--- Make full dataset with test/train split
 # Run 01_makeDatasets.R with vs=T, test_prop_Y=0.2
@@ -13,8 +15,9 @@ d.f <- "data/stan_data/vs_20"
 
 
 ##### Size = 1     -------------------------------------------------------------
+mod_size <- 1
 #--- Load full dataset, then create a new dataset for each individual variable
-make_next_datasets(full_data_base=d.f, out_base="data/fwdSearch/", opt_names="R_")
+make_next_datasets(full_data_base=d.f, out_base=fS_dat, opt_names="R_")
 
 
 #--- Run 16 models with 1 variable each -- intercept + 1 
@@ -25,23 +28,26 @@ make_next_datasets(full_data_base=d.f, out_base="data/fwdSearch/", opt_names="R_
 
 
 #--- Use loo to compare models based on ability to predict test subset
-Y_loo <- compare_models(fit_dir="out/fwdSearch", mod="Y", mod_size=1)
+Y_loo <- compare_models(fit_dir=fS_out, mod="Y", mod_size=mod_size)
 Y_loo$comp[1:10,]
+saveRDS("R_", paste0(fS_out, "opt_Y.rds"))
+update_opt_vars(out_dir=fS_out, mod="Y", mod_size=mod_size, comp=Y_loo$comp)
 
-WY_loo <- compare_models(fit_dir="out/fwdSearch", mod="WY", mod_size=1)
+WY_loo <- compare_models(fit_dir=fS_out, mod="WY", mod_size=mod_size)
 WY_loo$comp[1:10,]
+saveRDS("R_", paste0(fS_out, "opt_WY.rds"))
+update_opt_vars(out_dir=fS_out, mod="WY", mod_size=mod_size, comp=WY_loo$comp)
 
 
 
 
 ##### Size = 2     -------------------------------------------------------------
+mod_size <- 2
 #--- Make new datasets with selected variable + each other individually
-make_next_datasets(full_data_base=d.f, 
-                   out_base="data/fwdSearch/Y_", 
-                   opt_names=c("R_", ""))
-make_next_datasets(full_data_base=d.f, 
-                   out_base="data/fwdSearch/WY_", 
-                   opt_names=c("R_", ""))
+make_next_datasets(full_data_base=d.f, out_base=paste0(fS_dat, "Y_"),
+                   opt_names=readRDS(paste0(fS_out, "opt_Y.rds"))[1:mod_size])
+make_next_datasets(full_data_base=d.f, out_base=paste0(fS_dat, "WY_"), 
+                   opt_names=readRDS(paste0(fS_out, "opt_WY.rds"))[1:mod_size])
 
 
 #--- Run 15 models with 2 variables each -- optimal + 1 
@@ -52,23 +58,25 @@ make_next_datasets(full_data_base=d.f,
 
 
 #--- Use loo to compare models based on ability to predict test subset
-Y_loo <- compare_models(fit_dir="out/fwdSearch", mod="Y", mod_size=2)
+Y_loo <- compare_models(fit_dir=fS_out, mod="Y", mod_size=mod_size)
 Y_loo$comp[1:10,]
+update_opt_vars(out_dir=fS_out, mod="Y", mod_size=mod_size, comp=Y_loo$comp)
 
-WY_loo <- compare_models(fit_dir="out/fwdSearch", mod="WY", mod_size=2)
+WY_loo <- compare_models(fit_dir=fS_out, mod="WY", mod_size=mod_size)
 WY_loo$comp[1:10,]
+update_opt_vars(out_dir=fS_out, mod="WY", mod_size=mod_size, comp=WY_loo$comp)
+
 
 
 
 
 ##### Size = 3     -------------------------------------------------------------
-#--- Make new datasets with selected variables + each other individually
-make_next_datasets(full_data_base=d.f, 
-                   out_base="data/fwdSearch/Y_", 
-                   opt_names=c("R_", "", ""))
-make_next_datasets(full_data_base=d.f, 
-                   out_base="data/fwdSearch/WY_", 
-                   opt_names=c("R_", "", ""))
+mod_size <- 3
+#--- Make new datasets with selected variable + each other individually
+make_next_datasets(full_data_base=d.f, out_base=paste0(fS_dat, "Y_"),
+                   opt_names=readRDS(paste0(fS_out, "opt_Y.rds"))[1:mod_size])
+make_next_datasets(full_data_base=d.f, out_base=paste0(fS_dat, "WY_"), 
+                   opt_names=readRDS(paste0(fS_out, "opt_WY.rds"))[1:mod_size])
 
 
 #--- Run 14 models with 3 variables each -- optimal + 1 
@@ -79,23 +87,24 @@ make_next_datasets(full_data_base=d.f,
 
 
 #--- Use loo to compare models based on ability to predict test subset
-Y_loo <- compare_models(fit_dir="out/fwdSearch", mod="Y", mod_size=3)
+Y_loo <- compare_models(fit_dir=fS_out, mod="Y", mod_size=mod_size)
 Y_loo$comp[1:10,]
+update_opt_vars(out_dir=fS_out, mod="Y", mod_size=mod_size, comp=Y_loo$comp)
 
-WY_loo <- compare_models(fit_dir="out/fwdSearch", mod="WY", mod_size=3)
+WY_loo <- compare_models(fit_dir=fS_out, mod="WY", mod_size=mod_size)
 WY_loo$comp[1:10,]
+update_opt_vars(out_dir=fS_out, mod="WY", mod_size=mod_size, comp=WY_loo$comp)
 
 
 
 
 ##### Size = 4     -------------------------------------------------------------
-#--- Make new datasets with selected variables + each other individually
-make_next_datasets(full_data_base=d.f, 
-                   out_base="data/fwdSearch/Y_", 
-                   opt_names=c("R_", "", "", ""))
-make_next_datasets(full_data_base=d.f, 
-                   out_base="data/fwdSearch/WY_", 
-                   opt_names=c("R_", "", "", ""))
+mod_size <- 4
+#--- Make new datasets with selected variable + each other individually
+make_next_datasets(full_data_base=d.f, out_base=paste0(fS_dat, "Y_"),
+                   opt_names=readRDS(paste0(fS_out, "opt_Y.rds"))[1:mod_size])
+make_next_datasets(full_data_base=d.f, out_base=paste0(fS_dat, "WY_"), 
+                   opt_names=readRDS(paste0(fS_out, "opt_WY.rds"))[1:mod_size])
 
 
 #--- Run 13 models with 4 variables each -- optimal + 1 
@@ -106,23 +115,24 @@ make_next_datasets(full_data_base=d.f,
 
 
 #--- Use loo to compare models based on ability to predict test subset
-Y_loo <- compare_models(fit_dir="out/fwdSearch", mod="Y", mod_size=4)
+Y_loo <- compare_models(fit_dir=fS_out, mod="Y", mod_size=mod_size)
 Y_loo$comp[1:10,]
+update_opt_vars(out_dir=fS_out, mod="Y", mod_size=mod_size, comp=Y_loo$comp)
 
-WY_loo <- compare_models(fit_dir="out/fwdSearch", mod="WY", mod_size=4)
+WY_loo <- compare_models(fit_dir=fS_out, mod="WY", mod_size=mod_size)
 WY_loo$comp[1:10,]
+update_opt_vars(out_dir=fS_out, mod="WY", mod_size=mod_size, comp=WY_loo$comp)
 
 
 
 
 ##### Size = 5     -------------------------------------------------------------
-#--- Make new datasets with selected variables + each other individually
-make_next_datasets(full_data_base=d.f, 
-                   out_base="data/fwdSearch/Y_", 
-                   opt_names=c("R_", "", "", "", ""))
-make_next_datasets(full_data_base=d.f, 
-                   out_base="data/fwdSearch/WY_", 
-                   opt_names=c("R_", "", "", "", ""))
+mod_size <- 5
+#--- Make new datasets with selected variable + each other individually
+make_next_datasets(full_data_base=d.f, out_base=paste0(fS_dat, "Y_"),
+                   opt_names=readRDS(paste0(fS_out, "opt_Y.rds"))[1:mod_size])
+make_next_datasets(full_data_base=d.f, out_base=paste0(fS_dat, "WY_"), 
+                   opt_names=readRDS(paste0(fS_out, "opt_WY.rds"))[1:mod_size])
 
 
 #--- Run 12 models with 5 variables each -- optimal + 1 
@@ -133,23 +143,24 @@ make_next_datasets(full_data_base=d.f,
 
 
 #--- Use loo to compare models based on ability to predict test subset
-Y_loo <- compare_models(fit_dir="out/fwdSearch", mod="Y", mod_size=5)
+Y_loo <- compare_models(fit_dir=fS_out, mod="Y", mod_size=mod_size)
 Y_loo$comp[1:10,]
+update_opt_vars(out_dir=fS_out, mod="Y", mod_size=mod_size, comp=Y_loo$comp)
 
-WY_loo <- compare_models(fit_dir="out/fwdSearch", mod="WY", mod_size=5)
+WY_loo <- compare_models(fit_dir=fS_out, mod="WY", mod_size=mod_size)
 WY_loo$comp[1:10,]
+update_opt_vars(out_dir=fS_out, mod="WY", mod_size=mod_size, comp=WY_loo$comp)
 
 
 
 
 ##### Size = 6     -------------------------------------------------------------
-#--- Make new datasets with selected variables + each other individually
-make_next_datasets(full_data_base=d.f, 
-                   out_base="data/fwdSearch/Y_", 
-                   opt_names=c("R_", "", "", "", "", ""))
-make_next_datasets(full_data_base=d.f, 
-                   out_base="data/fwdSearch/WY_", 
-                   opt_names=c("R_", "", "", "", "", ""))
+mod_size <- 6
+#--- Make new datasets with selected variable + each other individually
+make_next_datasets(full_data_base=d.f, out_base=paste0(fS_dat, "Y_"),
+                   opt_names=readRDS(paste0(fS_out, "opt_Y.rds"))[1:mod_size])
+make_next_datasets(full_data_base=d.f, out_base=paste0(fS_dat, "WY_"), 
+                   opt_names=readRDS(paste0(fS_out, "opt_WY.rds"))[1:mod_size])
 
 
 #--- Run 11 models with 6 variables each -- optimal + 1 
@@ -160,23 +171,24 @@ make_next_datasets(full_data_base=d.f,
 
 
 #--- Use loo to compare models based on ability to predict test subset
-Y_loo <- compare_models(fit_dir="out/fwdSearch", mod="Y", mod_size=6)
+Y_loo <- compare_models(fit_dir=fS_out, mod="Y", mod_size=mod_size)
 Y_loo$comp[1:10,]
+update_opt_vars(out_dir=fS_out, mod="Y", mod_size=mod_size, comp=Y_loo$comp)
 
-WY_loo <- compare_models(fit_dir="out/fwdSearch", mod="WY", mod_size=6)
+WY_loo <- compare_models(fit_dir=fS_out, mod="WY", mod_size=mod_size)
 WY_loo$comp[1:10,]
+update_opt_vars(out_dir=fS_out, mod="WY", mod_size=mod_size, comp=WY_loo$comp)
 
 
 
 
 ##### Size = 7     -------------------------------------------------------------
-#--- Make new datasets with selected variables + each other individually
-make_next_datasets(full_data_base=d.f, 
-                   out_base="data/fwdSearch/Y_", 
-                   opt_names=c("R_", "", "", "", "", "", ""))
-make_next_datasets(full_data_base=d.f, 
-                   out_base="data/fwdSearch/WY_", 
-                   opt_names=c("R_", "", "", "", "", "", ""))
+mod_size <- 7
+#--- Make new datasets with selected variable + each other individually
+make_next_datasets(full_data_base=d.f, out_base=paste0(fS_dat, "Y_"),
+                   opt_names=readRDS(paste0(fS_out, "opt_Y.rds"))[1:mod_size])
+make_next_datasets(full_data_base=d.f, out_base=paste0(fS_dat, "WY_"), 
+                   opt_names=readRDS(paste0(fS_out, "opt_WY.rds"))[1:mod_size])
 
 
 #--- Run 10 models with 7 variables each -- optimal + 1 
@@ -187,23 +199,24 @@ make_next_datasets(full_data_base=d.f,
 
 
 #--- Use loo to compare models based on ability to predict test subset
-Y_loo <- compare_models(fit_dir="out/fwdSearch", mod="Y", mod_size=7)
+Y_loo <- compare_models(fit_dir=fS_out, mod="Y", mod_size=mod_size)
 Y_loo$comp[1:10,]
+update_opt_vars(out_dir=fS_out, mod="Y", mod_size=mod_size, comp=Y_loo$comp)
 
-WY_loo <- compare_models(fit_dir="out/fwdSearch", mod="WY", mod_size=7)
+WY_loo <- compare_models(fit_dir=fS_out, mod="WY", mod_size=mod_size)
 WY_loo$comp[1:10,]
+update_opt_vars(out_dir=fS_out, mod="WY", mod_size=mod_size, comp=WY_loo$comp)
 
 
 
 
 ##### Size = 8     -------------------------------------------------------------
-#--- Make new datasets with selected variables + each other individually
-make_next_datasets(full_data_base=d.f, 
-                   out_base="data/fwdSearch/Y_", 
-                   opt_names=c("R_", "", "", "", "", "", "", ""))
-make_next_datasets(full_data_base=d.f, 
-                   out_base="data/fwdSearch/WY_", 
-                   opt_names=c("R_", "", "", "", "", "", "", ""))
+mod_size <- 8
+#--- Make new datasets with selected variable + each other individually
+make_next_datasets(full_data_base=d.f, out_base=paste0(fS_dat, "Y_"),
+                   opt_names=readRDS(paste0(fS_out, "opt_Y.rds"))[1:mod_size])
+make_next_datasets(full_data_base=d.f, out_base=paste0(fS_dat, "WY_"), 
+                   opt_names=readRDS(paste0(fS_out, "opt_WY.rds"))[1:mod_size])
 
 
 #--- Run 9 models with 8 variables each -- optimal + 1 
@@ -214,23 +227,24 @@ make_next_datasets(full_data_base=d.f,
 
 
 #--- Use loo to compare models based on ability to predict test subset
-Y_loo <- compare_models(fit_dir="out/fwdSearch", mod="Y", mod_size=8)
+Y_loo <- compare_models(fit_dir=fS_out, mod="Y", mod_size=mod_size)
 Y_loo$comp[1:10,]
+update_opt_vars(out_dir=fS_out, mod="Y", mod_size=mod_size, comp=Y_loo$comp)
 
-WY_loo <- compare_models(fit_dir="out/fwdSearch", mod="WY", mod_size=8)
+WY_loo <- compare_models(fit_dir=fS_out, mod="WY", mod_size=mod_size)
 WY_loo$comp[1:10,]
+update_opt_vars(out_dir=fS_out, mod="WY", mod_size=mod_size, comp=WY_loo$comp)
 
 
 
 
 ##### Size = 9     -------------------------------------------------------------
-#--- Make new datasets with selected variables + each other individually
-make_next_datasets(full_data_base=d.f, 
-                   out_base="data/fwdSearch/Y_", 
-                   opt_names=c("R_", "", "", "", "", "", "", "", ""))
-make_next_datasets(full_data_base=d.f, 
-                   out_base="data/fwdSearch/WY_", 
-                   opt_names=c("R_", "", "", "", "", "", "", "", ""))
+mod_size <- 9
+#--- Make new datasets with selected variable + each other individually
+make_next_datasets(full_data_base=d.f, out_base=paste0(fS_dat, "Y_"),
+                   opt_names=readRDS(paste0(fS_out, "opt_Y.rds"))[1:mod_size])
+make_next_datasets(full_data_base=d.f, out_base=paste0(fS_dat, "WY_"), 
+                   opt_names=readRDS(paste0(fS_out, "opt_WY.rds"))[1:mod_size])
 
 
 #--- Run 8 models with 9 variables each -- optimal + 1 
@@ -239,23 +253,24 @@ make_next_datasets(full_data_base=d.f,
 
 
 #--- Use loo to compare models based on ability to predict test subset
-Y_loo <- compare_models(fit_dir="out/fwdSearch", mod="Y", mod_size=9)
+Y_loo <- compare_models(fit_dir=fS_out, mod="Y", mod_size=mod_size)
 Y_loo$comp[1:10,]
+update_opt_vars(out_dir=fS_out, mod="Y", mod_size=mod_size, comp=Y_loo$comp)
 
-WY_loo <- compare_models(fit_dir="out/fwdSearch", mod="WY", mod_size=9)
+WY_loo <- compare_models(fit_dir=fS_out, mod="WY", mod_size=mod_size)
 WY_loo$comp[1:10,]
+update_opt_vars(out_dir=fS_out, mod="WY", mod_size=mod_size, comp=WY_loo$comp)
 
 
 
 
 ##### Size = 10    -------------------------------------------------------------
-#--- Make new datasets with selected variables + each other individually
-make_next_datasets(full_data_base=d.f, 
-                   out_base="data/fwdSearch/Y_", 
-                   opt_names=c("R_", "", "", "", "", "", "", "", "", ""))
-make_next_datasets(full_data_base=d.f, 
-                   out_base="data/fwdSearch/WY_", 
-                   opt_names=c("R_", "", "", "", "", "", "", "", "", ""))
+mod_size <- 10
+#--- Make new datasets with selected variable + each other individually
+make_next_datasets(full_data_base=d.f, out_base=paste0(fS_dat, "Y_"),
+                   opt_names=readRDS(paste0(fS_out, "opt_Y.rds"))[1:mod_size])
+make_next_datasets(full_data_base=d.f, out_base=paste0(fS_dat, "WY_"), 
+                   opt_names=readRDS(paste0(fS_out, "opt_WY.rds"))[1:mod_size])
 
 
 #--- Run 7 models with 10 variables each -- optimal + 1 
@@ -264,8 +279,10 @@ make_next_datasets(full_data_base=d.f,
 
 
 #--- Use loo to compare models based on ability to predict test subset
-Y_loo <- compare_models(fit_dir="out/fwdSearch", mod="Y", mod_size=10)
+Y_loo <- compare_models(fit_dir=fS_out, mod="Y", mod_size=mod_size)
 Y_loo$comp[1:10,]
+update_opt_vars(out_dir=fS_out, mod="Y", mod_size=mod_size, comp=Y_loo$comp)
 
-WY_loo <- compare_models(fit_dir="out/fwdSearch", mod="WY", mod_size=10)
+WY_loo <- compare_models(fit_dir=fS_out, mod="WY", mod_size=mod_size)
 WY_loo$comp[1:10,]
+update_opt_vars(out_dir=fS_out, mod="WY", mod_size=mod_size, comp=WY_loo$comp)
