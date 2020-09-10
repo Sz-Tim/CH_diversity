@@ -7,6 +7,133 @@
 
 #### variable selection functions ##############################################
 
+
+
+
+
+#' Make new datasets for forward variable selection
+#' @param full_data_base path and base filename for full dataset
+#' @param out_base path and base filename for new datasets
+#' @param opt_names character vector of already selected variables
+#' @return Newly generated data sets and a confirmation message
+
+make_next_datasets <- function(full_data_base, out_base, opt_names) {
+  
+  # load full dataset
+  d.ls <- readRDS(paste0(full_data_base, "_ls.rds"))
+  d.i <- readRDS(paste0(full_data_base, "_i.rds"))
+  
+  # make unambiguous column names
+  colnames(d.ls$X) <- paste0("R_", colnames(d.ls$X))
+  colnames(d.i$X)[-c(1,2)] <- paste0("R_", colnames(d.i$X)[-c(1,2)])
+  colnames(d.ls$X_) <- paste0("R_", colnames(d.ls$X_))
+  colnames(d.i$X_)[-c(1,2)] <- paste0("R_", colnames(d.i$X_)[-c(1,2)])
+  colnames(d.ls$V) <- paste0("L_", colnames(d.ls$V))
+  colnames(d.i$V)[-c(1,2)] <- paste0("L_", colnames(d.i$V)[-c(1,2)])
+  colnames(d.ls$V_) <- paste0("L_", colnames(d.ls$V_))
+  colnames(d.i$V_)[-c(1,2)] <- paste0("L_", colnames(d.i$V_)[-c(1,2)])
+  
+  # identify parameters to add
+  par_names_all <- c(colnames(d.ls$X), colnames(d.ls$V))
+  par_names <- par_names_all[!par_names_all %in% opt_names]
+  
+  # make datasets
+  for(i in seq_along(par_names)) {
+    
+    d.ls_i <- d.ls
+    d.i_i <- d.i
+    
+    # indexes
+    d.ls_i$R <- sum(c(opt_names, par_names[i]) %in% colnames(d.ls$X))
+    d.ls_i$L <- sum(c(opt_names, par_names[i]) %in% colnames(d.ls$V))
+    
+    # X
+    d.ls_i$X <- d.ls$X[,which(colnames(d.ls$X) %in% c(opt_names, par_names[i])), drop=F]
+    d.i_i$X <- d.i$X[,which(colnames(d.i$X) %in% c("id", "el", par_names[i])), drop=F]
+    
+    # X_
+    d.ls_i$X_ <- d.ls$X_[,which(colnames(d.ls$X_) %in% c(opt_names, par_names[i])), drop=F]
+    d.i_i$X_ <- d.i$X_[,which(colnames(d.i$X_) %in% c("id", "el", par_names[i])), drop=F]
+    
+    # V
+    d.ls_i$V <- d.ls$V[,which(colnames(d.ls$V) %in% c(opt_names, par_names[i])), drop=F]
+    d.i_i$V <- d.i$V[,which(colnames(d.i$V) %in% c("id", "el", par_names[i])), drop=F]
+    
+    # V_
+    d.ls_i$V_ <- d.ls$V_[,which(colnames(d.ls$V_) %in% c(opt_names, par_names[i])), drop=F]
+    d.i_i$V_ <- d.i$V_[,which(colnames(d.i$V_) %in% c("id", "el", par_names[i])), drop=F]
+    
+    d.f_i <- paste0(out_base, length(opt_names), "__", par_names[i])
+    saveRDS(d.ls_i, paste0(d.f_i, "_ls.rds"))
+    saveRDS(d.i_i, paste0(d.f_i, "_i.rds"))
+    rstan::stan_rdump(ls(d.ls_i),
+                      file=paste0(d.f_i, ".Rdump"),
+                      envir=list2env(d.ls_i))
+    
+  }
+  
+  return(paste("Generated", length(par_names), "new datasets in", out_base))
+  
+}
+
+
+
+
+
+#' Calculate loo metrics for model set
+#' @param fit_dir Directory with cmdstan output; loo output will also be saved here if \code{save=T}
+#' @param mod Model version; either \code{"Y"} or \code{"WY"}
+#' @param mod_size Number of variables in model set
+#' @param comp_all If \code{TRUE} (default), any saved loo .rds files for smaller models are also included in the comparison
+#' @param save If \code{TRUE} (default), loo metrics are stored as a .rds file and comparison is stored as a .csv
+#' @return "loo" with output from loo::loo() and "comp" with output from loo::loo_compare()
+compare_models <- function(fit_dir, mod, mod_size, comp_all=T, save=T) {
+  
+  library(tidyverse)
+  
+  # load (fit | mod, mod_size) and calculate loo metrics
+  fit.f <- unique(str_sub(dir(fit_dir, paste0("^", mod, "_", mod_size, "__")), 1, -7))
+  fit.out <- map(fit.f, ~rstan::read_stan_csv(dir(fit_dir, .x, full.names=T)))
+  fit.loo <- map(setNames(fit.out, fit.f), loo::loo)
+  
+  # load loo metrics for all models of smaller size 
+  if(comp_all && mod_size > 1) {
+    if(mod_size < 11) {
+      smaller.loo <- map(dir(fit_dir, 
+                             paste0("loo_", mod, "_[1-", mod_size-1, "].rds"),
+                             full.names=T), readRDS)
+    } else {
+      smaller.loo <- c(
+        map(dir(fit_dir, 
+                paste0("loo_", mod, "_[1-9].rds"),
+                full.names=T), readRDS),
+        map(dir(fit_dir, 
+                paste0("loo_", mod, "_1[0-", mod_size-11, "].rds"),
+                full.names=T), readRDS)
+      )
+    }
+  } else {
+    smaller.loo <- NULL
+  }
+  
+  # compare based on elpd
+  loo.comp <- loo::loo_compare(c(fit.loo, unlist(smaller.loo, recursive=F)))
+  
+  if(save) {
+    saveRDS(fit.loo, paste0(fit_dir, "/loo_", mod, "_", mod_size, ".rds"))
+    write.csv(loo.comp, paste0(fit_dir, "/loo_", mod, "_", mod_size, ".csv"))
+  }
+  
+  return(list(loo=fit.loo, comp=loo.comp))
+}
+
+
+
+
+
+
+
+
 #' Update rstanarm object with fitted hierarchical model output
 #' @param fit_glmer rstanarm::glmer output
 #' @param fit_hm stanfit object of hierarchical model output
