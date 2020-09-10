@@ -19,7 +19,8 @@ agg_vs <- aggregate_output(d.i=readRDS("data/stan_data/vs_no_pred_i.rds"),
                                        sig_b="sigma_b", Sig_B="Sigma_B",
                                        disp="disp_lam", D="D"))
 
-saveRDS(agg_vs, "out/agg_vs.rds")
+saveRDS(agg_vs$summaries, "out/agg_vs.rds")
+saveRDS(agg_vs$full, "out/agg_vs_full.rds")
 
 
 
