@@ -1,4 +1,4 @@
-# 05_projpredWY.R
+# 04_projpredY.R
 # Tim Szewczyk
 #
 # This script runs projection predictive inference using the structure samples
@@ -15,22 +15,22 @@
 
 library(rstan); library(rstanarm); library(projpred); library(tidyverse)
 source("code/00_fn.R")
-d.ls <- readRDS("data/stan_data/vs_no_pred_ls.rds")
+d.ls <- readRDS("data/stan_data/vs_80_ls.rds")
 
 
 
 # load model outputs
-fit_shell <- readRDS("out/shell.rds")
-fit_WY <- read_stan_csv(dir("out", "vs_WY", full.names=T))
+fit_shell <- readRDS("out/vs_80/shell_80.rds")
+fit_Y <- read_stan_csv(dir("out/vs_80", "vs_Y_altRE_G", full.names=T))
 
 
 
 # update shell with Y posteriors
-fit_update <- update_rstanarm_shell(fit_shell, fit_WY, d.ls)
-saveRDS(fit_update, "out/fit_update_WY.rds")
+fit_update <- update_rstanarm_shell(fit_shell, fit_Y, d.ls)
+saveRDS(fit_update, "out/vs_80/fit_update_Y.rds")
 
 
 
 # select variables
-vs <- varsel(fit_update, verbose=T, nterms_max=21)
-saveRDS(vs, "out/varsel_WY.rds")
+vs <- varsel(fit_update, verbose=T, nterms_max=10, ndraws=1)
+saveRDS(vs, "out/vs_80/varsel_Y.rds")
