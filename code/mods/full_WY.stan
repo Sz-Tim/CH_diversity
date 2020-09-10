@@ -69,15 +69,19 @@ transformed data {
 
 parameters {
   
-  // slopes
-  matrix[R+L,S] b_std;
-  real<lower=0> sigma_b[R+L];
-  matrix[R+L,G] B_std;
+  // aggregate slopes
   vector[R+L] beta;
-  cholesky_factor_corr[G] L_Omega_B[R+L];
-  vector<lower=0>[G] sigma_B[R+L]; 
   vector<lower=0>[R+L-1] beta_lam;  // horseshoe prior
   real<lower=0> beta_tau;  // horseshoe prior
+  
+  // genus effects
+  matrix[R+L,G] B_std;
+  cholesky_factor_corr[R+L] L_Omega_B;
+  vector<lower=0>[R+L] sigma_B; 
+  
+  // species effects
+  matrix[R+L,S] b_std;
+  real<lower=0> sigma_b[R+L];
   
   real<lower=0, upper=1> disp_lam;  // implied prior: Uniform(0,1)
   
@@ -92,19 +96,22 @@ transformed parameters {
   
   // slopes
   matrix[R+L,S] b;  // species level
-  matrix[R+L,G] B;  // genus level
+  matrix[R+L,S] b_eff;  // species level
+  matrix[R+L,G] B_eff;  // genus level
   
   // Lambda/lambda
   matrix[K+J,S] lLAMBDA;  // cell level
   matrix[I,S] llambda;  // plot level
   
-  // cell level
+  // B ~ mvNorm(beta, sigma_B * L_Omega_B * sigma_B);  
+  B_eff = diag_pre_multiply(sigma_B, L_Omega_B) * B_std;
+  
+  // b ~ Norm(B, sigma_b)
   for(m in 1:(R+L)) {
-    // B ~ mvNorm(beta, sigma_B * L_Omega_B * sigma_B);  
-    // b ~ Norm(B, sigma_b)
-    B[m,] = beta[m] + B_std[m,] * diag_pre_multiply(sigma_B[m], L_Omega_B[m]);  
-    b[m,] = B[m,tax_i[,2]] + b_std[m,] * sigma_b[m]; 
+    b_eff[m,] = B_eff[m,tax_i[,2]] + b_std[m,] * sigma_b[m]; 
+    b[m,] = beta[m] + b_eff[m,]; 
   }
+  
   lLAMBDA = X * b[1:R,] - log(h);
   llambda = Z * b;
   
@@ -117,17 +124,17 @@ model {
   // effort and species bias priors
   D ~ normal(D_prior, 1);
   
-  // cell level priors
+  // slope priors
   beta[1] ~ normal(-4, 2);
   beta[2:(R+L)] ~ normal(0, beta_tau * beta_lam);
   beta_tau ~ cauchy(0, 2);
   beta_lam ~ student_t(4, 0, 1);
-  for(m in 1:(R+L)) {
-    b_std[m,] ~ normal(0, 1);
-    B_std[m,] ~ normal(0, 1);
-    sigma_B[m] ~ normal(0, 2);
-    L_Omega_B[m] ~ lkj_corr_cholesky(2);
-  }
+  
+  to_vector(B_std) ~ normal(0, 1);
+  sigma_B ~ normal(0, 2);
+  L_Omega_B ~ lkj_corr_cholesky(2);
+  
+  to_vector(b_std) ~ normal(0, 1);
   sigma_b ~ normal(0, 2);
   
   // likelihood
@@ -142,21 +149,25 @@ model {
 
 generated quantities {
   
+  matrix[I,S] loglik;
   matrix[I,S] prPresL;
-  matrix[G,G] Sigma_B[R+L];
+  matrix[R+L,G] B;  // genus level
+  matrix[R+L,R+L] Sigma_B;
 
   // calculated predicted plot-scale prPres
   for(s in 1:S) {
     for(i in 1:I) {
+      loglik[i,s] = GP_point_log_lpdf(Y[i,s] | disp_lam, llambda[i,s]);
       prPresL[i,s] = 1 - exp(GP_point_log_lpdf(0 | disp_lam, llambda[i,s]));
     }
   }
   
-  // compose correlation matrices = sigma * LL' * sigma
   for(m in 1:(R+L)) {
-    Sigma_B[m] = quad_form_diag(multiply_lower_tri_self_transpose(L_Omega_B[m]),
-                                sigma_B[m]);
+    B[m,] = beta[m] + B_eff[m,]; 
   }
+  
+  // compose correlation matrices = sigma * LL' * sigma
+  Sigma_B = quad_form_diag(multiply_lower_tri_self_transpose(L_Omega_B), sigma_B);
   
 }
 
