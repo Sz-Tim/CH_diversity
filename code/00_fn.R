@@ -93,7 +93,8 @@ compare_models <- function(fit_dir, mod, mod_size, comp_all=T, save=T) {
   
   # load (fit | mod, mod_size) and calculate loo metrics
   fit.f <- unique(str_sub(dir(fit_dir, paste0("^", mod, "_", mod_size, "__")), 1, -7))
-  fit.out <- map(fit.f, ~rstan::read_stan_csv(dir(fit_dir, .x, full.names=T)))
+  fit.out <- map(fit.f, 
+                 ~rstan::read_stan_csv(dir(fit_dir, paste0("^", .x), full.names=T)))
   fit.loo <- map(setNames(fit.out, fit.f), loo::loo)
   
   # load loo metrics for all models of smaller size 
