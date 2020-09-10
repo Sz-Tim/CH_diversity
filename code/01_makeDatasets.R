@@ -35,18 +35,18 @@ source("code/00_fn.R"); source(paste0(ant.dir, "../code/00_fn.R"))
 
 
 ##--- settings
-test_prop_Y <- ifelse(set_type=="vs", 0.3, 0)  # prop BDM to withold
+test_prop_Y <- ifelse(set_type=="vs", 0.2, 0)  # prop BDM to withold
 X_vars <- c("grwnDD0", "grwnDD0_sq", 
             "AP",
             "npp",
-            "lcH", 
+            "lcH",
             "Edge",
             "bldgPer", "rdLen",
             "aspctN")
 V_vars <- c("SoilTSt", 
             "VegTot",
-            "CnpyOpn", "CnpyMxd", 
-            "Pasture", "Crop", 
+            "CnpyOpn", "CnpyMxd",
+            "Pasture", "Crop",
             "aspctN")
 
 
@@ -106,20 +106,6 @@ for(s in 1:max(tax_i$sNum)) {
 
 
 
-##--- use only species in Y
-if(set_type=="vs") {
-  in_Y <- which(colSums(Y)>0)
-  W <- W[,in_Y]
-  W_id <- which(rowSums(W)>0)
-  W_inbd <- which(grd_W.sf$inbd)
-  grd_W.sf$W_obs <- rowSums(W)>0
-  Y <- Y[,in_Y]
-  tax_i <- tax_i %>% filter(species %in% names(in_Y)) %>%
-    mutate(sNum=row_number(), gNum=as.numeric(factor(genus)))
-}
-
-
-
 
 ##--- indexes
 if(set_type=="pred") {
@@ -156,6 +142,22 @@ if(test_prop_Y>0) {  # test/train
              Y=unlist(imap(IJ.ls$Y, ~rep(.y, length(.x)))))
   I <- list(Y=length(IJ$Y))
 }
+
+
+# 
+# 
+# ##--- use only species in Y
+# if(set_type=="vs") {
+#   in_Y <- which(colSums(Y[IJ$id_Y,])>0)
+#   W <- W[,in_Y]
+#   W_id <- which(rowSums(W)>0)
+#   W_inbd <- which(grd_W.sf$inbd)
+#   grd_W.sf$W_obs <- rowSums(W)>0
+#   Y <- Y[,in_Y]
+#   tax_i <- tax_i %>% filter(species %in% names(in_Y)) %>%
+#     mutate(sNum=row_number(), gNum=as.numeric(factor(genus)))
+# }
+
 
 
 
