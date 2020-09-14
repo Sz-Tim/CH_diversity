@@ -72,7 +72,8 @@ make_next_datasets <- function(full_data_base, out_base, opt_names) {
     
   }
   
-  return(paste("Generated", length(par_names), "new datasets in", out_base))
+  return(paste("Generated", length(par_names), "new datasets as", 
+               paste0(out_base, "_", length(opt_names), "__*")))
   
 }
 
