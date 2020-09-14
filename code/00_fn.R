@@ -144,8 +144,8 @@ update_opt_vars <- function(out_dir, mod, mod_size, comp) {
   
   opt.f <- paste0(out_dir, "/opt_", mod, ".rds")
   
-  if(grepl(mod_size, rownames(Y_loo$comp)[1])) {
-    opt_var <- str_split_fixed(rownames(Y_loo$comp)[1], "__", 2)[,2]
+  if(grepl(mod_size, rownames(comp)[1])) {
+    opt_var <- str_split_fixed(rownames(comp)[1], "__", 2)[,2]
     saveRDS(c(readRDS(opt.f), opt_var), opt.f)
     msg <- paste(opt_var, "  was added to:  ", opt.f, "\n",
                  " updated size: ", length(readRDS(opt.f))-1, "\n",
