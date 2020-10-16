@@ -6,7 +6,8 @@
 
 
 ##--- set up
-set_type <- c("vs", "pred")[1]  # vs = variable selection; pred = all of VD
+# cv: cross-validation; vs = single test/train; pred = predict all of VD
+set_type <- c("cv", "vs", "pred")[1]  
 library(tidyverse); library(sf); library(googlesheets)
 gis.dir <- "../2_gis/data/VD_21781/"
 ant.dir <- "../1_opfo/data/"
@@ -35,7 +36,13 @@ source("code/00_fn.R"); source(paste0(ant.dir, "../code/00_fn.R"))
 
 
 ##--- settings
-test_prop_Y <- ifelse(set_type=="vs", 0.2, 0)  # prop BDM to withold
+if(set_type=="cv") {
+  n_folds <- 4
+} else if(set_type=="vs") {
+  test_prop_Y <- 0.2
+} else if(set_type=="pred") {
+  test_prop_Y <- 0
+}
 X_vars <- c("grwnDD0", "grwnDD0_sq", 
             "AP",
             "npp",
@@ -46,8 +53,7 @@ X_vars <- c("grwnDD0", "grwnDD0_sq",
 V_vars <- c("SoilTSt", 
             "VegTot",
             "CnpyOpn", "CnpyMxd",
-            "Pasture", "Crop",
-            "aspctN")
+            "Pasture", "Crop")
 
 
 
@@ -118,16 +124,33 @@ if(set_type=="pred") {
             W=length(W_id))
 }
 
-J <- list(id_Y=sample(1:nrow(site.sf), floor(nrow(site.sf)*(1-test_prop_Y))))
-J$BDM_Y <- site.sf$BDM[J$id_Y]
-J$Y <- length(J$id_Y)
-if(test_prop_Y>0) {
-  J$id_Y_ <- (1:nrow(site.sf))[-J$id_Y]
-  J$BDM_Y_ <- site.sf$BDM[J$id_Y_]
-  J$Y_ <- length(J$id_Y_)
+if(set_type=="cv") {  # k-fold cross-validation 
+  J <- list(test_id_Y=caret::createFolds(1:nrow(site.sf), k=n_folds))
+  J$BDM_Y <- map(J$test_id_Y, ~site.sf$BDM[-.x])
+  J$Y <- map(J$BDM_Y, length)
+  J$BDM_Y_ <- map(J$test_id_Y, ~site.sf$BDM[.x])
+  J$Y_ <- map(J$BDM_Y_, length)
+} else {
+  J <- list(id_Y=sample(1:nrow(site.sf), floor(nrow(site.sf)*(1-test_prop_Y))))
+  J$BDM_Y <- site.sf$BDM[J$id_Y]
+  J$Y <- length(J$id_Y)
+  if(test_prop_Y>0) {
+    J$id_Y_ <- (1:nrow(site.sf))[-J$id_Y]
+    J$BDM_Y_ <- site.sf$BDM[J$id_Y_]
+    J$Y_ <- length(J$id_Y_)
+  }
 }
 
-if(test_prop_Y>0) {  # test/train
+if(set_type=="cv") {  # k-fold cross-validation 
+  IJ.ls <- list(Y=map(J$BDM_Y, ~map(.x, ~which(plot_i$BDM==.x))), 
+                Y_=map(J$BDM_Y_, ~map(.x, ~which(plot_i$BDM==.x))))
+  IJ <- list(id_Y=map(IJ.ls$Y, unlist),
+             id_Y_=map(IJ.ls$Y_, unlist),
+             Y=map(IJ.ls$Y, ~unlist(imap(.x, ~rep(.y, length(.x))))),
+             Y_=map(IJ.ls$Y_, ~unlist(imap(.x, ~rep(.y, length(.x))))))
+  I <- list(Y=map(IJ$Y, length),
+            Y_=map(IJ$Y_, length))
+} else if(test_prop_Y>0) {  # test/train
   IJ.ls <- list(Y=map(J$BDM_Y, ~which(plot_i$BDM==.x)),
                 Y_=map(J$BDM_Y_, ~which(plot_i$BDM==.x)))
   IJ <- list(id_Y=unlist(IJ.ls$Y),   # row of plot_i
@@ -268,23 +291,38 @@ X_Y.mx <- as.matrix(
     st_set_geometry(NULL) %>% 
     select("BDM", "el", one_of(X_vars))
   )
-# scale and carefully combine
-X.mx <- rbind(X_W.mx[match(K$id_W, X_W.mx[,'id']),], 
-              X_Y.mx[match(J$BDM_Y, X_Y.mx[,'BDM']),])
-if(set_type=="pred") {
-  X.mx <- rbind(X.mx,
-                X_W.mx[match(K$id_W_, X_W.mx[,'id']),])
-} 
-if(test_prop_Y > 0) {  # test/train
-  X.mx <- rbind(X.mx,
-                X_Y.mx[match(J$BDM_Y_, X_Y.mx[,'BDM']),])
+if(set_type=="cv") {
+  X.mx <- X.all <- vector("list", n_folds)
+  for(i in 1:n_folds) {
+    X.mx[[i]] <- rbind(X_W.mx[match(K$id_W, X_W.mx[,'id']),], 
+                       X_Y.mx[match(J$BDM_Y[[i]], X_Y.mx[,'BDM']),],
+                       X_Y.mx[match(J$BDM_Y_[[i]], X_Y.mx[,'BDM']),])
+    X.scale <- scale(X.mx[[i]][,-(1:2)])
+    if(any(grep("_sq", X_vars))) {
+      sqX <- grep("_sq", X_vars, value=T) %>% list(base=str_sub(., 1, -4), sq=.)
+      X.scale[,sqX$sq] <- X.scale[,sqX$base]^2 
+    }
+    X.all[[i]] <- cbind(1, X.scale)
+  }
+} else {
+  # scale and carefully combine
+  X.mx <- rbind(X_W.mx[match(K$id_W, X_W.mx[,'id']),], 
+                X_Y.mx[match(J$BDM_Y, X_Y.mx[,'BDM']),])
+  if(set_type=="pred") {
+    X.mx <- rbind(X.mx,
+                  X_W.mx[match(K$id_W_, X_W.mx[,'id']),])
+  } 
+  if(test_prop_Y > 0) {  # test/train
+    X.mx <- rbind(X.mx,
+                  X_Y.mx[match(J$BDM_Y_, X_Y.mx[,'BDM']),])
+  }
+  X.scale <- scale(X.mx[,-(1:2)])
+  if(any(grep("_sq", X_vars))) {
+    sqX <- grep("_sq", X_vars, value=T) %>% list(base=str_sub(., 1, -4), sq=.)
+    X.scale[,sqX$sq] <- X.scale[,sqX$base]^2 
+  }
+  X.all <- cbind(1, X.scale)
 }
-X.scale <- scale(X.mx[,-(1:2)])
-if(any(grep("_sq", X_vars))) {
-  sqX <- grep("_sq", X_vars, value=T) %>% list(base=str_sub(., 1, -4), sq=.)
-  X.scale[,sqX$sq] <- X.scale[,sqX$base]^2 
-}
-X.all <- cbind(1, X.scale)
 
 
 
@@ -309,36 +347,71 @@ V_Y.mx <- as.matrix(V.df %>% st_set_geometry(NULL) %>%
                       mutate_if(is.numeric, .funs=list(sq=~.^2)) %>%
                       mutate(Plot_id=as.numeric(as.character(Plot_id))) %>%
                       select("Plot_id", "el", all_of(V_vars)))
-V.mx <- V_Y.mx[IJ$id_Y,]
-if(test_prop_Y > 0) {  # test/train
-  V.mx <- rbind(V.mx, 
-                V_Y.mx[IJ$id_Y_,]) 
-}
-V.scale <- scale(V.mx[,-(1:2)])
-if("CnpyOpn" %in% V_vars) {
-  V.scale[,"CnpyOpn"] <- V.scale[,"CnpyOpn"] * 
-    attr(V.scale, "scaled:scale")["CnpyOpn"] + 
-    attr(V.scale, "scaled:center")["CnpyOpn"]
-}
-if("CnpyMxd" %in% V_vars) {
-  V.scale[,"CnpyMxd"] <- V.scale[,"CnpyMxd"] * 
-    attr(V.scale, "scaled:scale")["CnpyMxd"] + 
-    attr(V.scale, "scaled:center")["CnpyMxd"]
-}
-if("Pasture" %in% V_vars) {
-  V.scale[,"Pasture"] <- V.scale[,"Pasture"] * 
-    attr(V.scale, "scaled:scale")["Pasture"] + 
-    attr(V.scale, "scaled:center")["Pasture"]
-}
-if("Crop" %in% V_vars) {
-  V.scale[,"Crop"] <- V.scale[,"Crop"] * 
-    attr(V.scale, "scaled:scale")["Crop"] + 
-    attr(V.scale, "scaled:center")["Crop"]
-}
-if("Built" %in% V_vars) {
-  V.scale[,"Built"] <- V.scale[,"Built"] * 
-    attr(V.scale, "scaled:scale")["Built"] + 
-    attr(V.scale, "scaled:center")["Built"]
+if(set_type=="cv") {
+  V.mx <- V.all <- vector("list", n_folds)
+  for(i in 1:n_folds) {
+    V.mx[[i]] <- rbind(V_Y.mx[IJ$id_Y[[i]],],
+                       V_Y.mx[IJ$id_Y_[[i]],])
+    V.scale <- scale(V.mx[[i]][,-(1:2)])
+    if("CnpyOpn" %in% V_vars) {
+      V.scale[,"CnpyOpn"] <- V.scale[,"CnpyOpn"] * 
+        attr(V.scale, "scaled:scale")["CnpyOpn"] + 
+        attr(V.scale, "scaled:center")["CnpyOpn"]
+    }
+    if("CnpyMxd" %in% V_vars) {
+      V.scale[,"CnpyMxd"] <- V.scale[,"CnpyMxd"] * 
+        attr(V.scale, "scaled:scale")["CnpyMxd"] + 
+        attr(V.scale, "scaled:center")["CnpyMxd"]
+    }
+    if("Pasture" %in% V_vars) {
+      V.scale[,"Pasture"] <- V.scale[,"Pasture"] * 
+        attr(V.scale, "scaled:scale")["Pasture"] + 
+        attr(V.scale, "scaled:center")["Pasture"]
+    }
+    if("Crop" %in% V_vars) {
+      V.scale[,"Crop"] <- V.scale[,"Crop"] * 
+        attr(V.scale, "scaled:scale")["Crop"] + 
+        attr(V.scale, "scaled:center")["Crop"]
+    }
+    if("Built" %in% V_vars) {
+      V.scale[,"Built"] <- V.scale[,"Built"] * 
+        attr(V.scale, "scaled:scale")["Built"] + 
+        attr(V.scale, "scaled:center")["Built"]
+    }
+    V.all[[i]] <- V.scale
+  }
+} else {
+  V.mx <- V_Y.mx[IJ$id_Y,]
+  if(test_prop_Y > 0) {  # test/train
+    V.mx <- rbind(V.mx, 
+                  V_Y.mx[IJ$id_Y_,]) 
+  }
+  V.scale <- scale(V.mx[,-(1:2)])
+  if("CnpyOpn" %in% V_vars) {
+    V.scale[,"CnpyOpn"] <- V.scale[,"CnpyOpn"] * 
+      attr(V.scale, "scaled:scale")["CnpyOpn"] + 
+      attr(V.scale, "scaled:center")["CnpyOpn"]
+  }
+  if("CnpyMxd" %in% V_vars) {
+    V.scale[,"CnpyMxd"] <- V.scale[,"CnpyMxd"] * 
+      attr(V.scale, "scaled:scale")["CnpyMxd"] + 
+      attr(V.scale, "scaled:center")["CnpyMxd"]
+  }
+  if("Pasture" %in% V_vars) {
+    V.scale[,"Pasture"] <- V.scale[,"Pasture"] * 
+      attr(V.scale, "scaled:scale")["Pasture"] + 
+      attr(V.scale, "scaled:center")["Pasture"]
+  }
+  if("Crop" %in% V_vars) {
+    V.scale[,"Crop"] <- V.scale[,"Crop"] * 
+      attr(V.scale, "scaled:scale")["Crop"] + 
+      attr(V.scale, "scaled:center")["Crop"]
+  }
+  if("Built" %in% V_vars) {
+    V.scale[,"Built"] <- V.scale[,"Built"] * 
+      attr(V.scale, "scaled:scale")["Built"] + 
+      attr(V.scale, "scaled:center")["Built"]
+  }
 }
 
 
@@ -346,21 +419,68 @@ if("Built" %in% V_vars) {
 
 ##--- NA's
 # identify NA cells
-na.W <- which(is.na(rowSums(X.mx[1:K$W,]))) # rows of X with NA
-na.Y <- which(is.na(rowSums(V.mx[1:I$Y,]))) # rows of V with NA
-if(set_type=="pred") {
-  na.W_ <- which(is.na(rowSums(X.mx[K$W+J$Y+(1:K$W_),]))) # rows of X_ with NA
+if(set_type=="cv") {
+  na.W <- na.Y <- na.W_ <- na.Y_ <- vector("list", n_folds)
+  for(i in 1:n_folds) {
+    na.W[[i]] <- which(is.na(rowSums(X.mx[[i]][1:K$W,])))
+    na.Y[[i]] <- which(is.na(rowSums(V.mx[[i]][1:I$Y[[i]],])))
+    na.W_[[i]] <- numeric(0)
+    na.Y_[[i]] <- which(is.na(rowSums(V.mx[[i]][I$Y[[i]]+(1:I$Y_[[i]]),]))) 
+  }
 } else {
-  na.W_ <- numeric(0)
+  na.W <- which(is.na(rowSums(X.mx[1:K$W,]))) # rows of X with NA
+  na.Y <- which(is.na(rowSums(V.mx[1:I$Y,]))) # rows of V with NA
+  if(set_type=="pred") {
+    na.W_ <- which(is.na(rowSums(X.mx[K$W+J$Y+(1:K$W_),]))) # rows of X_ with NA
+  } else {
+    na.W_ <- numeric(0)
+  }
+  if(test_prop_Y > 0) {  # test/train
+    na.Y_ <- which(is.na(rowSums(V.mx[I$Y+(1:I$Y_),]))) # rows of V_ with NA
+  }
 }
-if(test_prop_Y > 0) {  # test/train
-  na.Y_ <- which(is.na(rowSums(V.mx[I$Y+(1:I$Y_),]))) # rows of V_ with NA
-}
-
 
 
 ##--- export stan data
-if(set_type=="vs") {
+if(set_type=="cv") {
+  for(i in 1:n_folds) {
+    d.ls <- list(K=K$W-length(na.W[[i]]),
+                 J=J$Y[[i]], J_=J$Y_[[i]],
+                 IJ=IJ$Y[[i]][-na.Y[[i]]], IJ_=IJ$Y_[[i]][-na.Y_[[i]]],
+                 I=I$Y[[i]]-length(na.Y[[i]]), I_=I$Y_[[i]]-length(na.Y_[[i]]),
+                 S=max(tax_i$sNum), G=max(tax_i$gNum), 
+                 tax_i=tax_i[,c("sNum", "gNum")], 
+                 D_prior=tax_i$Dprior, 
+                 R=dim(X.all[[i]])[2], 
+                 L=dim(V.all[[i]])[2],
+                 W=W[K$id_W,][-na.W[[i]],],
+                 Y=Y[IJ$id_Y[[i]],][-na.Y[[i]],],
+                 Y_=Y[IJ$id_Y_[[i]],][-na.Y_[[i]],],
+                 Y_int=Y[IJ$id_Y_[[i]],][-na.Y_[[i]],],
+                 X=X.all[[i]][1:(K$W+J$Y[[i]]),][-na.W[[i]],], 
+                 X_=X.all[[i]][K$W+J$Y[[i]]+(1:J$Y_[[i]]),], 
+                 V=V.all[[i]][1:I$Y[[i]],][-na.Y[[i]],], 
+                 V_=V.all[[i]][I$Y[[i]]+(1:I$Y_[[i]]),][-na.Y_[[i]],],
+                 h=7.5e-7)
+    d.i <- list(X=X.mx[[i]][1:(K$W+J$Y[[i]]),][-na.W[[i]],],
+                X_=X.mx[[i]][K$W+J$Y[[i]]+(1:J$Y_[[i]]),],
+                V=V.mx[[i]][1:I$Y[[i]],][-na.Y[[i]],],
+                V_=V.mx[[i]][I$Y[[i]]+(1:I$Y_[[i]]),][-na.Y_[[i]],],
+                W=W[K$id_W,][-na.W[[i]],], 
+                Y=Y[IJ$id_Y[[i]],][-na.Y[[i]],],
+                Y_=Y[IJ$id_Y_[[i]],][-na.Y_[[i]],],
+                I=I, J=J, IJ=IJ, K=K, 
+                na.W=na.W[[i]], na.Y=na.Y[[i]], na.Y_=na.Y_[[i]],
+                tax_i=tax_i,
+                grd_W.sf=grd_W.sf)
+    d.f <- paste0("data/stan_data/", set_type, "_k_", i)
+    saveRDS(d.ls, paste0(d.f, "_ls.rds"))
+    saveRDS(d.i, paste0(d.f, "_i.rds"))
+    rstan::stan_rdump(ls(d.ls),
+                      file=paste0(d.f, ".Rdump"),
+                      envir=list2env(d.ls)) 
+  }
+} else if(set_type=="vs") {
   if(test_prop_Y > 0) {  # test/train
     d.ls <- list(K=K$W-length(na.W),
                  J=J$Y, J_=J$Y_,
@@ -407,16 +527,13 @@ if(set_type=="vs") {
                  D_prior=tax_i$Dprior, 
                  R=dim(X.all)[2], 
                  L=dim(V.scale)[2],
-                 Q=dim(U.all)[2], 
                  W=W[K$id_W,],
                  Y=Y[IJ$id_Y,][-na.Y,],
                  X=X.all[1:(K$W+J$Y),], 
                  V=V.scale[1:I$Y,][-na.Y,], 
-                 U=U.all[1:K$W,], 
                  h=7.5e-7)
     d.i <- list(X=X.mx[1:(K$W+J$Y),],
                 V=V.mx[1:I$Y,][-na.Y,],
-                U=U_W.mx[1:K$W,],
                 W=W[K$id_W,], 
                 Y=Y[IJ$id_Y,][-na.Y,],
                 I=I, J=J, IJ=IJ, K=K, 
@@ -426,10 +543,8 @@ if(set_type=="vs") {
     if(length(na.W)>0) {
       d.ls$W <- d.ls$W[-na.W,]
       d.ls$X <- d.ls$X[-na.W,]
-      d.ls$U <- d.ls$U[-na.W,]
       d.i$W <- d.i$W[-na.W,]
       d.i$X <- d.i$X[-na.W,]
-      d.i$U <- d.i$U[-na.W,]
       d.i$grd_W.sf <- d.i$grd_W.sf[-na.W,]
     }
     d.f <- paste0("data/stan_data/", set_type, "_no_pred")
@@ -450,21 +565,16 @@ if(set_type=="vs") {
                D_prior=tax_i$Dprior, 
                R=dim(X.all)[2], 
                L=dim(V.scale)[2],
-               Q=dim(U.all)[2], 
                W=W[K$id_W,],
                W_=W[K$id_W_,],
                Y=Y[IJ$id_Y,][-na.Y,],
                X=X.all[1:(K$W+J$Y),], 
                X_=X.all[K$W+J$Y+(1:(K$W_)),], 
                V=V.scale[1:I$Y,][-na.Y,], 
-               U=U.all[1:K$W,], 
-               U_=U.all[K$W+(1:K$W_),], 
                h=7.5e-7)
   d.i <- list(X=X.mx[1:(K$W+J$Y),],
               X_=X.mx[K$W+J$Y+(1:(K$W_)),],
               V=V.mx[1:I$Y,][-na.Y,],
-              U=U_W.mx[1:K$W,],
-              U_=U_W.mx[K$W+(1:K$W_),],
               W=W[K$id_W,], 
               W_=W[K$id_W_,], 
               Y=Y[IJ$id_Y,][-na.Y,],
@@ -475,18 +585,14 @@ if(set_type=="vs") {
   if(length(na.W)>0) {
     d.ls$W <- d.ls$W[-na.W,]
     d.ls$X <- d.ls$X[-na.W,]
-    d.ls$U <- d.ls$U[-na.W,]
     d.i$W <- d.i$W[-na.W,]
     d.i$X <- d.i$X[-na.W,]
-    d.i$U <- d.i$U[-na.W,]
   }
   if(length(na.W_)>0) {
     d.ls$W_ <- d.ls$W_[-na.W_,]
     d.ls$X_ <- d.ls$X_[-na.W_,]
-    d.ls$U_ <- d.ls$U_[-na.W_,]
     d.i$W_ <- d.i$W_[-na.W_,]
     d.i$X_ <- d.i$X_[-na.W_,]
-    d.i$U_ <- d.i$U_[-na.W_,]
   }
   if(length(na.W)>0 | length(na.W_)>0) {
     d.i$grd_W.sf <- d.i$grd_W.sf[-c(na.W, na.W_),]
