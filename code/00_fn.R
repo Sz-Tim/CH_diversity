@@ -8,16 +8,15 @@
 #### variable selection functions ##############################################
 
 
-
-
-
 #' Make new datasets for forward variable selection
 #' @param full_data_base path and base filename for full dataset
 #' @param out_base path and base filename for new datasets
 #' @param opt_names character vector of already selected variables
+#' @param type dataset type; "cv" for cross-validation subsets, "vs" for
+#'   variable selection, or "pred" for optimal model that predicts whole map
 #' @return Newly generated data sets and a confirmation message
 
-make_next_datasets <- function(full_data_base, out_base, opt_names) {
+make_next_datasets <- function(full_data_base, out_base, opt_names, mod_size, type="cv") {
   
   # load full dataset
   d.ls <- readRDS(paste0(full_data_base, "_ls.rds"))
@@ -30,50 +29,117 @@ make_next_datasets <- function(full_data_base, out_base, opt_names) {
   colnames(d.i$X_)[-c(1,2)] <- paste0("R_", colnames(d.i$X_)[-c(1,2)])
   colnames(d.ls$V) <- paste0("L_", colnames(d.ls$V))
   colnames(d.i$V)[-c(1,2)] <- paste0("L_", colnames(d.i$V)[-c(1,2)])
-  colnames(d.ls$V_) <- paste0("L_", colnames(d.ls$V_))
-  colnames(d.i$V_)[-c(1,2)] <- paste0("L_", colnames(d.i$V_)[-c(1,2)])
+  if(type %in% c("cv", "vs")) {  
+    colnames(d.ls$V_) <- paste0("L_", colnames(d.ls$V_))
+    colnames(d.i$V_)[-c(1,2)] <- paste0("L_", colnames(d.i$V_)[-c(1,2)]) 
+  }
   
   # identify parameters to add
-  par_names_all <- c(colnames(d.ls$X), colnames(d.ls$V))
-  par_names <- par_names_all[!par_names_all %in% opt_names]
-  
-  # make datasets
-  for(i in seq_along(par_names)) {
+  if("L_CnpyOpn" %in% opt_names) opt_names <- c(opt_names, "L_CnpyMxd")
+  if("L_Pasture" %in% opt_names) opt_names <- c(opt_names, "L_Crop")
+  if("R_grwnDD0" %in% opt_names) opt_names <- c(opt_names, "R_grwnDD0_sq")
+  if(type %in% c("cv", "vs")) {
+    par_names_all <- c(colnames(d.ls$X), colnames(d.ls$V))
+    if(is.null(opt_names)) {
+      par_names <- "R_"
+    } else {
+      par_names <- par_names_all[!par_names_all %in% opt_names] 
+    } 
     
+    # make datasets
+    for(i in seq_along(par_names)) {
+      
+      par_i <- par_names[i]
+      if(par_i == "L_CnpyOpn") {
+        par_i <- c(par_i, "L_CnpyMxd")
+      } else if(par_i == "L_CnpyMxd") {
+        next
+      } else if(par_i == "L_Pasture") {
+        par_i <- c(par_i, "L_Crop")
+      } else if(par_i =="L_Crop") {
+        next
+      } else if(par_i == "R_grwnDD0") {
+        par_i <- c(par_i, "R_grwnDD0_sq")
+      } else if(par_i =="R_grwnDD0_sq") {
+        next
+      }
+      
+      d.ls_i <- d.ls
+      d.i_i <- d.i
+      
+      # indexes
+      d.ls_i$R <- sum(c(opt_names, par_i) %in% colnames(d.ls$X))
+      d.ls_i$L <- sum(c(opt_names, par_i) %in% colnames(d.ls$V))
+      
+      # X
+      d.ls_i$X <- d.ls$X[,which(colnames(d.ls$X) %in% c(opt_names, par_i)), drop=F]
+      d.i_i$X <- d.i$X[,which(colnames(d.i$X) %in% c("id", "el", opt_names, par_i)), drop=F]
+      
+      # X_
+      d.ls_i$X_ <- d.ls$X_[,which(colnames(d.ls$X_) %in% c(opt_names, par_i)), drop=F]
+      d.i_i$X_ <- d.i$X_[,which(colnames(d.i$X_) %in% c("id", "el", opt_names, par_i)), drop=F]
+      
+      # V
+      d.ls_i$V <- d.ls$V[,which(colnames(d.ls$V) %in% c(opt_names, par_i)), drop=F]
+      d.i_i$V <- d.i$V[,which(colnames(d.i$V) %in% c("Plot_id", "el", opt_names, par_i)), drop=F]
+      
+      # V_
+      d.ls_i$V_ <- d.ls$V_[,which(colnames(d.ls$V_) %in% c(opt_names, par_i)), drop=F]
+      d.i_i$V_ <- d.i$V_[,which(colnames(d.i$V_) %in% c("Plot_id", "el", opt_names, par_i)), drop=F]
+      
+      d.f_i <- paste0(out_base, mod_size, "__", 
+                      ifelse(type=="cv", 
+                             paste0("k-", str_sub(full_data_base, -1, -1), 
+                                    "_")), 
+                      par_names[i])
+      saveRDS(d.ls_i, paste0(d.f_i, "_ls.rds"))
+      saveRDS(d.i_i, paste0(d.f_i, "_i.rds"))
+      rstan::stan_rdump(ls(d.ls_i),
+                        file=paste0(d.f_i, ".Rdump"),
+                        envir=list2env(d.ls_i))
+      
+    }
+    return(paste("Generated", 
+                 length(dir("data/fwdSearch", 
+                            paste0("^", str_split_fixed(out_base, "/", 3)[1,3], 
+                                   mod_size, "__", 
+                                   ifelse(type=="cv", 
+                                          paste0("k-", str_sub(full_data_base, -1, -1), 
+                                                 "_.*Rdump"))))), 
+                        "new datasets as", 
+                 paste0(out_base, mod_size, "__*")))
+    
+  } else if(type=="pred") {
     d.ls_i <- d.ls
     d.i_i <- d.i
     
     # indexes
-    d.ls_i$R <- sum(c(opt_names, par_names[i]) %in% colnames(d.ls$X))
-    d.ls_i$L <- sum(c(opt_names, par_names[i]) %in% colnames(d.ls$V))
+    d.ls_i$R <- sum(opt_names %in% colnames(d.ls$X))
+    d.ls_i$L <- sum(opt_names %in% colnames(d.ls$V))
     
     # X
-    d.ls_i$X <- d.ls$X[,which(colnames(d.ls$X) %in% c(opt_names, par_names[i])), drop=F]
-    d.i_i$X <- d.i$X[,which(colnames(d.i$X) %in% c("id", "el", par_names[i])), drop=F]
+    d.ls_i$X <- d.ls$X[,which(colnames(d.ls$X) %in% opt_names), drop=F]
+    d.i_i$X <- d.i$X[,which(colnames(d.i$X) %in% c("id", "el", opt_names)), drop=F]
     
     # X_
-    d.ls_i$X_ <- d.ls$X_[,which(colnames(d.ls$X_) %in% c(opt_names, par_names[i])), drop=F]
-    d.i_i$X_ <- d.i$X_[,which(colnames(d.i$X_) %in% c("id", "el", par_names[i])), drop=F]
+    d.ls_i$X_ <- d.ls$X_[,which(colnames(d.ls$X_) %in% opt_names), drop=F]
+    d.i_i$X_ <- d.i$X_[,which(colnames(d.i$X_) %in% c("id", "el", opt_names)), drop=F]
     
     # V
-    d.ls_i$V <- d.ls$V[,which(colnames(d.ls$V) %in% c(opt_names, par_names[i])), drop=F]
-    d.i_i$V <- d.i$V[,which(colnames(d.i$V) %in% c("id", "el", par_names[i])), drop=F]
+    d.ls_i$V <- d.ls$V[,which(colnames(d.ls$V) %in% opt_names), drop=F]
+    d.i_i$V <- d.i$V[,which(colnames(d.i$V) %in% c("Plot_id", "el", opt_names)), drop=F]
     
-    # V_
-    d.ls_i$V_ <- d.ls$V_[,which(colnames(d.ls$V_) %in% c(opt_names, par_names[i])), drop=F]
-    d.i_i$V_ <- d.i$V_[,which(colnames(d.i$V_) %in% c("id", "el", par_names[i])), drop=F]
-    
-    d.f_i <- paste0(out_base, length(opt_names), "__", par_names[i])
+    d.f_i <- paste0(out_base, "__opt_var_set")
     saveRDS(d.ls_i, paste0(d.f_i, "_ls.rds"))
     saveRDS(d.i_i, paste0(d.f_i, "_i.rds"))
     rstan::stan_rdump(ls(d.ls_i),
                       file=paste0(d.f_i, ".Rdump"),
                       envir=list2env(d.ls_i))
-    
+    return(paste("Generated dataset with optimal variables as", 
+                 paste0(d.f_i, "*")))
+  } else {
+    return(cat("ERROR: type must be 'vs' or 'pred'."))
   }
-  
-  return(paste("Generated", length(par_names), "new datasets as", 
-               paste0(out_base, "_", length(opt_names), "__*")))
   
 }
 
@@ -88,15 +154,37 @@ make_next_datasets <- function(full_data_base, out_base, opt_names) {
 #' @param comp_all If \code{TRUE} (default), any saved loo .rds files for smaller models are also included in the comparison
 #' @param save If \code{TRUE} (default), loo metrics are stored as a .rds file and comparison is stored as a .csv
 #' @return "loo" with output from loo::loo() and "comp" with output from loo::loo_compare()
-compare_models <- function(fit_dir, mod, mod_size, comp_all=T, save=T) {
+compare_models <- function(fit_dir, mod, mod_size, comp_all=T, save=T, type="cv") {
   
   library(tidyverse)
   
   # load (fit | mod, mod_size) and calculate loo metrics
   fit.f <- unique(str_sub(dir(fit_dir, paste0("^", mod, "_", mod_size, "__")), 1, -7))
-  fit.out <- map(fit.f, 
-                 ~rstan::read_stan_csv(dir(fit_dir, paste0("^", .x), full.names=T)))
-  fit.loo <- map(setNames(fit.out, fit.f), loo::loo)
+  if(type=="cv") {
+    # create lookup table for folds within variables
+    fold.lu <- tibble(f=fit.f,
+                      k=as.numeric(str_sub(str_split_fixed(fit.f, "k-", 2)[,2], 1, 1)),
+                      vars=str_sub(str_split_fixed(fit.f, "k-", 2)[,2], 3, -1))
+    # extract log_lik for each fold
+    fit.ll <- map(fit.f, 
+                  ~rstan::read_stan_csv(dir(fit_dir, paste0("^", .x), full.names=T)) %>%
+                    rstan::extract(pars="log_lik")) %>%
+      setNames(fit.f) %>%
+      map(~matrix(.x$log_lik, nrow=dim(.x$log_lik)[1]))
+    
+    # concatenate log_lik across folds for each variable set and calculate loo
+    fit.loo <- vector("list", n_distinct(fold.lu$vars)) %>% 
+      setNames(., unique(fold.lu$vars))
+    for(i in seq_along(fit.loo)) {
+      ll.index <- match(fold.lu$f[fold.lu$vars==names(fit.loo)[i]], names(fit.ll))
+      fit.loo[[i]] <- loo::loo(do.call("cbind", fit.ll[ll.index]))
+    }
+    names(fit.loo) <- paste0(mod, "_", mod_size, "__", names(fit.loo))
+  } else {
+    fit.out <- map(fit.f, 
+                   ~rstan::read_stan_csv(dir(fit_dir, paste0("^", .x), full.names=T)))
+    fit.loo <- map(setNames(fit.out, fit.f), loo::loo)
+  }
   
   # load loo metrics for all models of smaller size 
   if(comp_all && mod_size > 1) {
@@ -119,7 +207,18 @@ compare_models <- function(fit_dir, mod, mod_size, comp_all=T, save=T) {
   }
   
   # compare based on elpd
-  loo.comp <- loo::loo_compare(c(fit.loo, unlist(smaller.loo, recursive=F)))
+  if(mod_size > 0) {
+    loo.comp <- loo::loo_compare(c(fit.loo, unlist(smaller.loo, recursive=F)))
+  } else {
+    loo.comp <- data.frame(elpd_diff=0, se_diff=0, 
+                           elpd_loo=fit.loo[[1]]$estimates[1,1],
+                           se_elpd_loo=fit.loo[[1]]$estimates[1,2],
+                           p_loo=fit.loo[[1]]$estimates[2,1],
+                           se_p_loo=fit.loo[[1]]$estimates[2,2],
+                           looic=fit.loo[[1]]$estimates[3,1],
+                           se_looic=fit.loo[[1]]$estimates[3,2],
+                           row.names=paste0(mod, "_", 0, "__R_"))
+  }
   
   if(save) {
     saveRDS(fit.loo, paste0(fit_dir, "/loo_", mod, "_", mod_size, ".rds"))
@@ -293,24 +392,30 @@ update_rstanarm_shell <- function(fit_glmer, fit_hm, d.ls) {
 #### output processing functions ###############################################
 
 #' Aggregate output from specified hierarchical models for specified parameters
-#' @param d.i list of data used in the models
-#' @param mods model filename base; must match cmdstan output csv files (e.g., "vs_Y" for "vs_Y_[1-12].csv")
+#' @param d.f character vector of filenames for data used in the model; should
+#'   be same length as \code{mods}, where the elements correspond with one
+#'   another
+#' @param mods model filename base; must match cmdstan output csv files (e.g.,
+#'   "vs_Y" for "vs_Y_[1-12].csv")
 #' @param pars_save Named vector of parameters to aggregate
 #' @param out.dir "out"; directory where cmdstan output is stored
 #' @return Updated rstanarm object
-aggregate_output <- function(d.i, mods, pars_save, out.dir="out") {
+aggregate_output <- function(d.f, mods, pars_save, out.dir="out") {
   
   # vs for cells with obs only; pred for predictions to new 1km2 cells
-  type <- ifelse(any(grepl("vs", mods)), "vs", "pred")
+  type <- ifelse(any(grepl("vs", mods), grepl("fwdSearch", out.dir)), "vs", "pred")
   
   # storage objects
   out.pars <- imap(pars_save, ~vector("list", length(mods)))
   out.stan <- vector("list", length(mods)) %>% setNames(mods)
   
   for(i in seq_along(mods)) {
+    d.i <- readRDS(paste0(d.f[i], "_i.rds"))
+    d.ls <- readRDS(paste0(d.f[i], "_ls.rds"))
+    
     cat("\n", format(Sys.time(), "%X"), "-- Beginning model", mods[i])
     cat("\n  Reading", paste0(out.dir, "/", mods[i]))
-    out.stan[[i]] <- dir(out.dir, paste0("^", mods[i], "_[0-9]"), full.names=T) %>%
+    out.stan[[i]] <- dir(out.dir, paste0("^", mods[i], ".*_[0-9]"), full.names=T) %>%
       read_stan_csv()
     cat("\n  Summarizing", paste0(out.dir, "/", mods[i]))
     pars.all <- unique(str_split_fixed(names(out.stan[[i]]), "\\[", 2)[,1])
@@ -328,8 +433,8 @@ aggregate_output <- function(d.i, mods, pars_save, out.dir="out") {
       split(., .$par, drop=T)
     
     ParNames <- c("intercept", 
-                  paste0(colnames(d.i$X)[-(1:2)], "_R"),
-                  paste0(colnames(d.i$V)[-(1:2)], "_L"))
+                  paste0(colnames(d.ls$X)[-1]),
+                  paste0(colnames(d.ls$V)))
     
     # lLAMBDA (site)
     out.pars$lLAM[[i]] <- out.ls$lLAMBDA %>%
@@ -392,19 +497,34 @@ aggregate_output <- function(d.i, mods, pars_save, out.dir="out") {
     }
     
     # prPres (plot)
-    out.pars$pP_L[[i]] <- out.ls$prPresL %>%
-      mutate(plot=str_split_fixed(str_split_fixed(Parameter, "\\[", n=2)[,2],
-                                  ",", n=2)[,1],
-             spp=str_sub(str_split_fixed(Parameter, ",", n=2)[,2], 1, -2)) %>%
-      mutate(plot=as.numeric(plot), spp=as.numeric(spp)) %>% 
-      mutate(sppName=d.i$tax_i$species[match(spp, d.i$tax_i$sNum)]) %>%
-      arrange(plot, spp) %>%
-      mutate(id=d.i$V[plot,"Plot_id"], el=d.i$V[plot,"el"],
-             Parameter=as.character(Parameter), model=as.character(model))
+    if("prPresL" %in% pars) {
+      out.pars$pP_L[[i]] <- out.ls$prPresL %>%
+        mutate(plot=str_split_fixed(str_split_fixed(Parameter, "\\[", n=2)[,2],
+                                    ",", n=2)[,1],
+               spp=str_sub(str_split_fixed(Parameter, ",", n=2)[,2], 1, -2)) %>%
+        mutate(plot=as.numeric(plot), spp=as.numeric(spp)) %>% 
+        mutate(sppName=d.i$tax_i$species[match(spp, d.i$tax_i$sNum)]) %>%
+        arrange(plot, spp) %>%
+        mutate(id=d.i$V[plot,"Plot_id"], el=d.i$V[plot,"el"],
+               Parameter=as.character(Parameter), model=as.character(model)) 
+    }
+    
+    # log likelihood
+    if("log_lik" %in% pars) {
+      out.pars$log_lik[[i]] <- out.ls$log_lik %>%
+        mutate(plot=str_split_fixed(str_split_fixed(Parameter, "\\[", n=2)[,2],
+                                    ",", n=2)[,1],
+               spp=str_sub(str_split_fixed(Parameter, ",", n=2)[,2], 1, -2)) %>%
+        mutate(plot=as.numeric(plot), spp=as.numeric(spp)) %>% 
+        mutate(sppName=d.i$tax_i$species[match(spp, d.i$tax_i$sNum)]) %>%
+        arrange(plot, spp) %>%
+        mutate(id=d.i$V[plot,"Plot_id"], el=d.i$V[plot,"el"],
+               Parameter=as.character(Parameter), model=as.character(model)) 
+    }
     
     # beta
     out.pars$beta[[i]] <- out.ls$beta %>%
-      mutate(ParName=ParNames) %>% 
+      # mutate(ParName=ParNames) %>% 
       mutate(Parameter=as.character(Parameter), model=as.character(model))
     
     # B
@@ -424,14 +544,14 @@ aggregate_output <- function(d.i, mods, pars_save, out.dir="out") {
       mutate(cov=str_split_fixed(str_split_fixed(Parameter, "\\[", n=2)[,2],
                                  ",", n=2)[,1],
              spp=str_sub(str_split_fixed(Parameter, ",", n=2)[,2], 1, -2)) %>%
-      mutate(ParName=ParNames[as.numeric(cov)],
+      mutate(#ParName=ParNames[as.numeric(cov)],
              sppName=d.i$tax_i$species[match(spp, d.i$tax_i$sNum)],
              genName=str_sub(sppName, 1L, 4L)) %>% 
       mutate(Parameter=as.character(Parameter), model=as.character(model))
     
     # sigma_b
     out.pars$sig_b[[i]] <- out.ls$sigma_b %>%
-      mutate(ParName=ParNames) %>% 
+      # mutate(ParName=ParNames) %>% 
       mutate(Parameter=as.character(Parameter), model=as.character(model))
     
     # Sigma_B
@@ -441,7 +561,7 @@ aggregate_output <- function(d.i, mods, pars_save, out.dir="out") {
                                    ",", n=3)[,1], 
                gen1=str_split_fixed(Parameter, ",", n=3)[,2],
                gen2=str_remove(str_split_fixed(Parameter, ",", n=3)[,3], "]")) %>%
-        mutate(ParName=ParNames[as.numeric(cov)],
+        mutate(#ParName=ParNames[as.numeric(cov)],
                gen1Name=d.i$tax_i$genus[match(gen1, d.i$tax_i$gNum)],
                gen2Name=d.i$tax_i$genus[match(gen2, d.i$tax_i$gNum)]) %>% 
         mutate(Parameter=as.character(Parameter), model=as.character(model))
@@ -462,21 +582,15 @@ aggregate_output <- function(d.i, mods, pars_save, out.dir="out") {
     if(type=="pred") {
     out.pars$H[[i]] <- rbind(
       out.ls$ShannonH %>%
-        mutate(site=str_split_fixed(str_split_fixed(Parameter, "\\[", n=2)[,2],
-                                    ",", n=2)[,1],
-               spp=str_sub(str_split_fixed(Parameter, ",", n=2)[,2], 1, -2)) %>%
-        mutate(site=as.numeric(site), spp=as.numeric(spp)) %>%
-        mutate(sppName=d.i$tax_i$species[match(spp, d.i$tax_i$sNum)]) %>%
-        arrange(site, spp) %>%
+        mutate(site=str_remove(str_split_fixed(Parameter, "\\[", n=2)[,2], "]")) %>%
+        mutate(site=as.numeric(site)) %>%
+        arrange(site) %>%
         mutate(id=d.i$X[site,"id"], el=d.i$X[site,"el"],
                Parameter=as.character(Parameter), model=as.character(model)), 
         out.ls$ShannonH_ %>%
-          mutate(site=str_split_fixed(str_split_fixed(Parameter, "\\[", n=2)[,2],
-                                      ",", n=2)[,1],
-                 spp=str_sub(str_split_fixed(Parameter, ",", n=2)[,2], 1, -2)) %>%
-          mutate(site=as.numeric(site), spp=as.numeric(spp)) %>%
-          mutate(sppName=d.i$tax_i$species[match(spp, d.i$tax_i$sNum)]) %>%
-          arrange(site, spp) %>%
+          mutate(site=str_remove(str_split_fixed(Parameter, "\\[", n=2)[,2], "]")) %>%
+          mutate(site=as.numeric(site)) %>%
+          arrange(site) %>%
           mutate(id=d.i$X_[site,"id"], el=d.i$X_[site,"el"],
                  Parameter=as.character(Parameter), model=as.character(model))
       )
