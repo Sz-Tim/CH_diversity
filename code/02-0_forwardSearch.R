@@ -3,13 +3,36 @@
 library(tidyverse)
 library(rstan)
 source("code/00_fn.R")
-d.f <- "data/stan_data/vs_20"
+d.dir <- "data/stan_data/"
+d.f <- "cv_k_"
 fS_out <- "out/fwdSearch/"
 fS_dat <- "data/fwdSearch/"
+n_folds <- length(dir(d.dir, paste0(d.f, ".*Rdump")))
 
 #--- Make full dataset with test/train split
-# Run 01_makeDatasets.R with vs=T, test_prop_Y=0.2
-# Creates data/stan_data/vs_20* (_ls.rds, _i.rds, .Rdump)
+# Run code/01_makeDatasets.R with set_type="cv"
+# Creates data/stan_data/cv_k_[1-4]* (_ls.rds, _i.rds, .Rdump)
+
+
+
+
+##### Size = 0     -------------------------------------------------------------
+mod_size <- 0
+#--- Load full dataset, then create a new dataset for each individual variable
+map(1:n_folds, 
+    ~make_next_datasets(full_data_base=paste0(d.dir, d.f, .x),
+                        out_base=fS_dat, opt_names=NULL, type="cv"))
+
+
+
+#--- Run models with only intercept
+# code/02-0_run.sh
+
+Y_loo <- compare_models(fit_dir=fS_out, mod="Y", mod_size=mod_size, type="cv")
+saveRDS("R_", paste0(fS_out, "opt_Y.rds"))
+
+WY_loo <- compare_models(fit_dir=fS_out, mod="WY", mod_size=mod_size)
+saveRDS("R_", paste0(fS_out, "opt_WY.rds"))
 
 
 
@@ -17,25 +40,22 @@ fS_dat <- "data/fwdSearch/"
 ##### Size = 1     -------------------------------------------------------------
 mod_size <- 1
 #--- Load full dataset, then create a new dataset for each individual variable
-make_next_datasets(full_data_base=d.f, out_base=fS_dat, opt_names="R_")
+map(1:n_folds, 
+    ~make_next_datasets(full_data_base=paste0(d.dir, d.f, .x),
+                        out_base=fS_dat, opt_names="R_", type="cv", 
+                        mod_size=mod_size))
 
 
-#--- Run 16 models with 1 variable each -- intercept + 1 
-# Run 02-1_run_Y_0-7.sh
-# Run 02-1_run_Y_8-15.sh
-# Run 02-1_run_WY_0-7.sh
-# Run 02-1_run_WY_8-15.sh
-
+#--- Run 12 models with 1 variable each -- intercept + 1 
+# code/02-1/02-1-[1-6]_[WY-Y].sh
 
 #--- Use loo to compare models based on ability to predict test subset
-Y_loo <- compare_models(fit_dir=fS_out, mod="Y", mod_size=mod_size)
+Y_loo <- compare_models(fit_dir=fS_out, mod="Y", mod_size=mod_size, type="cv")
 Y_loo$comp[1:10,]
-saveRDS("R_", paste0(fS_out, "opt_Y.rds"))
 update_opt_vars(out_dir=fS_out, mod="Y", mod_size=mod_size, comp=Y_loo$comp)
 
 WY_loo <- compare_models(fit_dir=fS_out, mod="WY", mod_size=mod_size)
 WY_loo$comp[1:10,]
-saveRDS("R_", paste0(fS_out, "opt_WY.rds"))
 update_opt_vars(out_dir=fS_out, mod="WY", mod_size=mod_size, comp=WY_loo$comp)
 
 
@@ -44,17 +64,20 @@ update_opt_vars(out_dir=fS_out, mod="WY", mod_size=mod_size, comp=WY_loo$comp)
 ##### Size = 2     -------------------------------------------------------------
 mod_size <- 2
 #--- Make new datasets with selected variable + each other individually
-make_next_datasets(full_data_base=d.f, out_base=paste0(fS_dat, "Y_"),
-                   opt_names=readRDS(paste0(fS_out, "opt_Y.rds"))[1:mod_size])
-make_next_datasets(full_data_base=d.f, out_base=paste0(fS_dat, "WY_"), 
-                   opt_names=readRDS(paste0(fS_out, "opt_WY.rds"))[1:mod_size])
+map(1:n_folds, 
+    ~make_next_datasets(full_data_base=paste0(d.dir, d.f, .x), type="cv", 
+                        out_base=paste0(fS_dat, "Y_"),
+                        opt_names=readRDS(paste0(fS_out, "opt_Y.rds"))[1:mod_size],
+                        mod_size=mod_size))
+map(1:n_folds, 
+    ~make_next_datasets(full_data_base=paste0(d.dir, d.f, .x), type="cv", 
+                        out_base=paste0(fS_dat, "WY_"),
+                        opt_names=readRDS(paste0(fS_out, "opt_WY.rds"))[1:mod_size],
+                        mod_size=mod_size))
 
 
-#--- Run 15 models with 2 variables each -- optimal + 1 
-# Run 02-2_run_Y_0-7.sh
-# Run 02-2_run_Y_8-14.sh
-# Run 02-2_run_WY_0-7.sh
-# Run 02-2_run_WY_8-14.sh
+#--- Run 11 models with 2 variables each -- optimal + 1 
+# code/02-2/02-2-[1-6]_[WY-Y].sh
 
 
 #--- Use loo to compare models based on ability to predict test subset
@@ -73,21 +96,24 @@ update_opt_vars(out_dir=fS_out, mod="WY", mod_size=mod_size, comp=WY_loo$comp)
 ##### Size = 3     -------------------------------------------------------------
 mod_size <- 3
 #--- Make new datasets with selected variable + each other individually
-make_next_datasets(full_data_base=d.f, out_base=paste0(fS_dat, "Y_"),
-                   opt_names=readRDS(paste0(fS_out, "opt_Y.rds"))[1:mod_size])
-make_next_datasets(full_data_base=d.f, out_base=paste0(fS_dat, "WY_"), 
-                   opt_names=readRDS(paste0(fS_out, "opt_WY.rds"))[1:mod_size])
+map(1:n_folds, 
+    ~make_next_datasets(full_data_base=paste0(d.dir, d.f, .x), type="cv", 
+                        out_base=paste0(fS_dat, "Y_"),
+                        opt_names=readRDS(paste0(fS_out, "opt_Y.rds"))[1:mod_size],
+                        mod_size=mod_size))
+map(1:n_folds, 
+    ~make_next_datasets(full_data_base=paste0(d.dir, d.f, .x), type="cv", 
+                        out_base=paste0(fS_dat, "WY_"),
+                        opt_names=readRDS(paste0(fS_out, "opt_WY.rds"))[1:mod_size],
+                        mod_size=mod_size))
 
 
-#--- Run 14 models with 3 variables each -- optimal + 1 
-# Run 02-3_run_Y_0-6.sh
-# Run 02-3_run_Y_7-13.sh
-# Run 02-3_run_WY_0-6.sh
-# Run 02-3_run_WY_7-13.sh
+#--- Run 10 models with 3 variables each -- optimal + 1 
+# code/02-3/02-3-[1-5]_[WY-Y].sh
 
 
 #--- Use loo to compare models based on ability to predict test subset
-Y_loo <- compare_models(fit_dir=fS_out, mod="Y", mod_size=mod_size)
+Y_loo <- compare_models(fit_dir=fS_out, mod="Y", mod_size=mod_size, comp_all=F)
 Y_loo$comp[1:10,]
 update_opt_vars(out_dir=fS_out, mod="Y", mod_size=mod_size, comp=Y_loo$comp)
 
@@ -101,17 +127,20 @@ update_opt_vars(out_dir=fS_out, mod="WY", mod_size=mod_size, comp=WY_loo$comp)
 ##### Size = 4     -------------------------------------------------------------
 mod_size <- 4
 #--- Make new datasets with selected variable + each other individually
-make_next_datasets(full_data_base=d.f, out_base=paste0(fS_dat, "Y_"),
-                   opt_names=readRDS(paste0(fS_out, "opt_Y.rds"))[1:mod_size])
-make_next_datasets(full_data_base=d.f, out_base=paste0(fS_dat, "WY_"), 
-                   opt_names=readRDS(paste0(fS_out, "opt_WY.rds"))[1:mod_size])
+map(1:n_folds, 
+    ~make_next_datasets(full_data_base=paste0(d.dir, d.f, .x), type="cv", 
+                        out_base=paste0(fS_dat, "Y_"),
+                        opt_names=readRDS(paste0(fS_out, "opt_Y.rds"))[1:mod_size],
+                        mod_size=mod_size))
+map(1:n_folds, 
+    ~make_next_datasets(full_data_base=paste0(d.dir, d.f, .x), type="cv", 
+                        out_base=paste0(fS_dat, "WY_"),
+                        opt_names=readRDS(paste0(fS_out, "opt_WY.rds"))[1:mod_size],
+                        mod_size=mod_size))
 
 
-#--- Run 13 models with 4 variables each -- optimal + 1 
-# Run 02-4_run_Y_0-6.sh
-# Run 02-4_run_Y_7-12.sh
-# Run 02-4_run_WY_0-6.sh
-# Run 02-4_run_WY_7-12.sh
+#--- Run 9 models with 4 variables each -- optimal + 1 
+# code/02-4/02-4-[1-5]_[WY-Y].sh
 
 
 #--- Use loo to compare models based on ability to predict test subset
@@ -129,17 +158,20 @@ update_opt_vars(out_dir=fS_out, mod="WY", mod_size=mod_size, comp=WY_loo$comp)
 ##### Size = 5     -------------------------------------------------------------
 mod_size <- 5
 #--- Make new datasets with selected variable + each other individually
-make_next_datasets(full_data_base=d.f, out_base=paste0(fS_dat, "Y_"),
-                   opt_names=readRDS(paste0(fS_out, "opt_Y.rds"))[1:mod_size])
-make_next_datasets(full_data_base=d.f, out_base=paste0(fS_dat, "WY_"), 
-                   opt_names=readRDS(paste0(fS_out, "opt_WY.rds"))[1:mod_size])
+map(1:n_folds, 
+    ~make_next_datasets(full_data_base=paste0(d.dir, d.f, .x), type="cv", 
+                        out_base=paste0(fS_dat, "Y_"),
+                        opt_names=readRDS(paste0(fS_out, "opt_Y.rds"))[1:mod_size],
+                        mod_size=mod_size))
+map(1:n_folds, 
+    ~make_next_datasets(full_data_base=paste0(d.dir, d.f, .x), type="cv", 
+                        out_base=paste0(fS_dat, "WY_"),
+                        opt_names=readRDS(paste0(fS_out, "opt_WY.rds"))[1:mod_size],
+                        mod_size=mod_size))
 
 
-#--- Run 12 models with 5 variables each -- optimal + 1 
-# Run 02-5_run_Y_0-5.sh
-# Run 02-5_run_Y_6-11.sh
-# Run 02-5_run_WY_0-5.sh
-# Run 02-5_run_WY_6-11.sh
+#--- Run 8 models with 5 variables each -- optimal + 1 
+# code/02-5/02-5-[1-4]_[WY-Y].sh
 
 
 #--- Use loo to compare models based on ability to predict test subset
@@ -157,17 +189,20 @@ update_opt_vars(out_dir=fS_out, mod="WY", mod_size=mod_size, comp=WY_loo$comp)
 ##### Size = 6     -------------------------------------------------------------
 mod_size <- 6
 #--- Make new datasets with selected variable + each other individually
-make_next_datasets(full_data_base=d.f, out_base=paste0(fS_dat, "Y_"),
-                   opt_names=readRDS(paste0(fS_out, "opt_Y.rds"))[1:mod_size])
-make_next_datasets(full_data_base=d.f, out_base=paste0(fS_dat, "WY_"), 
-                   opt_names=readRDS(paste0(fS_out, "opt_WY.rds"))[1:mod_size])
+map(1:n_folds, 
+    ~make_next_datasets(full_data_base=paste0(d.dir, d.f, .x), type="cv", 
+                        out_base=paste0(fS_dat, "Y_"),
+                        opt_names=readRDS(paste0(fS_out, "opt_Y.rds"))[1:mod_size],
+                        mod_size=mod_size))
+map(1:n_folds, 
+    ~make_next_datasets(full_data_base=paste0(d.dir, d.f, .x), type="cv", 
+                        out_base=paste0(fS_dat, "WY_"),
+                        opt_names=readRDS(paste0(fS_out, "opt_WY.rds"))[1:mod_size],
+                        mod_size=mod_size))
 
 
-#--- Run 11 models with 6 variables each -- optimal + 1 
-# Run 02-6_run_Y_0-5.sh
-# Run 02-6_run_Y_6-10.sh
-# Run 02-6_run_WY_0-5.sh
-# Run 02-6_run_WY_6-10.sh
+#--- Run 7 models with 6 variables each -- optimal + 1 
+# code/02-6/02-6-[1-4]_[WY-Y].sh
 
 
 #--- Use loo to compare models based on ability to predict test subset
@@ -185,17 +220,18 @@ update_opt_vars(out_dir=fS_out, mod="WY", mod_size=mod_size, comp=WY_loo$comp)
 ##### Size = 7     -------------------------------------------------------------
 mod_size <- 7
 #--- Make new datasets with selected variable + each other individually
-make_next_datasets(full_data_base=d.f, out_base=paste0(fS_dat, "Y_"),
-                   opt_names=readRDS(paste0(fS_out, "opt_Y.rds"))[1:mod_size])
-make_next_datasets(full_data_base=d.f, out_base=paste0(fS_dat, "WY_"), 
-                   opt_names=readRDS(paste0(fS_out, "opt_WY.rds"))[1:mod_size])
+map(1:n_folds, 
+    ~make_next_datasets(full_data_base=paste0(d.dir, d.f, .x), type="cv", 
+                        out_base=paste0(fS_dat, "Y_"),
+                        opt_names=readRDS(paste0(fS_out, "opt_Y.rds"))[1:mod_size]))
+map(1:n_folds, 
+    ~make_next_datasets(full_data_base=paste0(d.dir, d.f, .x), type="cv", 
+                        out_base=paste0(fS_dat, "WY_"),
+                        opt_names=readRDS(paste0(fS_out, "opt_WY.rds"))[1:mod_size]))
 
 
-#--- Run 10 models with 7 variables each -- optimal + 1 
-# Run 02-7_run_Y_0-4.sh
-# Run 02-7_run_Y_5-9.sh
-# Run 02-7_run_WY_0-4.sh
-# Run 02-7_run_WY_5-9.sh
+#--- Run 6 models with 7 variables each -- optimal + 1 
+# code/02-7/02-7-[1-3]_[WY-Y].sh
 
 
 #--- Use loo to compare models based on ability to predict test subset
@@ -213,43 +249,18 @@ update_opt_vars(out_dir=fS_out, mod="WY", mod_size=mod_size, comp=WY_loo$comp)
 ##### Size = 8     -------------------------------------------------------------
 mod_size <- 8
 #--- Make new datasets with selected variable + each other individually
-make_next_datasets(full_data_base=d.f, out_base=paste0(fS_dat, "Y_"),
-                   opt_names=readRDS(paste0(fS_out, "opt_Y.rds"))[1:mod_size])
-make_next_datasets(full_data_base=d.f, out_base=paste0(fS_dat, "WY_"), 
-                   opt_names=readRDS(paste0(fS_out, "opt_WY.rds"))[1:mod_size])
+map(1:n_folds, 
+    ~make_next_datasets(full_data_base=paste0(d.dir, d.f, .x), type="cv", 
+                        out_base=paste0(fS_dat, "Y_"),
+                        opt_names=readRDS(paste0(fS_out, "opt_Y.rds"))[1:mod_size]))
+map(1:n_folds, 
+    ~make_next_datasets(full_data_base=paste0(d.dir, d.f, .x), type="cv", 
+                        out_base=paste0(fS_dat, "WY_"),
+                        opt_names=readRDS(paste0(fS_out, "opt_WY.rds"))[1:mod_size]))
 
 
-#--- Run 9 models with 8 variables each -- optimal + 1 
-# Run 02-8_run_Y_0-4.sh
-# Run 02-8_run_Y_5-8.sh
-# Run 02-8_run_WY_0-4.sh
-# Run 02-8_run_WY_5-8.sh
-
-
-#--- Use loo to compare models based on ability to predict test subset
-Y_loo <- compare_models(fit_dir=fS_out, mod="Y", mod_size=mod_size)
-Y_loo$comp[1:10,]
-update_opt_vars(out_dir=fS_out, mod="Y", mod_size=mod_size, comp=Y_loo$comp)
-
-WY_loo <- compare_models(fit_dir=fS_out, mod="WY", mod_size=mod_size)
-WY_loo$comp[1:10,]
-update_opt_vars(out_dir=fS_out, mod="WY", mod_size=mod_size, comp=WY_loo$comp)
-
-
-
-
-##### Size = 9     -------------------------------------------------------------
-mod_size <- 9
-#--- Make new datasets with selected variable + each other individually
-make_next_datasets(full_data_base=d.f, out_base=paste0(fS_dat, "Y_"),
-                   opt_names=readRDS(paste0(fS_out, "opt_Y.rds"))[1:mod_size])
-make_next_datasets(full_data_base=d.f, out_base=paste0(fS_dat, "WY_"), 
-                   opt_names=readRDS(paste0(fS_out, "opt_WY.rds"))[1:mod_size])
-
-
-#--- Run 8 models with 9 variables each -- optimal + 1 
-# Run 02-9_run_Y_0-7.sh
-# Run 02-9_run_WY_0-7.sh
+#--- Run 5 models with 8 variables each -- optimal + 1 
+# code/02-8/02-8-[1-3]_[WY-Y].sh
 
 
 #--- Use loo to compare models based on ability to predict test subset
@@ -264,25 +275,107 @@ update_opt_vars(out_dir=fS_out, mod="WY", mod_size=mod_size, comp=WY_loo$comp)
 
 
 
-##### Size = 10    -------------------------------------------------------------
-mod_size <- 10
-#--- Make new datasets with selected variable + each other individually
-make_next_datasets(full_data_base=d.f, out_base=paste0(fS_dat, "Y_"),
-                   opt_names=readRDS(paste0(fS_out, "opt_Y.rds"))[1:mod_size])
-make_next_datasets(full_data_base=d.f, out_base=paste0(fS_dat, "WY_"), 
-                   opt_names=readRDS(paste0(fS_out, "opt_WY.rds"))[1:mod_size])
 
 
-#--- Run 7 models with 10 variables each -- optimal + 1 
-# Run 02-10_run_Y_0-6.sh
-# Run 02-10_run_WY_0-6.sh
 
 
-#--- Use loo to compare models based on ability to predict test subset
-Y_loo <- compare_models(fit_dir=fS_out, mod="Y", mod_size=mod_size)
-Y_loo$comp[1:10,]
-update_opt_vars(out_dir=fS_out, mod="Y", mod_size=mod_size, comp=Y_loo$comp)
 
-WY_loo <- compare_models(fit_dir=fS_out, mod="WY", mod_size=mod_size)
-WY_loo$comp[1:10,]
-update_opt_vars(out_dir=fS_out, mod="WY", mod_size=mod_size, comp=WY_loo$comp)
+
+
+
+
+
+
+
+#--- Plot elpd improvement
+talk_fonts <- theme(panel.grid=element_blank(),
+                    axis.text=element_text(size=14),
+                    axis.title=element_text(size=16),
+                    legend.text=element_text(size=12),
+                    legend.title=element_text(size=14),
+                    strip.text=element_text(size=16),
+                    title=element_text(size=18))
+mod_col <- c("Joint"="#7b3294", "Structured Only"="#008837")
+
+loo.f <- dir(fS_out, "loo.*csv")
+loo.df <- tibble(mod=str_split_fixed(loo.f, "_", 3)[,2], 
+                 nCov=as.numeric(str_sub(str_split_fixed(loo.f, "_", 3)[,3], 1, -5)), 
+                 elpd=map_dbl(loo.f, ~read_csv(paste0(fS_out, .x))$elpd_loo[1]),
+                 elpd_se=map_dbl(loo.f, ~read_csv(paste0(fS_out, .x))$se_elpd_loo[1]),
+                 v_full=map_chr(loo.f, ~read_csv(paste0(fS_out, .x))$X1[1])) %>%
+  mutate(v_scale=str_sub(str_split_fixed(v_full, "__", 2)[,2], 1, 1),
+         v_name=str_sub(str_split_fixed(v_full, "__", 2)[,2], 3, -1)) %>%
+  mutate(model=case_when(mod=="WY" ~ "Joint",
+                         mod=="Y" ~ "Structured Only"))
+  
+ggplot(loo.df, aes(x=nCov, y=elpd, colour=model, group=model)) + 
+  geom_point(size=3) + geom_line() + 
+  scale_colour_manual("", values=mod_col) + 
+  labs(x="Number of covariates") + 
+  # geom_linerange(aes(ymin=elpd-elpd_se, ymax=elpd+elpd_se)) +
+  geom_text(aes(label=v_name), colour=1, hjust=0, vjust=1, size=3, nudge_x=0.05) +
+  scale_shape_manual(values=c(1, 16))
+ggsave("eda/TEMP_varsel.jpg", width=8, height=5)
+
+
+
+
+
+
+
+#--- relocate, but for curiosity...
+best <- list(Y=map(1:n_folds, 
+                   ~rstan::read_stan_csv(
+                     dir("out/fwdSearch",
+                         paste0("Y_3__k-", .x, "_L_SoilTSt"), full.names=T))),
+             WY=map(1:n_folds, 
+                    ~rstan::read_stan_csv(
+                      dir("out/fwdSearch",
+                          paste0("WY_2__k-", .x, "_L_SoilTSt"), full.names=T))))
+
+best.beta <- map(best, ~do.call("rbind", 
+                                map(.x, ~do.call("rbind", 
+                                                 rstan::As.mcmc.list(.x, pars="beta")))))
+best.b <- map(best, ~do.call("rbind", 
+                             map(.x, ~do.call("rbind", 
+                                              rstan::As.mcmc.list(.x, pars="b")))))
+
+hdi.beta <- map(best.beta, ~HDInterval::hdi(.x) %>%
+                  as_tibble %>% mutate(Limit=c("lower", "upper")) %>%
+                  pivot_longer(!Limit, names_to="par", values_to="value") %>%
+                  mutate(cov=str_split_fixed(par, "\\.", 2)[,2]))
+hdi.b <- map(best.b, ~HDInterval::hdi(.x) %>%
+               as_tibble %>% mutate(Limit=c("lower", "upper")) %>%
+               pivot_longer(!Limit, names_to="par", values_to="value") %>%
+               mutate(cov=str_split_fixed(par, "\\.", 3)[,2],
+                      spp=str_split_fixed(par, "\\.", 3)[,3]))
+
+
+as_tibble(HDInterval::hdi(rstan::As.mcmc.list(best$Y, pars="b"))) %>%
+  mutate(Limit=c("lower", "upper")) %>%
+  pivot_longer(!Limit, names_to="par", values_to="value") %>%
+  mutate(cov=str_split_fixed(par, "\\.", 3)[,2],
+         spp=str_split_fixed(par, "\\.", 3)[,3]) %>%
+  ggplot(aes(spp, value)) + geom_point() + facet_wrap(~cov)
+
+
+
+best.i <- list(Y=readRDS("data/fwdSearch/Y_3__k-1_L_SoilTSt_ls.rds"),
+               WY=readRDS("data/fwdSearch/WY_2__k-1_L_SoilTSt_ls.rds"))
+
+plot(best$Y, pars="beta") + xlim(-2.5,2.5)
+c(colnames(best.i$Y$X), colnames(best.i$Y$V))
+
+plot(best$WY, pars="beta", outer_level=0.9) + xlim(-4,4)
+c(colnames(best.i$WY$X), colnames(best.i$WY$V))
+
+stan_diag(best$Y)
+stan_rhat(best$Y)
+stan_ess(best$Y)
+stan_mcse(best$Y)
+
+best.df <- sjstats::tidy_stan(best$Y, prob=c(0.5, 0.9, 0.95))
+
+
+
+
