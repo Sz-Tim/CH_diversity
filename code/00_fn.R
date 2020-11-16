@@ -34,11 +34,12 @@ make_next_datasets <- function(full_data_base, out_base, opt_names, mod_size, ty
     colnames(d.i$V_)[-c(1,2)] <- paste0("L_", colnames(d.i$V_)[-c(1,2)]) 
   }
   
-  # identify parameters to add
-  if("L_CnpyOpn" %in% opt_names) opt_names <- c(opt_names, "L_CnpyMxd")
-  if("L_Pasture" %in% opt_names) opt_names <- c(opt_names, "L_Crop")
-  if("R_grwnDD0" %in% opt_names) opt_names <- c(opt_names, "R_grwnDD0_sq")
   if(type %in% c("cv", "vs")) {
+    
+    # identify parameters to add
+    if("L_CnpyOpn" %in% opt_names) opt_names <- c(opt_names, "L_CnpyMxd")
+    if("L_Pasture" %in% opt_names) opt_names <- c(opt_names, "L_Crop")
+    if("R_grwnDD0" %in% opt_names) opt_names <- c(opt_names, "R_grwnDD0_sq")
     par_names_all <- c(colnames(d.ls$X), colnames(d.ls$V))
     if(is.null(opt_names)) {
       par_names <- "R_"
