@@ -21,7 +21,8 @@ mod_size <- 0
 #--- Load full dataset, then create a new dataset for each individual variable
 map(1:n_folds, 
     ~make_next_datasets(full_data_base=paste0(d.dir, d.f, .x),
-                        out_base=fS_dat, opt_names=NULL, type="cv"))
+                        out_base=fS_dat, opt_names="", type="cv", 
+                        mod_size=mod_size))
 
 
 
@@ -46,16 +47,16 @@ map(1:n_folds,
                         mod_size=mod_size))
 
 
-#--- Run 12 models with 1 variable each -- intercept + 1 
-# code/02-1/02-1-[1-6]_[WY-Y].sh
+#--- Run 14 models with 1 variable each -- intercept + 1 
+# code/02-1/02-1-[1-7]_[WY-Y].sh
 
 #--- Use loo to compare models based on ability to predict test subset
 Y_loo <- compare_models(fit_dir=fS_out, mod="Y", mod_size=mod_size, type="cv")
-Y_loo$comp[1:10,]
+Y_loo$comp
 update_opt_vars(out_dir=fS_out, mod="Y", mod_size=mod_size, comp=Y_loo$comp)
 
 WY_loo <- compare_models(fit_dir=fS_out, mod="WY", mod_size=mod_size)
-WY_loo$comp[1:10,]
+WY_loo$comp
 update_opt_vars(out_dir=fS_out, mod="WY", mod_size=mod_size, comp=WY_loo$comp)
 
 
@@ -76,17 +77,17 @@ map(1:n_folds,
                         mod_size=mod_size))
 
 
-#--- Run 11 models with 2 variables each -- optimal + 1 
-# code/02-2/02-2-[1-6]_[WY-Y].sh
+#--- Run 13 models with 2 variables each -- optimal + 1 
+# code/02-2/02-2-[1-7]_[WY-Y].sh
 
 
 #--- Use loo to compare models based on ability to predict test subset
 Y_loo <- compare_models(fit_dir=fS_out, mod="Y", mod_size=mod_size)
-Y_loo$comp[1:10,]
+Y_loo$comp
 update_opt_vars(out_dir=fS_out, mod="Y", mod_size=mod_size, comp=Y_loo$comp)
 
 WY_loo <- compare_models(fit_dir=fS_out, mod="WY", mod_size=mod_size)
-WY_loo$comp[1:10,]
+WY_loo$comp
 update_opt_vars(out_dir=fS_out, mod="WY", mod_size=mod_size, comp=WY_loo$comp)
 
 
@@ -108,17 +109,17 @@ map(1:n_folds,
                         mod_size=mod_size))
 
 
-#--- Run 10 models with 3 variables each -- optimal + 1 
-# code/02-3/02-3-[1-5]_[WY-Y].sh
+#--- Run 12 models with 3 variables each -- optimal + 1 
+# code/02-3/02-3-[1-6]_[WY-Y].sh
 
 
 #--- Use loo to compare models based on ability to predict test subset
-Y_loo <- compare_models(fit_dir=fS_out, mod="Y", mod_size=mod_size, comp_all=F)
-Y_loo$comp[1:10,]
+Y_loo <- compare_models(fit_dir=fS_out, mod="Y", mod_size=mod_size)
+Y_loo$comp
 update_opt_vars(out_dir=fS_out, mod="Y", mod_size=mod_size, comp=Y_loo$comp)
 
 WY_loo <- compare_models(fit_dir=fS_out, mod="WY", mod_size=mod_size)
-WY_loo$comp[1:10,]
+WY_loo$comp
 update_opt_vars(out_dir=fS_out, mod="WY", mod_size=mod_size, comp=WY_loo$comp)
 
 
@@ -139,17 +140,17 @@ map(1:n_folds,
                         mod_size=mod_size))
 
 
-#--- Run 9 models with 4 variables each -- optimal + 1 
-# code/02-4/02-4-[1-5]_[WY-Y].sh
+#--- Run 11 models with 4 variables each -- optimal + 1 
+# code/02-4/02-4-[1-6]_[WY-Y].sh
 
 
 #--- Use loo to compare models based on ability to predict test subset
 Y_loo <- compare_models(fit_dir=fS_out, mod="Y", mod_size=mod_size)
-Y_loo$comp[1:10,]
+Y_loo$comp
 update_opt_vars(out_dir=fS_out, mod="Y", mod_size=mod_size, comp=Y_loo$comp)
 
 WY_loo <- compare_models(fit_dir=fS_out, mod="WY", mod_size=mod_size)
-WY_loo$comp[1:10,]
+WY_loo$comp
 update_opt_vars(out_dir=fS_out, mod="WY", mod_size=mod_size, comp=WY_loo$comp)
 
 
@@ -170,17 +171,17 @@ map(1:n_folds,
                         mod_size=mod_size))
 
 
-#--- Run 8 models with 5 variables each -- optimal + 1 
-# code/02-5/02-5-[1-4]_[WY-Y].sh
+#--- Run 10 models with 5 variables each -- optimal + 1 
+# code/02-5/02-5-[1-5]_[WY-Y].sh
 
 
 #--- Use loo to compare models based on ability to predict test subset
 Y_loo <- compare_models(fit_dir=fS_out, mod="Y", mod_size=mod_size)
-Y_loo$comp[1:10,]
+Y_loo$comp
 update_opt_vars(out_dir=fS_out, mod="Y", mod_size=mod_size, comp=Y_loo$comp)
 
 WY_loo <- compare_models(fit_dir=fS_out, mod="WY", mod_size=mod_size)
-WY_loo$comp[1:10,]
+WY_loo$comp
 update_opt_vars(out_dir=fS_out, mod="WY", mod_size=mod_size, comp=WY_loo$comp)
 
 
@@ -201,17 +202,17 @@ map(1:n_folds,
                         mod_size=mod_size))
 
 
-#--- Run 7 models with 6 variables each -- optimal + 1 
-# code/02-6/02-6-[1-4]_[WY-Y].sh
+#--- Run 9 models with 6 variables each -- optimal + 1 
+# code/02-6/02-6-[1-5]_[WY-Y].sh
 
 
 #--- Use loo to compare models based on ability to predict test subset
 Y_loo <- compare_models(fit_dir=fS_out, mod="Y", mod_size=mod_size)
-Y_loo$comp[1:10,]
+Y_loo$comp
 update_opt_vars(out_dir=fS_out, mod="Y", mod_size=mod_size, comp=Y_loo$comp)
 
 WY_loo <- compare_models(fit_dir=fS_out, mod="WY", mod_size=mod_size)
-WY_loo$comp[1:10,]
+WY_loo$comp
 update_opt_vars(out_dir=fS_out, mod="WY", mod_size=mod_size, comp=WY_loo$comp)
 
 
@@ -223,24 +224,26 @@ mod_size <- 7
 map(1:n_folds, 
     ~make_next_datasets(full_data_base=paste0(d.dir, d.f, .x), type="cv", 
                         out_base=paste0(fS_dat, "Y_"),
-                        opt_names=readRDS(paste0(fS_out, "opt_Y.rds"))[1:mod_size]))
+                        opt_names=readRDS(paste0(fS_out, "opt_Y.rds"))[1:mod_size],
+                        mod_size=mod_size))
 map(1:n_folds, 
     ~make_next_datasets(full_data_base=paste0(d.dir, d.f, .x), type="cv", 
                         out_base=paste0(fS_dat, "WY_"),
-                        opt_names=readRDS(paste0(fS_out, "opt_WY.rds"))[1:mod_size]))
+                        opt_names=readRDS(paste0(fS_out, "opt_WY.rds"))[1:mod_size],
+                        mod_size=mod_size))
 
 
-#--- Run 6 models with 7 variables each -- optimal + 1 
-# code/02-7/02-7-[1-3]_[WY-Y].sh
+#--- Run 8 models with 7 variables each -- optimal + 1 
+# code/02-7/02-7-[1-4]_[WY-Y].sh
 
 
 #--- Use loo to compare models based on ability to predict test subset
 Y_loo <- compare_models(fit_dir=fS_out, mod="Y", mod_size=mod_size)
-Y_loo$comp[1:10,]
+Y_loo$comp
 update_opt_vars(out_dir=fS_out, mod="Y", mod_size=mod_size, comp=Y_loo$comp)
 
 WY_loo <- compare_models(fit_dir=fS_out, mod="WY", mod_size=mod_size)
-WY_loo$comp[1:10,]
+WY_loo$comp
 update_opt_vars(out_dir=fS_out, mod="WY", mod_size=mod_size, comp=WY_loo$comp)
 
 
@@ -252,25 +255,61 @@ mod_size <- 8
 map(1:n_folds, 
     ~make_next_datasets(full_data_base=paste0(d.dir, d.f, .x), type="cv", 
                         out_base=paste0(fS_dat, "Y_"),
-                        opt_names=readRDS(paste0(fS_out, "opt_Y.rds"))[1:mod_size]))
+                        opt_names=readRDS(paste0(fS_out, "opt_Y.rds"))[1:mod_size],
+                        mod_size=mod_size))
 map(1:n_folds, 
     ~make_next_datasets(full_data_base=paste0(d.dir, d.f, .x), type="cv", 
                         out_base=paste0(fS_dat, "WY_"),
-                        opt_names=readRDS(paste0(fS_out, "opt_WY.rds"))[1:mod_size]))
+                        opt_names=readRDS(paste0(fS_out, "opt_WY.rds"))[1:mod_size],
+                        mod_size=mod_size))
 
 
-#--- Run 5 models with 8 variables each -- optimal + 1 
-# code/02-8/02-8-[1-3]_[WY-Y].sh
+#--- Run 7 models with 8 variables each -- optimal + 1 
+# code/02-8/02-8-[1-4]_[WY-Y].sh
 
 
 #--- Use loo to compare models based on ability to predict test subset
 Y_loo <- compare_models(fit_dir=fS_out, mod="Y", mod_size=mod_size)
-Y_loo$comp[1:10,]
+Y_loo$comp
 update_opt_vars(out_dir=fS_out, mod="Y", mod_size=mod_size, comp=Y_loo$comp)
 
 WY_loo <- compare_models(fit_dir=fS_out, mod="WY", mod_size=mod_size)
-WY_loo$comp[1:10,]
+WY_loo$comp
 update_opt_vars(out_dir=fS_out, mod="WY", mod_size=mod_size, comp=WY_loo$comp)
+
+
+
+
+##### Size = 9     -------------------------------------------------------------
+mod_size <- 9
+#--- Make new datasets with selected variable + each other individually
+map(1:n_folds, 
+    ~make_next_datasets(full_data_base=paste0(d.dir, d.f, .x), type="cv", 
+                        out_base=paste0(fS_dat, "Y_"),
+                        opt_names=readRDS(paste0(fS_out, "opt_Y.rds"))[1:mod_size],
+                        mod_size=mod_size))
+map(1:n_folds, 
+    ~make_next_datasets(full_data_base=paste0(d.dir, d.f, .x), type="cv", 
+                        out_base=paste0(fS_dat, "WY_"),
+                        opt_names=readRDS(paste0(fS_out, "opt_WY.rds"))[1:mod_size],
+                        mod_size=mod_size))
+
+
+#--- Run 6 models with 9 variables each -- optimal + 1 
+# code/02-9/02-9-[1-3]_[WY-Y].sh
+
+
+#--- Use loo to compare models based on ability to predict test subset
+Y_loo <- compare_models(fit_dir=fS_out, mod="Y", mod_size=mod_size)
+Y_loo$comp
+update_opt_vars(out_dir=fS_out, mod="Y", mod_size=mod_size, comp=Y_loo$comp)
+
+WY_loo <- compare_models(fit_dir=fS_out, mod="WY", mod_size=mod_size)
+WY_loo$comp
+update_opt_vars(out_dir=fS_out, mod="WY", mod_size=mod_size, comp=WY_loo$comp)
+
+
+
 
 
 
@@ -299,7 +338,7 @@ mod_col <- c("Joint"="#7b3294", "Structured Only"="#008837")
 
 loo.f <- dir(fS_out, "loo.*csv")
 loo.df <- tibble(mod=str_split_fixed(loo.f, "_", 3)[,2], 
-                 nCov=as.numeric(str_sub(str_split_fixed(loo.f, "_", 3)[,3], 1, -5)), 
+                 nCov=as.numeric(str_sub(str_split_fixed(loo.f, "_", 3)[,3], 1, -7)), 
                  elpd=map_dbl(loo.f, ~read_csv(paste0(fS_out, .x))$elpd_loo[1]),
                  elpd_se=map_dbl(loo.f, ~read_csv(paste0(fS_out, .x))$se_elpd_loo[1]),
                  v_full=map_chr(loo.f, ~read_csv(paste0(fS_out, .x))$X1[1])) %>%
@@ -312,10 +351,10 @@ ggplot(loo.df, aes(x=nCov, y=elpd, colour=model, group=model)) +
   geom_point(size=3) + geom_line() + 
   scale_colour_manual("", values=mod_col) + 
   labs(x="Number of covariates") + 
-  # geom_linerange(aes(ymin=elpd-elpd_se, ymax=elpd+elpd_se)) +
+  # geom_errorbar(aes(ymin=elpd-elpd_se, ymax=elpd+elpd_se), width=0.02) +
   geom_text(aes(label=v_name), colour=1, hjust=0, vjust=1, size=3, nudge_x=0.05) +
   scale_shape_manual(values=c(1, 16))
-ggsave("eda/TEMP_varsel.jpg", width=8, height=5)
+# ggsave("eda/TEMP_varsel.jpg", width=8, height=5)
 
 
 
@@ -327,11 +366,11 @@ ggsave("eda/TEMP_varsel.jpg", width=8, height=5)
 best <- list(Y=map(1:n_folds, 
                    ~rstan::read_stan_csv(
                      dir("out/fwdSearch",
-                         paste0("Y_3__k-", .x, "_L_SoilTSt"), full.names=T))),
+                         paste0("Y_7__k-", .x, "_R_bldgPer"), full.names=T))),
              WY=map(1:n_folds, 
                     ~rstan::read_stan_csv(
                       dir("out/fwdSearch",
-                          paste0("WY_2__k-", .x, "_L_SoilTSt"), full.names=T))))
+                          paste0("WY_5__k-", .x, "_R_rdLen"), full.names=T))))
 
 best.beta <- map(best, ~do.call("rbind", 
                                 map(.x, ~do.call("rbind", 
@@ -351,13 +390,11 @@ hdi.b <- map(best.b, ~HDInterval::hdi(.x) %>%
                       spp=str_split_fixed(par, "\\.", 3)[,3]))
 
 
-as_tibble(HDInterval::hdi(rstan::As.mcmc.list(best$Y, pars="b"))) %>%
-  mutate(Limit=c("lower", "upper")) %>%
-  pivot_longer(!Limit, names_to="par", values_to="value") %>%
-  mutate(cov=str_split_fixed(par, "\\.", 3)[,2],
-         spp=str_split_fixed(par, "\\.", 3)[,3]) %>%
-  ggplot(aes(spp, value)) + geom_point() + facet_wrap(~cov)
-
+p <- ggplot(hdi.b$WY, aes(value, spp)) + 
+  geom_vline(xintercept=0, colour="gray80") +
+  geom_line() + facet_wrap(~cov, scales="free_x") + 
+  theme(panel.grid=element_blank())
+ggsave("~/Desktop/WY.pdf", p)
 
 
 best.i <- list(Y=readRDS("data/fwdSearch/Y_3__k-1_L_SoilTSt_ls.rds"),
@@ -369,9 +406,9 @@ c(colnames(best.i$Y$X), colnames(best.i$Y$V))
 plot(best$WY, pars="beta", outer_level=0.9) + xlim(-4,4)
 c(colnames(best.i$WY$X), colnames(best.i$WY$V))
 
-stan_diag(best$Y)
-stan_rhat(best$Y)
-stan_ess(best$Y)
+stan_diag(best$WY[[1]])
+stan_rhat(best$WY[[1]])
+stan_ess(best$WY[[1]])
 stan_mcse(best$Y)
 
 best.df <- sjstats::tidy_stan(best$Y, prob=c(0.5, 0.9, 0.95))
