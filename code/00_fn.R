@@ -192,6 +192,15 @@ compare_models <- function(fit_dir, mod, mod_size, comp_all=F, save=T, type="cv"
   }
   
   # load loo metrics for all models of smaller size 
+  if(length(dir(fit_dir, paste0("loo_", mod, "_", mod_size)))>0) {
+    sub_num <- 1 + length(dir(fit_dir, paste0("loo_", mod, "_", mod_size, ".*rds")))
+    same.loo <- map(dir(fit_dir, 
+                        paste0("loo_", mod, "_", mod_size, ".*rds"),
+                        full.names=T), readRDS)
+  } else {
+    sub_num <- 1
+    same.loo <- NULL
+  }
   if(comp_all && mod_size > 1) {
     if(mod_size < 11) {
       smaller.loo <- map(dir(fit_dir, 
@@ -213,7 +222,9 @@ compare_models <- function(fit_dir, mod, mod_size, comp_all=F, save=T, type="cv"
   
   # compare based on elpd
   if(mod_size > 0) {
-    loo.comp <- loo::loo_compare(c(fit.loo, unlist(smaller.loo, recursive=F)))
+    loo.comp <- loo::loo_compare(c(fit.loo, 
+                                   unlist(same.loo, recursive=F),
+                                   unlist(smaller.loo, recursive=F)))
   } else {
     loo.comp <- data.frame(elpd_diff=0, se_diff=0, 
                            elpd_loo=fit.loo[[1]]$estimates[1,1],
@@ -226,8 +237,8 @@ compare_models <- function(fit_dir, mod, mod_size, comp_all=F, save=T, type="cv"
   }
   
   if(save) {
-    saveRDS(fit.loo, paste0(fit_dir, "/loo_", mod, "_", mod_size, ".rds"))
-    write.csv(loo.comp, paste0(fit_dir, "/loo_", mod, "_", mod_size, ".csv"))
+    saveRDS(fit.loo, paste0(fit_dir, "/loo_", mod, "_", mod_size, "_", sub_num, ".rds"))
+    write.csv(loo.comp, paste0(fit_dir, "/loo_", mod, "_", mod_size, "_", sub_num, ".csv"))
   }
   
   return(list(loo=fit.loo, comp=loo.comp))
