@@ -149,13 +149,17 @@ make_next_datasets <- function(full_data_base, out_base, opt_names, mod_size, ty
 
 
 #' Calculate loo metrics for model set
-#' @param fit_dir Directory with cmdstan output; loo output will also be saved here if \code{save=T}
+#' @param fit_dir Directory with cmdstan output; loo output will also be saved
+#'   here if \code{save=T}
 #' @param mod Model version; either \code{"Y"} or \code{"WY"}
 #' @param mod_size Number of variables in model set
-#' @param comp_all If \code{TRUE} (default), any saved loo .rds files for smaller models are also included in the comparison
-#' @param save If \code{TRUE} (default), loo metrics are stored as a .rds file and comparison is stored as a .csv
-#' @return "loo" with output from loo::loo() and "comp" with output from loo::loo_compare()
-compare_models <- function(fit_dir, mod, mod_size, comp_all=T, save=T, type="cv") {
+#' @param comp_all If \code{TRUE}, any saved loo .rds files for smaller models
+#'   are also included in the comparison
+#' @param save If \code{TRUE} (default), loo metrics are stored as a .rds file
+#'   and comparison is stored as a .csv
+#' @return "loo" with output from loo::loo() and "comp" with output from
+#'   loo::loo_compare()
+compare_models <- function(fit_dir, mod, mod_size, comp_all=F, save=T, type="cv") {
   
   library(tidyverse)
   
