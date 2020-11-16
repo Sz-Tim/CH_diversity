@@ -48,12 +48,14 @@ X_vars <- c("grwnDD0", "grwnDD0_sq",
             "npp",
             "lcH",
             "Edge",
+            "Forest",
             "bldgPer", "rdLen",
             "aspctN")
 V_vars <- c("SoilTSt", 
             "VegTot",
             "CnpyOpn", "CnpyMxd",
-            "Pasture", "Crop")
+            "Pasture", "Crop", 
+            "Built")
 
 
 
@@ -78,8 +80,11 @@ site.sf <- agg_str_site_data() %>% arrange(BDM)
 
 
 ##--- W
-ants <- load_ant_data(str_type="soil", clean_spp=T)
-grid.W <- st_join(ants$pub, grd_W.sf) %>%
+ants <- load_ant_data(str_type="all", clean_spp=T)
+grid.W <- bind_rows(ants$pub, 
+                    ants$str %>% filter(TypeOfSample != "soil") %>%
+                      select(TubeNo, SPECIESID, SampleDate)) %>% 
+  st_join(., grd_W.sf) %>%
   group_by(SPECIESID, id, inbd) %>% st_set_geometry(NULL) %>%
   summarise(nObs=n()) %>% ungroup %>%
   filter(inbd) %>% arrange(id)
@@ -97,7 +102,8 @@ grd_W.sf$W_obs <- rowSums(W)>0
 
 
 ##--- Y
-box.Y <- ants$str %>% group_by(BDM, Plot_id, SPECIESID) %>%
+box.Y <- ants$str %>% filter(TypeOfSample == "soil") %>%
+  group_by(BDM, Plot_id, SPECIESID) %>%
   summarise(nObs=n()) %>% 
   left_join(., select(plot_i, BDM, Plot_id), 
             by=c("BDM", "Plot_id")) %>%
@@ -202,7 +208,7 @@ clim <- dir(gis.dir, "chelsa") %>%
   setNames(str_remove(., "_chelsa_VD_21781.tif$")) %>%
   magrittr::extract(names(.) %in% X_vars) %>%
   map(., ~raster::raster(paste0(gis.dir, .x)))
-envirem <- dir(gis.dir, "envirem") %>%
+envirem <- dir(gis.dir, "envirem.*tif$") %>%
   setNames(str_remove(., "_envirem_VD_21781.tif$")) %>%
   # magrittr::extract(names(.) %in% X_vars) %>%
   map(., ~raster::raster(paste0(gis.dir, .x)))
