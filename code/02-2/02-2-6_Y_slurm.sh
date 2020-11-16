@@ -9,7 +9,7 @@
 ## tasks should be 1.  This reflects how many processes are running (1), and
 ## not how many threads that process will use.
 #SBATCH --ntasks=1
-#SBATCH --cpus-per-task=12
+#SBATCH --cpus-per-task=24
 
 ## If it's likely your job will use more than 128GB of RAM, be sure
 ## to specify a minimum above this to ensure you are allocated a node

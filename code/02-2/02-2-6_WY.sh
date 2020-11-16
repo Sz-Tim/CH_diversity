@@ -10,13 +10,13 @@
 
 # warmup and sampling per chain
 nWarm=2000
-nSamp=70
+nSamp=500
 
 FILES=data/fwdSearch/WY_2__*.Rdump
 d=($FILES)
 dfull=($(basename -a $FILES))
 
-for f in {40..43}
+for f in {40..47}
 do 
   df="${dfull[$f]}"
   dname="${df%.Rdump}"

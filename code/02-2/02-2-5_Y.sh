@@ -10,7 +10,7 @@
 
 # warmup and sampling per chain
 nWarm=2000
-nSamp=70
+nSamp=500
 
 FILES=data/fwdSearch/Y_2__*.Rdump
 d=($FILES)
