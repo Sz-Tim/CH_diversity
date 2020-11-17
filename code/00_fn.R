@@ -439,8 +439,19 @@ aggregate_output <- function(d.f, mods, pars_save, out.dir="out") {
     cat("\n  Summarizing", paste0(out.dir, "/", mods[i]))
     pars.all <- unique(str_split_fixed(names(out.stan[[i]]), "\\[", 2)[,1])
     pars <- pars.all[pars.all %in% pars_save]
-    out.mcmc <- map(pars, ~do.call('rbind', 
-                                   rstan::As.mcmc.list(out.stan[[i]], pars=.x)))
+    pars.trans <- grep("lambda", pars, value=T, ignore.case=T)
+    
+    # HDIs need to be calculated for lambdas separately on log vs natural scale
+    out.mcmc <- c(map(pars, 
+                      ~do.call('rbind', 
+                               rstan::As.mcmc.list(out.stan[[i]], pars=.x))),
+                  map(pars.trans, 
+                      ~exp(do.call('rbind', 
+                                   rstan::As.mcmc.list(out.stan[[i]], pars=.x))))) %>%
+      setNames(c(pars, str_sub(pars.trans, 2, -1)))
+    for(p in str_sub(pars.trans, 2, -1)) {
+      dimnames(out.mcmc[[p]])[2][[1]] <- str_sub(dimnames(out.mcmc[[p]])[2][[1]], 2, -1)
+    }
     out.50 <- map(out.mcmc, ~HDInterval::hdi(.x, 0.5) %>% t %>%
                     as_tibble(rownames="Parameter") %>%
                     rename(L25=lower, L75=upper))
@@ -457,17 +468,36 @@ aggregate_output <- function(d.f, mods, pars_save, out.dir="out") {
                     as_tibble(rownames="Parameter") %>%
                     rename(median=`50%`) %>%
                     mutate(Parameter=str_replace_all(Parameter, 
-                                                     c("\\["=".",
-                                                       ","=".",
-                                                       "]"=""))))
-    out.ls <- map(seq_along(pars), 
+                                                     c("\\[" = ".",
+                                                       "," = ".",
+                                                       "]" = "")))) %>%
+      setNames(pars)
+    for(p in seq_along(pars.trans)) {
+      p.trans.i <- str_sub(pars.trans[p], 2, -1)
+      p.untrans.i <- pars.trans[p]
+      out.mn[[p.trans.i]] <- tibble(
+        Parameter=out.50[[p.trans.i]]$Parameter,
+        mean=apply(out.mcmc[[p.trans.i]], 2, mean),
+        sd=apply(out.mcmc[[p.trans.i]], 2, sd),
+        median=apply(out.mcmc[[p.trans.i]], 2, median),
+        n_eff=out.mn[[p.untrans.i]]$n_eff,
+        Rhat=out.mn[[p.untrans.i]]$Rhat,
+        se_mean=sd/sqrt(n_eff)
+      ) %>% 
+        select(Parameter, mean, se_mean, sd, median, n_eff, Rhat)
+    }
+    
+    # Need to either calculate lambda/LAMBDA HDIs here, or add them to gen quant
+    
+    
+    out.ls <- map(seq_along(c(pars, pars.trans)), 
                   ~full_join(out.50[[.x]], out.80[[.x]], by="Parameter") %>%
                     full_join(., out.90[[.x]], by="Parameter") %>%
                     full_join(., out.95[[.x]], by="Parameter") %>%
                     full_join(., out.mn[[.x]], by="Parameter") %>%
                     mutate(model=mods[i],
                            par=str_split_fixed(Parameter, "\\.", n=2)[,1])) %>%
-      setNames(pars)
+      setNames(c(pars, str_sub(pars.trans, 2, -1)))
     
     ParNames <- c("intercept", 
                   paste0(colnames(d.ls$X)[-1]),
@@ -475,6 +505,14 @@ aggregate_output <- function(d.f, mods, pars_save, out.dir="out") {
     
     # lLAMBDA (site)
     out.pars$lLAM[[i]] <- out.ls$lLAMBDA %>%
+      mutate(site=str_split_fixed(Parameter, "\\.", n=3)[,2],
+             spp=str_split_fixed(Parameter, "\\.", n=3)[,3]) %>%
+      mutate(site=as.numeric(site), spp=as.numeric(spp)) %>%
+      mutate(sppName=d.i$tax_i$species[match(spp, d.i$tax_i$sNum)]) %>%
+      arrange(site, spp) %>%
+      mutate(id=d.i$X[site,"id"], el=d.i$X[site,"el"],
+             Parameter=as.character(Parameter), model=as.character(model))
+    out.pars$LAM[[i]] <- out.ls$LAMBDA %>%
       mutate(site=str_split_fixed(Parameter, "\\.", n=3)[,2],
              spp=str_split_fixed(Parameter, "\\.", n=3)[,3]) %>%
       mutate(site=as.numeric(site), spp=as.numeric(spp)) %>%
@@ -494,10 +532,29 @@ aggregate_output <- function(d.f, mods, pars_save, out.dir="out") {
           mutate(id=d.i$X_[site,"id"], el=d.i$X_[site,"el"],
                  Parameter=as.character(Parameter), model=as.character(model))
       )
+      out.pars$LAM[[i]] <- rbind(
+        out.pars$LAM[[i]], 
+        out.ls$LAMBDA_ %>%
+          mutate(site=str_split_fixed(Parameter, "\\.", n=3)[,2],
+                 spp=str_split_fixed(Parameter, "\\.", n=3)[,3]) %>%
+          mutate(site=as.numeric(site), spp=as.numeric(spp)) %>%
+          mutate(sppName=d.i$tax_i$species[match(spp, d.i$tax_i$sNum)]) %>%
+          arrange(site, spp) %>%
+          mutate(id=d.i$X_[site,"id"], el=d.i$X_[site,"el"],
+                 Parameter=as.character(Parameter), model=as.character(model))
+      )
     }
     
     # llambda (plot)
     out.pars$llam[[i]] <- out.ls$llambda %>%
+      mutate(plot=str_split_fixed(Parameter, "\\.", n=3)[,2],
+             spp=str_split_fixed(Parameter, "\\.", n=3)[,3]) %>%
+      mutate(plot=as.numeric(plot), spp=as.numeric(spp)) %>%
+      mutate(sppName=d.i$tax_i$species[match(spp, d.i$tax_i$sNum)]) %>%
+      arrange(plot, spp) %>%
+      mutate(id=d.i$V[plot,"Plot_id"], el=d.i$V[plot,"el"],
+             Parameter=as.character(Parameter), model=as.character(model))
+    out.pars$lam[[i]] <- out.ls$lambda %>%
       mutate(plot=str_split_fixed(Parameter, "\\.", n=3)[,2],
              spp=str_split_fixed(Parameter, "\\.", n=3)[,3]) %>%
       mutate(plot=as.numeric(plot), spp=as.numeric(spp)) %>%
