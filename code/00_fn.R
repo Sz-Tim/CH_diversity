@@ -439,8 +439,9 @@ aggregate_output <- function(d.f, mods, pars_save, out.dir="out") {
     cat("\n  Summarizing", paste0(out.dir, "/", mods[i]))
     pars.all <- unique(str_split_fixed(names(out.stan[[i]]), "\\[", 2)[,1])
     pars <- pars.all[pars.all %in% pars_save]
-    pars.trans <- grep("lambda", pars, value=T, ignore.case=T)
+    pars.trans <- grep("llambda", pars, value=T, ignore.case=T)
     
+    ## CALCULATE SUMMARY STATISTICS --------------------------------------------
     # HDIs need to be calculated for lambdas separately on log vs natural scale
     out.mcmc <- c(map(pars, 
                       ~do.call('rbind', 
@@ -487,9 +488,6 @@ aggregate_output <- function(d.f, mods, pars_save, out.dir="out") {
         select(Parameter, mean, se_mean, sd, median, n_eff, Rhat)
     }
     
-    # Need to either calculate lambda/LAMBDA HDIs here, or add them to gen quant
-    
-    
     out.ls <- map(seq_along(c(pars, pars.trans)), 
                   ~full_join(out.50[[.x]], out.80[[.x]], by="Parameter") %>%
                     full_join(., out.90[[.x]], by="Parameter") %>%
@@ -503,128 +501,16 @@ aggregate_output <- function(d.f, mods, pars_save, out.dir="out") {
                   paste0(colnames(d.ls$X)[-1]),
                   paste0(colnames(d.ls$V)))
     
-    # lLAMBDA (site)
-    out.pars$lLAM[[i]] <- out.ls$lLAMBDA %>%
-      mutate(site=str_split_fixed(Parameter, "\\.", n=3)[,2],
-             spp=str_split_fixed(Parameter, "\\.", n=3)[,3]) %>%
-      mutate(site=as.numeric(site), spp=as.numeric(spp)) %>%
-      mutate(sppName=d.i$tax_i$species[match(spp, d.i$tax_i$sNum)]) %>%
-      arrange(site, spp) %>%
-      mutate(id=d.i$X[site,"id"], el=d.i$X[site,"el"],
-             Parameter=as.character(Parameter), model=as.character(model))
-    out.pars$LAM[[i]] <- out.ls$LAMBDA %>%
-      mutate(site=str_split_fixed(Parameter, "\\.", n=3)[,2],
-             spp=str_split_fixed(Parameter, "\\.", n=3)[,3]) %>%
-      mutate(site=as.numeric(site), spp=as.numeric(spp)) %>%
-      mutate(sppName=d.i$tax_i$species[match(spp, d.i$tax_i$sNum)]) %>%
-      arrange(site, spp) %>%
-      mutate(id=d.i$X[site,"id"], el=d.i$X[site,"el"],
-             Parameter=as.character(Parameter), model=as.character(model))
-    if(type=="pred") {
-      out.pars$lLAM[[i]] <- rbind(
-        out.pars$lLAM[[i]], 
-        out.ls$lLAMBDA_ %>%
-          mutate(site=str_split_fixed(Parameter, "\\.", n=3)[,2],
-                 spp=str_split_fixed(Parameter, "\\.", n=3)[,3]) %>%
-          mutate(site=as.numeric(site), spp=as.numeric(spp)) %>%
-          mutate(sppName=d.i$tax_i$species[match(spp, d.i$tax_i$sNum)]) %>%
-          arrange(site, spp) %>%
-          mutate(id=d.i$X_[site,"id"], el=d.i$X_[site,"el"],
-                 Parameter=as.character(Parameter), model=as.character(model))
-      )
-      out.pars$LAM[[i]] <- rbind(
-        out.pars$LAM[[i]], 
-        out.ls$LAMBDA_ %>%
-          mutate(site=str_split_fixed(Parameter, "\\.", n=3)[,2],
-                 spp=str_split_fixed(Parameter, "\\.", n=3)[,3]) %>%
-          mutate(site=as.numeric(site), spp=as.numeric(spp)) %>%
-          mutate(sppName=d.i$tax_i$species[match(spp, d.i$tax_i$sNum)]) %>%
-          arrange(site, spp) %>%
-          mutate(id=d.i$X_[site,"id"], el=d.i$X_[site,"el"],
-                 Parameter=as.character(Parameter), model=as.character(model))
-      )
-    }
     
-    # llambda (plot)
-    out.pars$llam[[i]] <- out.ls$llambda %>%
-      mutate(plot=str_split_fixed(Parameter, "\\.", n=3)[,2],
-             spp=str_split_fixed(Parameter, "\\.", n=3)[,3]) %>%
-      mutate(plot=as.numeric(plot), spp=as.numeric(spp)) %>%
-      mutate(sppName=d.i$tax_i$species[match(spp, d.i$tax_i$sNum)]) %>%
-      arrange(plot, spp) %>%
-      mutate(id=d.i$V[plot,"Plot_id"], el=d.i$V[plot,"el"],
-             Parameter=as.character(Parameter), model=as.character(model))
-    out.pars$lam[[i]] <- out.ls$lambda %>%
-      mutate(plot=str_split_fixed(Parameter, "\\.", n=3)[,2],
-             spp=str_split_fixed(Parameter, "\\.", n=3)[,3]) %>%
-      mutate(plot=as.numeric(plot), spp=as.numeric(spp)) %>%
-      mutate(sppName=d.i$tax_i$species[match(spp, d.i$tax_i$sNum)]) %>%
-      arrange(plot, spp) %>%
-      mutate(id=d.i$V[plot,"Plot_id"], el=d.i$V[plot,"el"],
-             Parameter=as.character(Parameter), model=as.character(model))
     
-    # prPres (site)
-    if(type=="pred") {
-      out.pars$pP_R[[i]] <- rbind(
-        out.ls$prPres %>%
-          mutate(site=str_split_fixed(Parameter, "\\.", n=3)[,2],
-                 spp=str_split_fixed(Parameter, "\\.", n=3)[,3]) %>%
-          mutate(site=as.numeric(site), spp=as.numeric(spp)) %>%
-          mutate(sppName=d.i$tax_i$species[match(spp, d.i$tax_i$sNum)]) %>%
-          arrange(site, spp) %>%
-          mutate(id=d.i$X[site,"id"], el=d.i$X[site,"el"],
-                 Parameter=as.character(Parameter), model=as.character(model)),
-        out.ls$prPres_ %>%
-          mutate(site=str_split_fixed(Parameter, "\\.", n=3)[,2],
-                 spp=str_split_fixed(Parameter, "\\.", n=3)[,3]) %>%
-          mutate(site=as.numeric(site), spp=as.numeric(spp)) %>%
-          mutate(sppName=d.i$tax_i$species[match(spp, d.i$tax_i$sNum)]) %>%
-          arrange(site, spp) %>%
-          mutate(id=d.i$X_[site,"id"], el=d.i$X_[site,"el"],
-                 Parameter=as.character(Parameter), model=as.character(model))
-      )
-    }
+    ## CREATE DATAFRAMES WITH SITE/PLOT/COVARIATE INFO -------------------------
     
-    # prPres (plot)
-    if("prPresL" %in% pars) {
-      out.pars$pP_L[[i]] <- out.ls$prPresL %>%
-        mutate(plot=str_split_fixed(Parameter, "\\.", n=3)[,2],
-               spp=str_split_fixed(Parameter, "\\.", n=3)[,3]) %>%
-        mutate(plot=as.numeric(plot), spp=as.numeric(spp)) %>% 
-        mutate(sppName=d.i$tax_i$species[match(spp, d.i$tax_i$sNum)]) %>%
-        arrange(plot, spp) %>%
-        mutate(id=d.i$V[plot,"Plot_id"], el=d.i$V[plot,"el"],
-               Parameter=as.character(Parameter), model=as.character(model)) 
-    }
-    
-    # log likelihood
-    if("log_lik" %in% pars) {
-      out.pars$log_lik[[i]] <- out.ls$log_lik %>%
-        mutate(plot=str_split_fixed(Parameter, "\\.", n=3)[,2],
-               spp=str_split_fixed(Parameter, "\\.", n=3)[,3]) %>%
-        mutate(plot=as.numeric(plot), spp=as.numeric(spp)) %>% 
-        mutate(sppName=d.i$tax_i$species[match(spp, d.i$tax_i$sNum)]) %>%
-        arrange(plot, spp) %>%
-        mutate(id=d.i$V[plot,"Plot_id"], el=d.i$V[plot,"el"],
-               Parameter=as.character(Parameter), model=as.character(model)) 
-    }
+    #### slopes -----------------------
     
     # beta
     out.pars$beta[[i]] <- out.ls$beta %>%
       mutate(ParName=ParNames) %>%
       mutate(Parameter=as.character(Parameter), model=as.character(model))
-    
-    # B
-    if("B" %in% pars) {
-    out.pars$B[[i]] <- out.ls$B %>%
-      mutate(cov=str_split_fixed(str_split_fixed(Parameter, "\\[", n=2)[,2],
-                                 ",", n=2)[,1],
-             gen=str_sub(str_split_fixed(Parameter, ",", n=2)[,2], 1, -2)) %>%
-      mutate(ParName=ParNames[as.numeric(cov)],
-             genName=d.i$tax_i$genus[match(gen, d.i$tax_i$gNum)]) %>% 
-      mutate(Parameter=as.character(Parameter), model=as.character(model))
-    
-    }
     
     # b
     out.pars$b[[i]] <- out.ls$b %>%
@@ -640,8 +526,65 @@ aggregate_output <- function(d.f, mods, pars_save, out.dir="out") {
       mutate(ParName=ParNames) %>%
       mutate(Parameter=as.character(Parameter), model=as.character(model))
     
-    # Sigma_B
-    if("Sigma_B" %in% pars) {
+    
+    #### intensities ------------------
+    
+    # lLAMBDA 
+    out.pars$lLAM[[i]] <- out.ls$lLAMBDA %>%
+      mutate(site=str_split_fixed(Parameter, "\\.", n=3)[,2],
+             spp=str_split_fixed(Parameter, "\\.", n=3)[,3]) %>%
+      mutate(site=as.numeric(site), spp=as.numeric(spp)) %>%
+      mutate(sppName=d.i$tax_i$species[match(spp, d.i$tax_i$sNum)]) %>%
+      arrange(site, spp) %>%
+      mutate(id=d.i$X[site,"id"], el=d.i$X[site,"el"],
+             Parameter=as.character(Parameter), model=as.character(model))
+    
+    # LAMBDA
+    out.pars$LAM[[i]] <- out.ls$LAMBDA %>%
+      mutate(site=str_split_fixed(Parameter, "\\.", n=3)[,2],
+             spp=str_split_fixed(Parameter, "\\.", n=3)[,3]) %>%
+      mutate(site=as.numeric(site), spp=as.numeric(spp)) %>%
+      mutate(sppName=d.i$tax_i$species[match(spp, d.i$tax_i$sNum)]) %>%
+      arrange(site, spp) %>%
+      mutate(id=d.i$X[site,"id"], el=d.i$X[site,"el"],
+             Parameter=as.character(Parameter), model=as.character(model))
+    
+    # llambda
+    out.pars$llam[[i]] <- out.ls$llambda %>%
+      mutate(plot=str_split_fixed(Parameter, "\\.", n=3)[,2],
+             spp=str_split_fixed(Parameter, "\\.", n=3)[,3]) %>%
+      mutate(plot=as.numeric(plot), spp=as.numeric(spp)) %>%
+      mutate(sppName=d.i$tax_i$species[match(spp, d.i$tax_i$sNum)]) %>%
+      arrange(plot, spp) %>%
+      mutate(id=d.i$V[plot,"Plot_id"], el=d.i$V[plot,"el"],
+             Parameter=as.character(Parameter), model=as.character(model))
+    
+    # lambda
+    out.pars$lam[[i]] <- out.ls$lambda %>%
+      mutate(plot=str_split_fixed(Parameter, "\\.", n=3)[,2],
+             spp=str_split_fixed(Parameter, "\\.", n=3)[,3]) %>%
+      mutate(plot=as.numeric(plot), spp=as.numeric(spp)) %>%
+      mutate(sppName=d.i$tax_i$species[match(spp, d.i$tax_i$sNum)]) %>%
+      arrange(plot, spp) %>%
+      mutate(id=d.i$V[plot,"Plot_id"], el=d.i$V[plot,"el"],
+             Parameter=as.character(Parameter), model=as.character(model))
+    
+    
+    #### FULL MODEL ONLY --------------
+    
+    if(type=="pred") {
+      
+      #### slopes -----------------------
+      
+      # B
+      out.pars$B[[i]] <- out.ls$B %>%
+        mutate(cov=str_split_fixed(Parameter, "\\.", n=3)[,2],
+               gen=str_split_fixed(Parameter, "\\.", n=3)[,3]) %>%
+        mutate(ParName=ParNames[as.numeric(cov)],
+               genName=d.i$tax_i$genus[match(gen, d.i$tax_i$gNum)]) %>% 
+        mutate(Parameter=as.character(Parameter), model=as.character(model))
+      
+      # Sigma_B
       out.pars$Sig_B[[i]] <- out.ls$Sigma_B %>%
         mutate(cov=str_split_fixed(Parameter, "\\.", n=4)[,2],
                gen1=str_split_fixed(Parameter, "\\.", n=4)[,3],
@@ -650,68 +593,88 @@ aggregate_output <- function(d.f, mods, pars_save, out.dir="out") {
                gen1Name=d.i$tax_i$genus[match(gen1, d.i$tax_i$gNum)],
                gen2Name=d.i$tax_i$genus[match(gen2, d.i$tax_i$gNum)]) %>% 
         mutate(Parameter=as.character(Parameter), model=as.character(model))
-    }
-    
-    # dispersion parameter
-    out.pars$disp[[i]] <- out.ls$disp_lam %>% 
-      mutate(Parameter=as.character(Parameter), model=as.character(model))
-    
-    # D
-    if("D" %in% pars) {
-      out.pars$D[[i]] <- out.ls$D %>% 
-        mutate(spp=str_split_fixed(Parameter, "\\.", 2)[,2]) %>%
-        mutate(sppName=d.i$tax_i$species[match(spp, d.i$tax_i$sNum)],
-               Parameter=as.character(Parameter), model=as.character(model))
-    }
-    
-    if(type=="pred") {
-    out.pars$H[[i]] <- rbind(
-      out.ls$ShannonH %>%
-        mutate(site=str_split_fixed(Parameter, "\\.", n=2)[,2]) %>%
-        mutate(site=as.numeric(site)) %>%
-        arrange(site) %>%
-        mutate(id=d.i$X[site,"id"], el=d.i$X[site,"el"],
-               Parameter=as.character(Parameter), model=as.character(model)), 
-      out.ls$ShannonH_ %>%
-        mutate(site=str_split_fixed(Parameter, "\\.", n=2)[,2]) %>%
-        mutate(site=as.numeric(site)) %>%
-        arrange(site) %>%
-        mutate(id=d.i$X_[site,"id"], el=d.i$X_[site,"el"],
-               Parameter=as.character(Parameter), model=as.character(model))
+      
+      
+      #### intensities ------------------
+      
+      # lLAMBDA_ 
+      out.pars$lLAM[[i]] <- rbind(
+        out.pars$lLAM[[i]], 
+        out.ls$lLAMBDA_ %>%
+          mutate(site=str_split_fixed(Parameter, "\\.", n=3)[,2],
+                 spp=str_split_fixed(Parameter, "\\.", n=3)[,3]) %>%
+          mutate(site=as.numeric(site), spp=as.numeric(spp)) %>%
+          mutate(sppName=d.i$tax_i$species[match(spp, d.i$tax_i$sNum)]) %>%
+          arrange(site, spp) %>%
+          mutate(id=d.i$X_[site,"id"], el=d.i$X_[site,"el"],
+                 Parameter=as.character(Parameter), model=as.character(model))
       )
-    out.pars$S_R[[i]] <- rbind(
-      out.ls$Rich %>%
-        mutate(site=str_split_fixed(Parameter, "\\.", n=2)[,2]) %>%
-        mutate(site=as.numeric(site)) %>%
-        arrange(site) %>%
-        mutate(id=d.i$X[site,"id"], el=d.i$X[site,"el"],
-               Parameter=as.character(Parameter), model=as.character(model)), 
-      out.ls$Rich_ %>%
-        mutate(site=str_split_fixed(Parameter, "\\.", n=2)[,2]) %>%
-        mutate(site=as.numeric(site)) %>%
-        arrange(site) %>%
-        mutate(id=d.i$X_[site,"id"], el=d.i$X_[site,"el"],
-               Parameter=as.character(Parameter), model=as.character(model))
-    )
-    out.pars$S_L[[i]] <- out.ls$RichL %>%
-      mutate(plot=str_split_fixed(Parameter, "\\.", n=2)[,2]) %>%
-      mutate(plot=as.numeric(plot)) %>%
-      arrange(plot) %>%
-      mutate(id=d.i$V[plot,"Plot_id"], el=d.i$V[plot,"el"],
-             Parameter=as.character(Parameter), model=as.character(model))
-    
-    # Predictions
-    if("pred_YL" %in% pars) {
-      out.pars$pred_L[[i]] <- out.ls$pred_YL %>%
-        mutate(plot=str_split_fixed(Parameter, "\\.", n=3)[,2],
-               spp=str_split_fixed(Parameter, "\\.", n=3)[,3]) %>%
-        mutate(plot=as.numeric(plot), spp=as.numeric(spp)) %>% 
-        mutate(sppName=d.i$tax_i$species[match(spp, d.i$tax_i$sNum)]) %>%
-        arrange(plot, spp) %>%
+      
+      # LAMBDA_
+      out.pars$LAM[[i]] <- rbind(
+        out.pars$LAM[[i]], 
+        out.ls$LAMBDA_ %>%
+          mutate(site=str_split_fixed(Parameter, "\\.", n=3)[,2],
+                 spp=str_split_fixed(Parameter, "\\.", n=3)[,3]) %>%
+          mutate(site=as.numeric(site), spp=as.numeric(spp)) %>%
+          mutate(sppName=d.i$tax_i$species[match(spp, d.i$tax_i$sNum)]) %>%
+          arrange(site, spp) %>%
+          mutate(id=d.i$X_[site,"id"], el=d.i$X_[site,"el"],
+                 Parameter=as.character(Parameter), model=as.character(model))
+      )
+      
+      # tot_lLAM, tot_lLAM_
+      out.pars$tot_lLAM[[i]] <- rbind(
+        out.ls$tot_lLAM %>%
+          mutate(site=str_split_fixed(Parameter, "\\.", n=2)[,2]) %>%
+          mutate(site=as.numeric(site)) %>%
+          arrange(site) %>%
+          mutate(id=d.i$X[site,"id"], el=d.i$X[site,"el"],
+                 Parameter=as.character(Parameter), model=as.character(model)), 
+        out.ls$tot_lLAM_ %>%
+          mutate(site=str_split_fixed(Parameter, "\\.", n=2)[,2]) %>%
+          mutate(site=as.numeric(site)) %>%
+          arrange(site) %>%
+          mutate(id=d.i$X_[site,"id"], el=d.i$X_[site,"el"],
+                 Parameter=as.character(Parameter), model=as.character(model))
+      )
+      
+      # tot_LAM, tot_LAM_
+      out.pars$tot_LAM[[i]] <- rbind(
+        out.ls$tot_LAM %>%
+          mutate(site=str_split_fixed(Parameter, "\\.", n=2)[,2]) %>%
+          mutate(site=as.numeric(site)) %>%
+          arrange(site) %>%
+          mutate(id=d.i$X[site,"id"], el=d.i$X[site,"el"],
+                 Parameter=as.character(Parameter), model=as.character(model)), 
+        out.ls$tot_LAM_ %>%
+          mutate(site=str_split_fixed(Parameter, "\\.", n=2)[,2]) %>%
+          mutate(site=as.numeric(site)) %>%
+          arrange(site) %>%
+          mutate(id=d.i$X_[site,"id"], el=d.i$X_[site,"el"],
+                 Parameter=as.character(Parameter), model=as.character(model))
+      ) 
+      
+      # tot_llam
+      out.pars$tot_llam[[i]] <- out.ls$tot_llam %>%
+        mutate(plot=str_split_fixed(Parameter, "\\.", n=2)[,2]) %>%
+        mutate(plot=as.numeric(plot)) %>%
+        arrange(plot) %>%
         mutate(id=d.i$V[plot,"Plot_id"], el=d.i$V[plot,"el"],
-               Parameter=as.character(Parameter), model=as.character(model)) 
-    }
-    if("pred_Y" %in% pars) {
+               Parameter=as.character(Parameter), model=as.character(model))
+      
+      # tot_lam
+      out.pars$tot_lam[[i]] <- out.ls$tot_lam %>%
+        mutate(plot=str_split_fixed(Parameter, "\\.", n=2)[,2]) %>%
+        mutate(plot=as.numeric(plot)) %>%
+        arrange(plot) %>%
+        mutate(id=d.i$V[plot,"Plot_id"], el=d.i$V[plot,"el"],
+               Parameter=as.character(Parameter), model=as.character(model))
+      
+      
+      #### presence / absence ---------
+      
+      # pred_Y, pred_Y_
       out.pars$pred_R[[i]] <- rbind(
         out.ls$pred_Y %>%
           mutate(site=str_split_fixed(Parameter, "\\.", n=3)[,2],
@@ -730,10 +693,130 @@ aggregate_output <- function(d.f, mods, pars_save, out.dir="out") {
           mutate(id=d.i$X_[site,"id"], el=d.i$X_[site,"el"],
                  Parameter=as.character(Parameter), model=as.character(model))
       )
+      
+      # pred_YL
+      out.pars$pred_L[[i]] <- out.ls$pred_YL %>%
+        mutate(plot=str_split_fixed(Parameter, "\\.", n=3)[,2],
+               spp=str_split_fixed(Parameter, "\\.", n=3)[,3]) %>%
+        mutate(plot=as.numeric(plot), spp=as.numeric(spp)) %>% 
+        mutate(sppName=d.i$tax_i$species[match(spp, d.i$tax_i$sNum)]) %>%
+        arrange(plot, spp) %>%
+        mutate(id=d.i$V[plot,"Plot_id"], el=d.i$V[plot,"el"],
+               Parameter=as.character(Parameter), model=as.character(model)) 
+      
+      # prPres, prPres_
+      out.pars$pP_R[[i]] <- rbind(
+        out.ls$prPres %>%
+          mutate(site=str_split_fixed(Parameter, "\\.", n=3)[,2],
+                 spp=str_split_fixed(Parameter, "\\.", n=3)[,3]) %>%
+          mutate(site=as.numeric(site), spp=as.numeric(spp)) %>%
+          mutate(sppName=d.i$tax_i$species[match(spp, d.i$tax_i$sNum)]) %>%
+          arrange(site, spp) %>%
+          mutate(id=d.i$X[site,"id"], el=d.i$X[site,"el"],
+                 Parameter=as.character(Parameter), model=as.character(model)),
+        out.ls$prPres_ %>%
+          mutate(site=str_split_fixed(Parameter, "\\.", n=3)[,2],
+                 spp=str_split_fixed(Parameter, "\\.", n=3)[,3]) %>%
+          mutate(site=as.numeric(site), spp=as.numeric(spp)) %>%
+          mutate(sppName=d.i$tax_i$species[match(spp, d.i$tax_i$sNum)]) %>%
+          arrange(site, spp) %>%
+          mutate(id=d.i$X_[site,"id"], el=d.i$X_[site,"el"],
+                 Parameter=as.character(Parameter), model=as.character(model))
+      )
+      
+      # prPresL
+      out.pars$pP_L[[i]] <- out.ls$prPresL %>%
+        mutate(plot=str_split_fixed(Parameter, "\\.", n=3)[,2],
+               spp=str_split_fixed(Parameter, "\\.", n=3)[,3]) %>%
+        mutate(plot=as.numeric(plot), spp=as.numeric(spp)) %>% 
+        mutate(sppName=d.i$tax_i$species[match(spp, d.i$tax_i$sNum)]) %>%
+        arrange(plot, spp) %>%
+        mutate(id=d.i$V[plot,"Plot_id"], el=d.i$V[plot,"el"],
+               Parameter=as.character(Parameter), model=as.character(model)) 
+      
+      
+      #### diversity ------------------
+      
+      # ShannonH, ShannonH_
+      out.pars$H[[i]] <- rbind(
+        out.ls$ShannonH %>%
+          mutate(site=str_split_fixed(Parameter, "\\.", n=2)[,2]) %>%
+          mutate(site=as.numeric(site)) %>%
+          arrange(site) %>%
+          mutate(id=d.i$X[site,"id"], el=d.i$X[site,"el"],
+                 Parameter=as.character(Parameter), model=as.character(model)), 
+        out.ls$ShannonH_ %>%
+          mutate(site=str_split_fixed(Parameter, "\\.", n=2)[,2]) %>%
+          mutate(site=as.numeric(site)) %>%
+          arrange(site) %>%
+          mutate(id=d.i$X_[site,"id"], el=d.i$X_[site,"el"],
+                 Parameter=as.character(Parameter), model=as.character(model))
+      )
+      
+      # ShannonH_L
+      out.pars$ShannonH_L[[i]] <- out.ls$ShannonH_L %>%
+        mutate(plot=str_split_fixed(Parameter, "\\.", n=2)[,2]) %>%
+        mutate(plot=as.numeric(plot)) %>%
+        arrange(plot) %>%
+        mutate(id=d.i$V[plot,"Plot_id"], el=d.i$V[plot,"el"],
+               Parameter=as.character(Parameter), model=as.character(model))
+      
+      
+      #### richness -------------------
+      
+      # Rich, Rich_
+      out.pars$S_R[[i]] <- rbind(
+        out.ls$Rich %>%
+          mutate(site=str_split_fixed(Parameter, "\\.", n=2)[,2]) %>%
+          mutate(site=as.numeric(site)) %>%
+          arrange(site) %>%
+          mutate(id=d.i$X[site,"id"], el=d.i$X[site,"el"],
+                 Parameter=as.character(Parameter), model=as.character(model)), 
+        out.ls$Rich_ %>%
+          mutate(site=str_split_fixed(Parameter, "\\.", n=2)[,2]) %>%
+          mutate(site=as.numeric(site)) %>%
+          arrange(site) %>%
+          mutate(id=d.i$X_[site,"id"], el=d.i$X_[site,"el"],
+                 Parameter=as.character(Parameter), model=as.character(model))
+      )
+      
+      # RichL
+      out.pars$S_L[[i]] <- out.ls$RichL %>%
+        mutate(plot=str_split_fixed(Parameter, "\\.", n=2)[,2]) %>%
+        mutate(plot=as.numeric(plot)) %>%
+        arrange(plot) %>%
+        mutate(id=d.i$V[plot,"Plot_id"], el=d.i$V[plot,"el"],
+               Parameter=as.character(Parameter), model=as.character(model))
+      
     }
     
+    
+    #### dispersion parameter ---------
+    out.pars$disp[[i]] <- out.ls$disp_lam %>% 
+      mutate(Parameter=as.character(Parameter), model=as.character(model))
+    
+    
+    #### taxonomic bias ---------------
+    if("D" %in% pars) {
+      out.pars$D[[i]] <- out.ls$D %>% 
+        mutate(spp=str_split_fixed(Parameter, "\\.", 2)[,2]) %>%
+        mutate(sppName=d.i$tax_i$species[match(spp, d.i$tax_i$sNum)],
+               Parameter=as.character(Parameter), model=as.character(model))
     }
     
+    
+    #### log likelihood ---------------
+    if("log_lik" %in% pars) {
+      out.pars$log_lik[[i]] <- out.ls$log_lik %>%
+        mutate(plot=str_split_fixed(Parameter, "\\.", n=3)[,2],
+               spp=str_split_fixed(Parameter, "\\.", n=3)[,3]) %>%
+        mutate(plot=as.numeric(plot), spp=as.numeric(spp)) %>% 
+        mutate(sppName=d.i$tax_i$species[match(spp, d.i$tax_i$sNum)]) %>%
+        arrange(plot, spp) %>%
+        mutate(id=d.i$V[plot,"Plot_id"], el=d.i$V[plot,"el"],
+               Parameter=as.character(Parameter), model=as.character(model)) 
+    }
+
   }
   return(list(full=out.stan, summaries=map(out.pars, ~do.call('rbind', .))))
 }
