@@ -334,7 +334,7 @@ talk_fonts <- theme(panel.grid=element_blank(),
                     legend.title=element_text(size=14),
                     strip.text=element_text(size=16),
                     title=element_text(size=18))
-mod_col <- c("Joint"="#7b3294", "Structured Only"="#008837")
+mod_col <- c("Joint"="#7b3294", "Structured"="#008837")
 
 loo.f <- dir(fS_out, "loo.*csv")
 loo.df <- tibble(mod=str_split_fixed(loo.f, "_", 3)[,2], 
@@ -345,7 +345,7 @@ loo.df <- tibble(mod=str_split_fixed(loo.f, "_", 3)[,2],
   mutate(v_scale=str_sub(str_split_fixed(v_full, "__", 2)[,2], 1, 1),
          v_name=str_sub(str_split_fixed(v_full, "__", 2)[,2], 3, -1)) %>%
   mutate(model=case_when(mod=="WY" ~ "Joint",
-                         mod=="Y" ~ "Structured Only"))
+                         mod=="Y" ~ "Structured"))
   
 ggplot(loo.df, aes(x=nCov, y=elpd, colour=model, group=model)) + 
   geom_point(size=3) + geom_line() + 
