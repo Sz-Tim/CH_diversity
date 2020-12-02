@@ -425,7 +425,7 @@ aggregate_output <- function(d.f, mods, pars_save, out.dir="out") {
   type <- ifelse(any(grepl("vs", mods), grepl("fwdSearch", out.dir)), "vs", "pred")
   
   # storage objects
-  out.pars <- imap(pars_save, ~vector("list", length(mods)))
+  out.pars <- list()
   out.stan <- vector("list", length(mods)) %>% setNames(mods)
   
   for(i in seq_along(mods)) {
