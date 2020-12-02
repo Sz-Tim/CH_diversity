@@ -518,7 +518,7 @@ aggregate_output <- function(d.f, mods, pars_save, out.dir="out") {
              spp=str_split_fixed(Parameter, "\\.", n=3)[,3]) %>%
       mutate(ParName=ParNames[as.numeric(cov)],
              sppName=d.i$tax_i$species[match(spp, d.i$tax_i$sNum)],
-             genName=str_sub(sppName, 1L, 4L)) %>% 
+             genName=str_split_fixed(sppName, "_", 2)[,1]) %>% 
       mutate(Parameter=as.character(Parameter), model=as.character(model))
     
     # sigma_b
