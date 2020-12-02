@@ -10,22 +10,18 @@ source("code/00_fn.R")
 
 
 ### Full models ----------------------------------------------------------------
-Y_opt <- "vs_Y_altRE_G"
-WY_opt <- "vs_WY_altRE_G"
-# Y_opt <- "Y_7__L_aspctN"
-# WY_opt <- "WY_6__R_lcH"
-agg_vs <- aggregate_output(d.f=paste0("data/stan_data/", c("vs_no_pred", "vs_no_pred")),#paste0("data/fwdSearch/", c(Y_opt, WY_opt)),
+Y_opt <- "Y_4__k-2_L_SoilTSt"
+# WY_opt <- "WY_5__k-2_L_Pasture"
+WY_opt <- "WY_7__k-2_R_AP"
+agg_vs <- aggregate_output(d.f=paste0("data/fwdSearch/", c(Y_opt, WY_opt)),
                            mods=c(Y_opt, WY_opt), 
-                           out.dir="out/vs_all_species",#"out/fwdSearch",
-                           pars_save=c(lLAM="lLAMBDA", llam="llambda",
-                                       pP_L="prPresL", 
-                                       beta="beta", B="B", b="b", 
-                                       sig_b="sigma_b", Sig_B="Sigma_B",
-                                       disp="disp_lam", D="D", 
-                                       log_lik="log_lik"))
+                           out.dir="out/fwdSearch",
+                           pars_save=c("lLAMBDA", "llambda",
+                                       "beta", "b", "sigma_b", 
+                                       "disp_lam", "D", "log_lik"))
 
-saveRDS(agg_vs$summaries, "out/agg_vs_OLD.rds")
-saveRDS(agg_vs$full, "out/agg_vs_full_OLD.rds")
+saveRDS(agg_vs$summaries, "out/agg_vs_k-2.rds")
+saveRDS(agg_vs$full, "out/agg_vs_k-2_full.rds")
 
 
 
@@ -33,24 +29,20 @@ saveRDS(agg_vs$full, "out/agg_vs_full_OLD.rds")
 
 ### Best models ----------------------------------------------------------------
 
-# WAIT!! RUN THIS MANUALLY WITHIN THE FUNCTION IN CASE PARNAMES FAILS!
-agg_opt <- aggregate_output(d.f=paste0("data/opt/", c("WY"), "__opt_var_set"),
-                             mods=c("WY"),
-                             out.dir="out/opt",
-                             pars_save=c(llam="llambda",
-                                         lLAM="lLAMBDA", lLAM_="lLAMBDA_", 
-                                         pP_L="prPresL", 
-                                         pP_R="prPres", pP_R_="prPres_",
-                                         H="ShannonH", H_="ShannonH_",
-                                         S_R="Rich", S_R_="Rich_", S_L="RichL",
-                                         pred_R="pred_Y", pred_R_="pred_Y_", 
-                                         pred_L="pred_YL",
-                                         beta="beta", B="B", b="b", 
-                                         sig_b="sigma_b", Sig_B="Sigma_B",
-                                         disp="disp_lam", D="D"))
+agg_opt <- aggregate_output(d.f="data/opt/Y__opt_var_set",
+                            mods="Y",
+                            out.dir="out/opt",
+                            pars_save=c("lLAMBDA", "lLAMBDA_", "llambda",
+                                        "tot_lLAM", "tot_lLAM_", "tot_llam", 
+                                        "prPres", "prPres_", "prPresL", 
+                                        "ShannonH", "ShannonH_", "ShannonH_L",
+                                        "Rich", "Rich_", "RichL",
+                                        "pred_Y", "pred_Y_", "pred_YL",
+                                        "beta", "B", "b", "sigma_b", "Sigma_B",
+                                        "disp_lam", "D"))
 
-saveRDS(agg_opt$summaries, "out/agg_opt_WY.rds")
-saveRDS(agg_opt$full, "out/agg_opt_full_WY.rds")
+saveRDS(agg_opt$summaries, "out/agg_opt_Y.rds")
+saveRDS(agg_opt$full, "out/agg_opt_full_Y.rds")
 
 
 
