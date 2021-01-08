@@ -7,7 +7,7 @@
 
 ##--- set up
 # cv: cross-validation; vs = single test/train; pred = predict all of VD
-set_type <- c("cv", "vs", "pred")[1]  
+set_type <- c("cv", "vs", "pred")[3]  
 library(tidyverse); library(sf); library(googlesheets)
 gis.dir <- "../2_gis/data/VD_21781/"
 ant.dir <- "../1_opfo/data/"
