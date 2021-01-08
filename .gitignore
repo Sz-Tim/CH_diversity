@@ -5,6 +5,7 @@
 # slurm scripts
 code/02*slurm*.sh
 code/*/*slurm.sh
+code/*scratch*
 
 # intermediate data files
 data/fwdSearch/
