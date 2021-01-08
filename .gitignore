@@ -4,17 +4,33 @@
 
 # slurm scripts
 code/02*slurm*.sh
+code/*/*slurm.sh
 
 # intermediate data files
-data/fwdSearch/*.Rdump
-data/fwdSearch/*_i.rds
-data/fwdSearch/*_ls.rds
+data/fwdSearch/
+data/stan_data/cv*
+data/stan_data/vs*
+data/stan_data/test*
+data/opt/
+data/opt_a/
 
 # large output files
 out/fwdSearch/Y_*.csv
 out/fwdSearch/WY_*.csv
+out/agg_opt*rds
+out/opt/*.csv
+out/opt_a/*.csv
 
+# temp manuscript files
+ms/outline.key
+ms/*/*.log
+ms/*/*.tex
+ms/*/*.gz
+
+# folders
 eda/
+cmdstan-2.23.0/
+code/dev/
 
 # Session Data files
 .RData
