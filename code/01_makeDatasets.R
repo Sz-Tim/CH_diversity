@@ -317,6 +317,10 @@ if(set_type=="cv") {
   if(set_type=="pred") {
     X.mx <- rbind(X.mx,
                   X_W.mx[match(K$id_W_, X_W.mx[,'id']),])
+    # Remove extreme road length values (unjustified extrapolation)
+    if("rdLen" %in% X_vars) {
+      X.mx[X.mx[,"rdLen"] < 6,"rdLen"] <- NA
+    }
   } 
   if(test_prop_Y > 0) {  # test/train
     X.mx <- rbind(X.mx,
