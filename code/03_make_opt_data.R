@@ -22,7 +22,9 @@ loo.df <- tibble(mod=str_split_fixed(loo.f, "_", 3)[,2],
                  elpd=map_dbl(loo.f, ~read_csv(paste0(fS_out, .x))$elpd_loo[1]),
                  elpd_se=map_dbl(loo.f, ~read_csv(paste0(fS_out, .x))$se_elpd_loo[1]),
                  v_full=map_chr(loo.f, ~read_csv(paste0(fS_out, .x))$X1[1])) %>%
-  group_by(mod) %>% filter(elpd==max(elpd)) %>% ungroup %>%
+  group_by(mod) %>% filter(abs(elpd-max(elpd))<4) %>% 
+  # filter(nCov == max(nCov)) %>% ungroup %>%
+  filter(elpd == max(elpd)) %>% ungroup %>%
   mutate(file=paste(mod, nCov, "_k-1", str_split_fixed(v_full, "__", 2)[,2], sep="_"))
 opt_var <- map(loo.df$file, ~readRDS(paste0(fS_dat, .x, "_ls.rds"))) %>%
   setNames(loo.df$mod) %>%
