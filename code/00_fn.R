@@ -550,36 +550,6 @@ aggregate_output <- function(d.f, mods, pars_save, out.dir="out") {
       
       #### presence / absence ---------
       
-      # # pred_Y, pred_Y_
-      # out.pars$pred_R[[i]] <- rbind(
-      #   out.ls$pred_Y %>%
-      #     mutate(site=str_split_fixed(Parameter, "\\.", n=3)[,2],
-      #            spp=str_split_fixed(Parameter, "\\.", n=3)[,3]) %>%
-      #     mutate(site=as.numeric(site), spp=as.numeric(spp)) %>%
-      #     mutate(sppName=d.i$tax_i$species[match(spp, d.i$tax_i$sNum)]) %>%
-      #     arrange(site, spp) %>%
-      #     mutate(id=d.i$X[site,"id"], el=d.i$X[site,"el"],
-      #            Parameter=as.character(Parameter), model=as.character(model)),
-      #   out.ls$pred_Y_ %>%
-      #     mutate(site=str_split_fixed(Parameter, "\\.", n=3)[,2],
-      #            spp=str_split_fixed(Parameter, "\\.", n=3)[,3]) %>%
-      #     mutate(site=as.numeric(site), spp=as.numeric(spp)) %>%
-      #     mutate(sppName=d.i$tax_i$species[match(spp, d.i$tax_i$sNum)]) %>%
-      #     arrange(site, spp) %>%
-      #     mutate(id=d.i$X_[site,"id"], el=d.i$X_[site,"el"],
-      #            Parameter=as.character(Parameter), model=as.character(model))
-      # )
-      # 
-      # # pred_YL
-      # out.pars$pred_L[[i]] <- out.ls$pred_YL %>%
-      #   mutate(plot=str_split_fixed(Parameter, "\\.", n=3)[,2],
-      #          spp=str_split_fixed(Parameter, "\\.", n=3)[,3]) %>%
-      #   mutate(plot=as.numeric(plot), spp=as.numeric(spp)) %>% 
-      #   mutate(sppName=d.i$tax_i$species[match(spp, d.i$tax_i$sNum)]) %>%
-      #   arrange(plot, spp) %>%
-      #   mutate(id=d.i$V[plot,"Plot_id"], el=d.i$V[plot,"el"],
-      #          Parameter=as.character(Parameter), model=as.character(model)) 
-      
       # prPres, prPres_
       out.pars$pP_R[[i]] <- rbind(
         out.ls$prPres %>%
