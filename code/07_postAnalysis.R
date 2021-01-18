@@ -18,29 +18,9 @@ d.i <- readRDS("data/opt/Y__opt_var_set_i.rds")
 site_i <- read_csv("../1_opfo/data/opfo_siteSummaryProcessed.csv")
 
 ants <- load_ant_data(str_type="soil", clean_spp=T)
-tax_i <- read_csv("data/tax_i.csv") %>%
-  mutate(subf=as.factor(case_when(genus=="Apha" ~ "Myrmicinae",
-                                  genus=="Camp" ~ "Formicinae",
-                                  genus=="Colo" ~ "Formicinae",
-                                  genus=="Crem" ~ "Myrmicinae",
-                                  genus=="Doli" ~ "Dolichoderinae",
-                                  genus=="Form" ~ "Formicinae",
-                                  genus=="Formx" ~ "Myrmicinae",
-                                  genus=="Harp" ~ "Myrmicinae",
-                                  genus=="Lasi" ~ "Formicinae",
-                                  genus=="Lept" ~ "Myrmicinae",
-                                  genus=="Mani" ~ "Myrmicinae",
-                                  genus=="Myrm" ~ "Myrmicinae",
-                                  genus=="Myrme" ~ "Myrmicinae",
-                                  genus=="Plag" ~ "Formicinae",
-                                  genus=="Poly" ~ "Formicinae",
-                                  genus=="Pone" ~ "Ponerinae",
-                                  genus=="Sole" ~ "Myrmicinae",
-                                  genus=="Sten" ~ "Myrmicinae",
-                                  genus=="Tapi" ~ "Dolichoderinae",
-                                  genus=="Temn" ~ "Myrmicinae",
-                                  genus=="Tetr" ~ "Myrmicinae")),
-         fam=as.factor("Formicidae"))
+tax_i <- read_csv("data/tax_i.csv") %>% 
+  mutate(across(contains("Full"), as.factor))
+  
 
 det_Y <- which(colSums(d.ls$Y)>0)
 
