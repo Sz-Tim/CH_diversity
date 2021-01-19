@@ -35,7 +35,14 @@ dem <- raster::raster("../2_gis/data/VD_21781/dem_VD_21781.tif") %>%
 site.sf <- st_read("../2_gis/data/VD_21781/site_env_sf.shp")
 names(site.sf) <- c(read_csv("../2_gis/data/VD_21781/site_env_sf_names.csv")$full,
                     "geometry")
-ants <- load_ant_data(str_type="all", clean_spp=T)
+ants_raw <- load_ant_data(str_type="all", clean_spp=T)
+ants <- list(pub=bind_rows(ants_raw$pub, 
+                      ants_raw$str %>% filter(TypeOfSample != "soil") %>%
+                        select(TubeNo, SPECIESID, SampleDate)), 
+             str=ants_raw$str %>% filter(TypeOfSample == "soil") %>%
+               select(TubeNo, SPECIESID, SampleDate))
+ants$all <- bind_rows(ants$pub %>% mutate(source="p"),
+                      ants$str %>% mutate(source="s"))
 tax_i <- read_csv("data/tax_i.csv")
 
 
