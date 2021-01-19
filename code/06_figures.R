@@ -136,7 +136,6 @@ dev.off()
 ########------------------------------------------------------------------------
 
 el.pred <- data.frame(el=seq(300, 3000, by=10))
-
 S.loess <- bind_rows(
   agg$S_R %>%
     group_by(model, id, el) %>% group_by(model) %>% nest() %>%
@@ -198,32 +197,39 @@ S.p <- ggplot(S.loess, aes(el)) +
   geom_ribbon(aes(ymin=loess_lo, ymax=loess_hi, fill=model), 
               alpha=0.5, colour=NA) +
   geom_line(aes(y=loess_md, colour=model)) + 
-  scale_colour_manual(values=mod_col) + scale_fill_manual(values=mod_col) + 
+  scale_colour_manual("Model", values=mod_col) + 
+  scale_fill_manual("Model", values=mod_col) + 
   xlim(350, 3000) + 
   facet_grid(Scale~., scales="free_y") + 
   labs(x="Elevation (m)", y="Richness") + 
-  ms_fonts + theme(panel.spacing=unit(3, "mm"))
+  ms_fonts + theme(panel.spacing=unit(3, "mm"),
+                   axis.title.y=element_text(margin=margin(r=6)))
 H.p <- ggplot(H.loess, aes(el)) + 
   geom_ribbon(aes(ymin=loess_lo, ymax=loess_hi, fill=model), 
               alpha=0.5, colour=NA) +
   geom_line(aes(y=loess_md, colour=model)) + 
-  scale_colour_manual(values=mod_col) + scale_fill_manual(values=mod_col) + 
+  scale_colour_manual("Model", values=mod_col) + 
+  scale_fill_manual("Model", values=mod_col) + 
   xlim(350, 3000) + 
   facet_grid(Scale~., scales="free_y") + 
   labs(x="Elevation (m)", y="Diversity") + 
-  ms_fonts + theme(panel.spacing=unit(3, "mm"))
+  ms_fonts + theme(panel.spacing=unit(3, "mm"),
+                   axis.title.y=element_text(margin=margin(l=12, r=6)))
 lam.p <- ggplot(lam.loess, aes(el)) + 
   geom_hline(yintercept=0, size=0.25, colour="gray30") +
   geom_ribbon(aes(ymin=loess_lo, ymax=loess_hi, fill=model), 
               alpha=0.5, colour=NA) +
   geom_line(aes(y=loess_md, colour=model)) + 
-  scale_colour_manual(values=mod_col) + scale_fill_manual(values=mod_col) + 
+  scale_colour_manual("Model", values=mod_col) + 
+  scale_fill_manual("Model", values=mod_col) + 
   xlim(350, 3000) + scale_y_continuous(labels=scales::comma, limits=c(0, NA)) + 
   facet_grid(Scale~., scales="free_y") + 
   labs(x="Elevation (m)", y="Colony intensity") + 
-  ms_fonts + theme(panel.spacing=unit(3, "mm"))
+  ms_fonts + theme(panel.spacing=unit(3, "mm"), 
+                   axis.title.y=element_text(margin=margin(l=12, r=6)))
 
-p <- ggpubr::ggarrange(S.p, H.p, lam.p, nrow=1,
+p <- ggpubr::ggarrange(S.p, H.p, lam.p, nrow=1, widths=c(.9, .9, 1),
+                       labels=c("a.", "b.", "c."), label.x=0.02,
                        common.legend=T, legend="bottom") 
 ggsave(paste0(ms_dir, "figs/el_patterns.png"), p, width=10, height=5, units="in")
 
@@ -273,7 +279,8 @@ p <- ggplot(b_post, aes(x=mean, y=Par, fill=model, colour=model)) +
   geom_linerange(data=filter(beta_post, model!="Joint"), aes(xmin=L025, xmax=L975), 
                  size=0.5, position=position_nudge(y=-0.1)) + 
   geom_vline(xintercept=0, linetype=3, colour="gray30", size=0.5) +
-  scale_fill_manual(values=mod_col) + scale_colour_manual(values=mod_col) +
+  scale_colour_manual("Model", values=mod_col) + 
+  scale_fill_manual("Model", values=mod_col) + 
   facet_grid(Scale~., scales="free_y", space="free_y") +
   labs(x="Posterior slope", y="") +
   ms_fonts + 
