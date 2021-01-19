@@ -337,6 +337,104 @@ ggsave(paste0(ms_dir, "figs/beta_diversity.png"), p, width=5, height=3.5)
 
 
 
+########------------------------------------------------------------------------
+## Elevational assemblages
+########------------------------------------------------------------------------
+
+# DPCoA on plot-level posteriors
+library(ade4); library(adegraphics)
+adegpar(psub.cex=1.5, 
+        ppoints=list(cex=0.4, alpha=0.8), 
+        plines=list(lwd=0.25),
+        pellipse=list(alpha=0.4, axes=list(draw=FALSE)))
+
+col_region <- c(Alps="#56B4E9", Jura="#E69F00", Plateau="#666666")
+
+tax_dist <- tax_i %>% select(contains("Full")) %>% as.data.frame
+rownames(tax_dist) <- paste(tax_dist$FullGen, tax_dist$FullSpp, sep="_")
+
+
+lam.site.ls <- agg$lam %>% 
+  mutate(site=str_pad(str_sub(as.character(id), 1, -5), 2, "left", "0"),
+         BDM=arrange(site_i, BDM_id)$BDM[as.numeric(site)]) %>%
+  filter(model=="Joint") %>%
+  select(sppName, site, BDM, id, median) %>%
+  pivot_wider(names_from="sppName", values_from="median")
+lam.plot.mx <- as.matrix(lam.site.ls[,4:83])
+
+env.plot <- tibble(el=as.factor((d.i[[1]]$V[,2] %/% 100) * 100),
+                   el_cont=d.i[[1]]$V[,2],
+                   region=site_i$region[match(lam.site.ls$BDM, site_i$BDM)]) %>%
+  mutate(region=factor(ifelse(region=="Low", "Plateau", region)))
+
+lam.dpcoa <- dpcoa(as.data.frame(lam.plot.mx), 
+                   vegan::taxa2dist(tax_dist, varstep=T), scannf=F, nf=4)
+p.A1 <- s.class(lam.dpcoa$li, env.plot$el, 
+               psub=list(text="a.", position="topleft"),
+               col=terrain.colors(n_distinct(env.plot$el)))
+p.A2 <- plotEig(lam.dpcoa$eig[1:30], lam.dpcoa$nf, pbackground=list(box=TRUE), 
+                psub=list(text="Eigenvalues", cex=1), plot=FALSE)
+p.A <- insert(p.A2, p.A1, posi=c(0.02, 0.02), ratio=0.25)
+p.B <- s.class(lam.dpcoa$li, env.plot$region, 
+               psub=list(text="b.", position="topleft"), col=col_region)
+
+png(paste0(ms_dir, "figs/DPCoA.png"), height=4, width=8, res=400, units="in")
+ADEgS(list(p.A, p.B), layout=c(1,2))
+dev.off()
+
+
+# Raw samples: genus proportions
+genProp.df <- ants$all %>%
+  mutate(el=raster::extract(dem, .),
+         elCat=c("Montane", "Plateau")[(el < 1000) + 1],
+         elCat=factor(elCat, levels=c("Plateau", "Montane")),
+         genFull=tax_i$FullGen[match(SPECIESID, tax_i$species)],
+         source=factor(source, labels=c("Public", "Structured"))) %>%
+  st_set_geometry(NULL) %>% filter(!is.na(elCat))
+gen_1pct <- unique((genProp.df %>% 
+                      group_by(genFull, elCat, source) %>% summarise(N=n()) %>%
+                      group_by(elCat, source) %>% mutate(prop=N/sum(N)) %>%
+                      ungroup %>% filter(prop > 0.01))$genFull)
+genProp.df <- genProp.df %>%
+  mutate(genus_1pct=if_else(genFull %in% gen_1pct, genFull, "Other"), 
+         genus_1pct=factor(genus_1pct, levels=c(gen_1pct, "Other")))
+
+p <- ggplot(genProp.df, aes(elCat, fill=genus_1pct)) + 
+  geom_hline(yintercept=0, colour="gray30", size=0.25) + 
+  geom_bar(position="fill", colour="black", size=0.25) +
+  scale_fill_viridis_d("Genus", option="D") + 
+  facet_grid(.~source) + 
+  ms_fonts + 
+  labs(x="", y="Proportion of samples")
+
+ggsave(paste0(ms_dir, "figs/genus_assemblages.png"), p, width=5, height=5)
+
+
+
+
+
+########------------------------------------------------------------------------
+## Taxonomic bias
+########------------------------------------------------------------------------
+
+p <- agg$D %>%
+  mutate(genFull=tax_i$FullGen[match(sppName, tax_i$species)],
+         sppName=str_replace(str_remove(sppName, "-GR"), "_", ".")) %>%
+  ggplot(aes(x=median, xmin=L05, xmax=L95, y=sppName,
+             colour=sign(L05-1)==sign(L95-1))) + 
+  geom_vline(xintercept=1, colour="gray") +
+  geom_point() + geom_linerange() + 
+  facet_grid(genFull~., scales="free_y", space="free_y") +
+  scale_colour_manual(values=c("gray", "darkred"), guide=F) +
+  ms_fonts  + theme(axis.text.y=element_text(hjust=1, vjust=0.5),
+                    strip.background=element_blank(),
+                    strip.text=element_blank(), 
+                    panel.spacing=unit(0.5, "mm")) + 
+  labs(y="", x="Proportional Bias")
+ggsave(paste0(ms_dir, "figs/D_opt.png"), p, width=4, height=13)
+
+
+
 
 
 
