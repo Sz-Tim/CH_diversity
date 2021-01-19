@@ -103,8 +103,8 @@ lam.site.ls <- agg$lam %>%
   mutate(site=str_pad(str_sub(as.character(id), 1, -5), 2, "left", "0"),
          BDM=arrange(site_i, BDM_id)$BDM[as.numeric(site)]) %>%
   filter(model=="Joint") %>%
-  select(sppName, site, BDM, id, mean) %>%
-  pivot_wider(names_from="sppName", values_from="mean")
+  select(sppName, site, BDM, id, L025) %>%
+  pivot_wider(names_from="sppName", values_from="L025")
 beta.lam.df <- site.mns %>% 
   filter(BDM %in% lam.site.ls$BDM) %>%
   mutate(beta.BRAY.BAL=NA, 
@@ -118,17 +118,82 @@ for(i in 1:n_distinct(beta.lam.df$BDM)) {
   beta.lam.df$beta.BRAY[i] <- beta_i$beta.BRAY
 }
 
-p <- beta.lam.df %>% pivot_longer(7:9, names_to="BetaPart", values_to="Beta") %>%
-  mutate(BetaPart=factor(BetaPart, 
-                         levels=paste0("beta.BRAY", c("", ".BAL", ".GRA")), 
-                         labels=c("Overall", "Balanced\nvariation", "Abundance\ngradient"))) %>%
-  ggplot(aes(el, Beta, colour=BetaPart)) + 
-  stat_smooth(size=0.5, se=F, linetype=2, method="lm", formula=y~x+I(x^2)) + 
-  geom_point(shape=1) + 
-  scale_colour_brewer(expression(beta~diversity), type="qual", palette=2) + 
-  labs(title=expression('Between-plot abundance-based'~beta~'diversity'),
-       x="Elevation (m)", y=expression('Within-site'~beta~diversity)) + 
-  ylim(0,1) + talk_fonts + 
-  theme(legend.key.height=unit(12, "mm"))
-ggsave("eda/diversity_beta_lam.png", p, width=9, height=7)
+
+
+
+library(vegan)
+plot.mds <- metaMDS(lam.site.ls[,4:83], trymax=1e3, k=2)
+  mds.df <- as_tibble(plot.mds$points) %>%
+  mutate(el=d.i$V[,2])
+ggplot(mds.df, aes(MDS1, MDS2, colour=el)) + geom_point() + 
+  scale_colour_viridis_c(option="E")
+
+
+
+
+LAM.site.ls <- agg$LAM %>% 
+  filter(model=="Joint") %>%
+  filter(id > 1e5) %>%
+  select(sppName, el, id, L025) %>%
+  pivot_wider(names_from="sppName", values_from="L025")
+site.mds <- metaMDS(LAM.site.ls[,3:82], trymax=1e3, k=2)
+mds.df <- as_tibble(site.mds$points) %>%
+  mutate(el=LAM.site.ls$el)
+ggplot(mds.df, aes(MDS1, MDS2, colour=el>1000)) + geom_point() 
+
+
+tax_dist <- tax_i %>% select(contains("Full")) %>% as.data.frame
+rownames(tax_dist) <- paste(tax_dist$FullGen, tax_dist$FullSpp, sep="_")
+
+lam.plot.mx <- as.matrix(lam.site.ls[,4:83])
+rownames(lam.plot.mx) <- lam.site.ls$id
+
+env.plot <- data.frame(el=as.factor((d.i$V[,2] %/% 100) * 100),
+                       el_cont=d.i$V[,2],
+                       region=site_i$region[match(lam.site.ls$BDM, site_i$BDM)])
+
+LAM.site.mx <- as.matrix(LAM.site.ls[,3:82])
+rownames(LAM.site.mx) <- LAM.site.ls$id
+
+env.site <- data.frame(el=as.factor((LAM.site.ls$el %/% 100) * 100),
+                       el_cont=LAM.site.ls$el,
+                       region=site_i$region[match(LAM.site.ls$id, site_i$BDM)])
+
+library(ade4)
+library(adegraphics) 
+adegpar(pbackground.col = "grey", 
+        pgrid.col = "white", 
+        psub.cex = 1.5, 
+        ppoints = list(cex = 0.4, alpha = 0.8), 
+        pellipse = list(alpha = 0.4, axes = list(draw = FALSE)))
+
+lam.dpcoa <- dpcoa(as.data.frame(lam.plot.mx), 
+                   vegan::taxa2dist(tax_dist, varstep=T), scannf=F, nf=4)
+lam.bc <- bca(lam.dpcoa, env.plot$el, scannf=F, nf=5)
+
+lam.bc$ratio
+
+
+
+
+p <- list(
+  a=s.class(lam.dpcoa$li, env.plot$el, 
+            col=terrain.colors(n_distinct(env.plot$el))),
+  b=s.class(lam.dpcoa$dls, tax_dist$FullSpp, 
+            col=scales::viridis_pal()(n_distinct(tax_dist$FullSpp))),
+  c=s.class(lam.dpcoa$dls, as.factor(tax_dist$FullGen), 
+            col=scales::viridis_pal(option="E")(n_distinct(tax_dist$FullGen))),
+  d=s.class(lam.dpcoa$dls, tax_dist$FullSF, 
+            col=scales::viridis_pal(option="E")(n_distinct(tax_dist$FullSF))),
+  e=s.class(lam.bc$ls, env.plot$el, 
+            col=terrain.colors(n_distinct(env.plot$el))),
+  f=s.class(lam.bc$dls, tax_dist$FullSpp, 
+            col=scales::viridis_pal()(n_distinct(tax_dist$FullSpp))),
+  g=s.class(lam.bc$dls, tax_dist$FullGen,
+            col=scales::viridis_pal(option="E")(n_distinct(tax_dist$FullGen))),
+  h=s.class(lam.bc$dls, tax_dist$FullSF, 
+            col=scales::viridis_pal(option="E")(n_distinct(tax_dist$FullSF)))
+)
+
+Fig2 <- ADEgS(p, layout = c(2,4))
 
