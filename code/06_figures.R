@@ -250,14 +250,16 @@ ggsave(paste0(ms_dir, "figs/el_patterns.png"), p, width=10, height=5, units="in"
 ## Posterior species responses
 ########------------------------------------------------------------------------
 
-parName.df <- tibble(par=c("R_grwnDD0", "R_grwnDD0_sq", 
+parName.df <- tibble(par=c("intercept", 
+                           "R_grwnDD0", "R_grwnDD0_sq", 
                            "R_AP", 
                            "R_Forest",
                            "R_rdLen", 
                            "L_SoilTSt", 
                            "L_Pasture", "L_Crop", 
                            "L_CnpyOpn", "L_CnpyMxd"),
-                     full=c("Growing deg. days",
+                     full=c("Intercept", 
+                            "Growing deg. days",
                             "Growing deg. days (sq)", 
                             "Annual precipation",
                             "Forest proportion", 
@@ -296,6 +298,34 @@ p <- ggplot(b_post, aes(x=mean, y=Par, fill=model, colour=model)) +
   theme(panel.grid.major.y=element_line(size=0.1, colour="gray30"),
         legend.position="bottom")
 ggsave(paste0(ms_dir, "figs/slope_means.png"), p, width=6, height=6, units="in")
+
+
+
+
+
+########------------------------------------------------------------------------
+## Uncertainty in species responses
+########------------------------------------------------------------------------
+
+p <- agg$b %>% 
+  mutate(Scale=str_sub(ParName, 1L, 1L),
+         Scale=factor(if_else(Scale=="i", "R", Scale),
+                      levels=c("R", "L"), labels=c("Regional", "Local")), 
+         Par=parName.df$full[match(ParName, parName.df$par)],
+         Par=factor(Par, levels=rev(unique(parName.df$full))),
+         SppInY=c("Species not in structured", 
+                  "Species in structured")[(spp %in% det_Y)+1]) %>%
+  ggplot(aes(x=abs(L95-L05), y=Par, fill=model)) + 
+  geom_vline(xintercept=0, colour="gray30", size=0.1) +
+  ggridges::geom_density_ridges(colour="gray30", alpha=0.75, scale=1, 
+                                size=0.25, rel_min_height=0.001) + 
+  scale_fill_manual("Model", values=mod_col) +
+  labs(x="Posterior 90% HDI width", y="") +
+  facet_grid(Scale~SppInY, scales="free_y", space="free_y") +
+  ms_fonts + 
+  theme(panel.grid.major.y=element_line(size=0.1, colour="gray30"),
+        legend.position="bottom")
+ggsave(paste0(ms_dir, "figs/slope_HDI.png"), p, width=6.75, height=6.5, units="in")
 
 
 
