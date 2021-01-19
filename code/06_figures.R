@@ -103,7 +103,7 @@ ms_fonts <- theme(panel.grid=element_blank(),
 ## VD sampling map
 ########------------------------------------------------------------------------
 
-pdf(paste0(ms_dir, "figs/map_ants_BDM_el.pdf"), height=7, width=7)
+png(paste0(ms_dir, "figs/map_ants_BDM_el.png"), height=7, width=7, res=400, units="in")
 par(mar=c(0.5, 0.5, 0, 0))
 raster::plot(dem, legend=F, axes=F, box=F,
              col=colorRampPalette(c("gray60", "white"))(255))
