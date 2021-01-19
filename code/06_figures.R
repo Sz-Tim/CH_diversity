@@ -27,11 +27,14 @@ lc_sum <- readxl::read_xlsx("../1_opfo/data/landcover_id.xlsx", 1) %>%
   mutate(VD=c(52381568, 24099, 2361482, 14810092, 8926571, 7856914, 95030, 
               101983, 6954192, 571985, 1114617, 960859, 5151839, 603243, 8666373), 
          VD_prop=VD/sum(VD))
-VD_raw <- st_read("../2_gis/data/VD_21781/Vaud_boundaries.shp") %>% 
-  filter(!grepl("Lac ", NAME)) 
-VD <- st_union(VD_raw)
+VD_raw <- st_read("../2_gis/data/VD_21781/Vaud_boundaries.shp") 
+VD <- st_union(VD_raw %>% filter(!grepl("Lac ", NAME)))
 dem <- raster::raster("../2_gis/data/VD_21781/dem_VD_21781.tif") %>%
   raster::mask(., st_zm(VD_raw))
+world <- st_read("../2_gis/data/world/World_Countries__Generalized_.shp") %>%
+  st_transform(st_crs(VD_raw)) %>%
+  select(COUNTRY)
+
 site.sf <- st_read("../2_gis/data/VD_21781/site_env_sf.shp")
 names(site.sf) <- c(read_csv("../2_gis/data/VD_21781/site_env_sf_names.csv")$full,
                     "geometry")
@@ -112,8 +115,8 @@ ms_fonts <- theme(panel.grid=element_blank(),
 
 png(paste0(ms_dir, "figs/map_ants_BDM_el.png"), 
     height=7, width=7, res=400, units="in")
-par(mar=c(0.5, 0.5, 0, 0))
-raster::plot(dem, legend=F, axes=F, box=F,
+par(mar=c(0.5, 0.5, 0, 0), fig=c(0, 1, 0, 1))
+raster::plot(dem, legend=F, axes=F, box=F, 
              col=colorRampPalette(c("gray60", "white"))(255))
 raster::scalebar(d=10000, xy=c(570000, 162000), below="km", 
                  label=c(0, 5, 10), type="bar")
@@ -126,6 +129,12 @@ legend(565000, 182000, pch=c(0,1), pt.cex=c(1.2, 1), y.intersp=1.25,
        legend=c("Structured\nsampling site", "Public sample"), 
        bty="n")
 dev.off()
+
+p <- ggplot(world) + geom_sf() + xlim(-3e5, 1.5e6) + ylim(-4e5, 6e5) + 
+  geom_sf(data=st_union(VD_raw), fill="#fdd49e", colour="black", size=0.5) +
+  theme(axis.line=element_blank(), axis.ticks=element_blank(), 
+        axis.text=element_blank(), panel.border=element_rect(size=2))
+ggsave(paste0(ms_dir, "figs/map_inset.png"), p, height=3, width=5, units="in")
 
 
 
