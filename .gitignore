@@ -7,6 +7,14 @@ code/02*slurm*.sh
 code/*/*slurm.sh
 code/*scratch*
 
+# latex auxilliary files
+ms/*/*/*.aux
+ms/*/*/*.bbl
+ms/*/*/*.blg
+ms/*/*/*.log
+ms/*/*/*.spl
+ms/*/*/*.gz
+
 # intermediate data files
 data/fwdSearch/
 data/stan_data/cv*
