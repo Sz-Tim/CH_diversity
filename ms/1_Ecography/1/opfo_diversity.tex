@@ -45,7 +45,7 @@
 \usepackage{pdflscape}
 \usepackage{natbib}
 
-\journal{Ecological Modelling}
+\journal{Ecography}
 \setcitestyle{authoryear,round,semicolon,sort}
 \bibliographystyle{apalike}
 \begin{document}
@@ -82,7 +82,7 @@ Increasingly, ecologists have access to occurrence data collected in various and
 
 However, that doesn't mean these data can't be useful. Instead, the geographic breadth and rather indiscriminate collection methods can capture occurrences in unexpected locations or detect species that may be missed in alternative, more structured sampling methods. Leveraging the widely available occurrence data could thus clarify patterns of species distributions and diversity, and the drivers that shape them.
 
-Here, we combine species occurrences of ants collected in a citizen science project in western Switzerland with species presence-absence data from a concurrent structured sampling effort. In a hierarchical Bayesian framework, we use the citizen science data to help inform species' responses to regional variables, and the structured samples to inform responses to both regional and local variables, while accounting for bias in geographic and taxonomic sampling effort in the citizen science data. With this model, we detail the patterns of ant colony density and species diversity across the landscapewhile incorporating uncertainty in species compositions, and we evaluate the support for hypothesized drivers across spatial scales. We compare inferences from the combined model with those from each dataset independently, and also assess the differences in observed communities from each sampling method. 
+Here, we combine species occurrences of ants collected in a citizen science project in western Switzerland with species abundance data from a concurrent structured sampling effort. In a hierarchical Bayesian framework, we use the citizen science data to help inform species' responses to regional variables, and the structured samples to inform responses to both regional and local variables, while accounting for bias in geographic and taxonomic sampling effort in the citizen science data. With this model, we detail the patterns of ant colony density and species diversity across the landscape while incorporating uncertainty in species compositions, and we evaluate the support for hypothesized drivers across spatial scales. We compare inferences from the combined model with those from each dataset independently, and also assess the differences in observed communities from each sampling method. 
 
 
 
@@ -95,52 +95,50 @@ This is a blurb about Vaud, including some about the climate, topography, as wel
 
 \begin{figure}
 	\centering\includegraphics[width=3.5in]{figs/map_VD.png}
-	\caption{\label{fig:VD_map} Map of the canton of Vaud, Switzerland. Samples consisted of presence-only data (blue points) and structured presence-absence data collected at 1 $km^2$ long-term biodiversity monitoring sites (red squares). }
+	\caption{\label{fig:VD_map} Map of the canton of Vaud, Switzerland. Samples consisted of presence-only data (blue points) and structured abundance data collected at 1 km$^2$ long-term biodiversity monitoring sites (red squares). }
 \end{figure}
 
 % Methods for citizen science data
-Ants were collected during the summer of 2019 in two simultaneous collection efforts (Fig. \ref{fig:VD_map}). First, a citizen science project involved the distribution of vials of ethanol to interested residents of the canton, who were asked to collect approximately 10 ant workers per colony for each vial. Participants were encouraged to explore under rocks, on bark, inside twigs, and in downed wood, and an online map was updated periodically to highlight data-sparse areas. Collectors returned the vials along with the locality of the sample (latitude and longitude, an address, or an annotated map), and often basic habitat information. A total of X,XXX samples were returned, representing collections between DATE and DATE. For these presence-only data, we discretized the landscape into a 1 $km^2$ grid (3,558 $km^2$) and tallied the number of counts for each species in each cell (X,XXX cells with occurrences). 
+Ants were collected during the summer of 2019 in two simultaneous collection efforts (Fig. \ref{fig:VD_map}). First, a citizen science project (Opération Fourmis: <https://wp.unil.ch/fourmisvaud/>) was organized to survey the ant fauna within the canton of Vaud. Vials of ethanol were distributed to interested citizen scientists, who were asked to collect approximately 10 ant workers per colony for each vial. Participants were encouraged to explore under rocks, on bark, inside twigs, and in downed wood, and an online map was updated periodically to highlight data-sparse areas. Collectors returned the vials along with the collection date and the locality of the sample including the latitude and longitude. A total of TK samples were returned, representing collections between TK and TK. For these presence-only data, we discretized the landscape into a 1 km$^2$ grid (3,558 km$^2$) and tallied the number of counts for each species in each cell (TK cells with occurrences). 
 
 % Methods for structured samples
-Second, a structured sampling effort collected local presence-absence data, where samples of ants were collected within 44 sites of 1 $km^2$ each. Thirty-nine of the sites were a part of long-term biodiversity monitoring efforts by the federal government, and as such were arranged on a regular grid with $sim$ 5-7 km between adjacent sites. Five additional sites are established monitoring sites by the University of Lausanne. The ants at each site were characterized by 25 plots, distributed among habitat types in approximate proportion to the abundance of each habitat, where each habitat type present within the site was represented by at least one plot. Inaccessible areas (e.g., cliffs, water, property beyond Vaud) were excluded, resulting in several sites with areas less than 1 $km^2$, and the number of plots was reduced proportionally (Appendix). Plots consisted of a 2m radius circle, with soil temperature recorded in the center, and vegetation characterized according to coverage classes within the plot (grass, forb, shrub, litter, bare, moss). Six flags were evenly spaced around the circumference, and within $sim$ 20cm of each (total surface area $sim 0.75 m^2$), we searched for ant colonies within any downed wood, under large rocks, and in $sim$ 2L of soil, litter, and small rocks using Hori Hori gardening knives. We haphazardly collected $sim$ 10 workers from each colony. All trees within the plot were also inspected for ant workers which were collected regardless of whether or not a colony was identifiable. Additionally, transects were mapped \emph{a priori}, distributed proportionally among habitat types and totalling 2km. Workers were collected from all permanent mounds within $\approx$ 2m of the transect line. 
+Second, a structured sampling effort collected local colony abundance data, where ants were collected within 44 sites of 1 km$^2$ each, with standardized effort across sites. Thirty-nine of the sites were a part of long-term biodiversity monitoring efforts by the federal government, and as such were arranged on a regular grid with approximately 5-7 km between adjacent sites. Five additional sites are established monitoring sites by the University of Lausanne. The ants at each site were characterized by 25 plots, distributed among habitat types in approximate proportion to the abundance of each habitat, where each habitat type present within the site was represented by at least one plot. Inaccessible areas (e.g., cliffs, water, property beyond Vaud) were excluded, resulting in several sites with areas less than 1 km$^2$, and the number of plots was reduced proportionally (TK total plots; Appendix 1). 
+
+Each sampling plot consisted of a 2m radius circle, with soil temperature recorded in the center at a depth of approximately 6 cm, and vegetation characterized according to Braun-Blanquet coverage classes (grass, forb, shrub, litter, bare, moss) within the plot (CITE). Six flags were evenly spaced around the circumference. Within $\sim$ 20 cm of each flag (total surface area $\sim$ 0.75 m$^2$), we searched for ant colonies within any downed wood or stumps, under large rocks, and in 2 L of soil, litter, and small rocks using 18 cm Hori Hori gardening knives. We haphazardly collected 10 workers from each colony, placing them directly into vials of ethanol. A total of TK colonies were detected across the 44 sites. Within each plot, all trees $\geq$3 cm diameter at breast height were also inspected for ant workers which were collected regardless of whether or not a colony was identifiable. Lastly, transect lines were mapped \emph{a priori}, distributed proportionally among habitat types and totalling 2 km, and surveyed at a moderate pace. Workers were collected from all permanent above-ground mounds within 2 m of the transect line. Because of the distinct sampling methods, the tree and transect collections were treated as presence-only data, and incorporated into the citizen science dataset (TK additional occurrences). 
+
+Thus, each dataset has distinct strengths and limitations. The presence-only dataset was collected very broadly spatially, with a subset of detections resulting from free investigation of subjectively suitable habitats by skilled myrmecologists, and was therefore more likely to include rare or secretive species. However, many collections form citizen scientists occurred in or near human-dominant areas, with a likely bias toward larger, more obvious, or more anthropophilic species. The sampling effort also varied widely across space. In contrast, the structured abundance dataset was collected with uniform sampling effort, with a sampling design aimed to produce representative samples of colony density within each site. The communities from this dataset are thus expected to be more representative of the ground-nesting ant community structure, despite detecting a smaller number of species. 
 
 % Identification and storage
-
-% Key differences between W and Y -- maybe for the methods? unclear...
-There are many differences between W and Y, but they can be reduced down to three key points:
-
-1. W is collected very broadly spatially, with no constraints within Vaud, while Y was collected in discrete, representative plots within pre-determined squares
-
-2. Effort varies across space for W, but is standardized for Y
-
-3. Species collections are biased in W toward larger, more active species, while Y provides a less biased survey of ground-nesting ants
-
-The model described below accounts for each of these three differences, leveraging the information contained in W to improve estimates for the local diversity estimated by Y.
+All ants were identified to species or species group based on morphology by local experts (names?). Specimens are stored at the Natural History Museum of Lausanne in Lausanne, Switzerland in TK\% ethanol or mounted on pins. 
 
 
 \subsection{Model overview}
-To leverage the information contained in each dataset, we use a community-level hierarchical inhomogenous Poisson point process model (PPM). Inhomogenous Poisson PPMs assume that the distribution of occurrences is dependent on the variation in local intensity, $\lambda(x)$, across space, $x$, which may be observed imperfectly resulting in a thinned point process. One key benefit of PPMs is that the predicted point location intensity can be integrated to arbitrary spatial resolutions. Following the structure of our sampling design, we modelled the expected abundance of each species at two resolutions (coarse: 1 $km^2$, fine: 0.75 $m^2$), representing the area of the sampling sites and the area of the sampling plots respectively.
+To leverage the strengths of each dataset, we used a community-level hierarchical inhomogenous Poisson point process model (PPM). Inhomogenous Poisson PPMs assume that the distribution of occurrences is dependent on the variation in local intensity, $\lambda(x)$, across space, $x$, which may be observed imperfectly resulting in a thinned point process. One key benefit of PPMs is that the underlying latent intensity is continuous in space, and can be integrated to arbitrary spatial resolutions (CITE). Following the structure of the sampling design, we modelled the expected intensity of each species at two resolutions (regional: 1 km$^2$, local: 0.75 $m^2$), representing the area of the sampling sites and the area of the sampling plots respectively. The modelled local intensities are a function of species' responses to the local and regional environment, with the structured abundance data incorporated at the local scale, and the presence-only data incorporated at the regional scale. 
 
 
 \subsection{Model structure}
-We use two datasets: haphazard citizen science collections ($\textbf{W}$, res: 1 $km^2$), and structured samples ($\textbf{Y}$, 0.75 $m^2$ plots within 1 $km^2$ sites). Thus, for the citizen science dataset, we use only the coarse resolution (1 $km^2$), while the structured samples are incorporated at both resolutions. We assume that the colony density for each species is a function of local and regional environmental conditions, with potential phylogenetic conservatism among species-specific responses. We estimate the effects of regional conditions using both $\textbf{Y}$ and $\textbf{W}$, and the effects of local conditions using $\textbf{Y}$.
+The hierarchical PPM unites the two datasets, $\textbf{W}$ (presence-only citizen science collections; resolution: 1 km$^2$) and $\textbf{Y}$ (structured local abundance collections; 0.75 $m^2$ plots within 1 km$^2$ sites). Thus, $\textbf{W}$ informs responses to regional environmental variables, and  $\textbf{Y}$ informs responses to both regional and local environmental variables. Similarly, $\textbf{W}$ helps to identify overall relative abundance among species, while $\textbf{Y}$ is a direct measurement of local abundance. We assume that local colony density for each species is a function of local and regional environmental conditions, with potential phylogenetic conservatism among species-specific responses.
 
-At a local scale, $Y_{is}$ represents the number of colonies of species $s$ detected at plot $i$ of site $j$, which is an estimate of the true number of colonies $\lambda_{is}$, which in turn depends on the local environment and the overall abundance of species $s$ at site $j$:
+At a local scale, the number of observed colonies $Y_{is}$ of species $s$ at plot $i$ follows a generalized Poisson distribution with the latent colony intensity $\lambda_{is}$ and dispersion term $\theta$ to account for overdispersion (CITE). The local intensity $\lambda_{is}$ is a function of the local environment and the regional intensity of species $s$ at the encompassing 1 km$^2$ site $j$:
+
 \begin{equation}
-Y_{is} \sim Poisson(\lambda_{is}) \\
+Y_{is} \sim GPoisson(\lambda_{is}, \theta) \\
+\label{eq:Y_GP}
 \end{equation}
 \begin{equation}
 log(\lambda_{is}) = a_s V_i + log(h\Lambda_{js}) \\
+\label{eq:lambda}
 \end{equation}
-where $V_i$ is a vector of local environmental covariates, $a_s$ is a vector of species-specific responses, $h$ is a constant representing the proportion of site $j$ sampled by plot $i$ (0.75 $m^2 /$ 1 $km^2$ = 7.5e-7), and $\Lambda_{js}$ is the total expected abundance of species $s$ at site $j$. Thus, $log(h\Lambda_{js})$ functions as an intercept, determining the baseline expected abundance at each plot within each site, which are then further refined according to the effects of the local environment.
 
-At the site scale, the total abundance within a $1 km^2$ cell is observed indirectly by $Y_{is}$ as describe above, and directly by $W_{ks}$. The species counts from the unstructured survey in cell $k$ are thinned such that:
+where $V_i$ is a vector of local environmental covariates, $a_s$ is a vector of species-specific responses, $h$ is a constant scaling factor representing the proportion of site $j$ sampled by plot $i$ (0.75 $m^2 /$ 1 km$^2$ = 7.5e-7), and $\Lambda_{js}$ is the regional intensity of species $s$ at site $j$. Thus, $log(h\Lambda_{js})$ functions as a site-level intercept, determining the baseline expected intensity at each plot within each site, which local intensities further dependent on the effects of the local environment.
+
+At a regional scale, the intensity within each 1 km$^2$ cell is informed indirectly by $Y_{is}$ following Eq. \ref{eq:Y_GP}-\ref{eq:lambda}, as well as $W_{ks}$. The species counts from the unstructured survey in cell $k$ are thinned such that:
 \begin{equation}
 W_{ks} \sim Multinomial(\Lambda_{ks}D_s) \\
 \end{equation}
 where $D_s$ is the detection bias for each species, which accounts for bias in the community composition based on species that are more readily observed. Thus, for each species $s$ in cell $k$, the observed count $W_{ks}$ for species $s$ is expected to be higher if the species is relatively abundant in cell $k$ ($\Lambda_{ks}$ is larger), more samples were collected in $k$ , or if species $s$ is likely to be over-represented in haphazard collections by non-experts ($D_s$ is larger).
 
-Thus, both $\Lambda_{js}$ and $\Lambda_{ks}$ represent the expected abundance of species $s$ per $km^2$, but the exact cells are not required to overlap. The ecological processes driving $\Lambda_{(jk)s}$ are assumed to be the same, however, such that:
+Thus, both $\Lambda_{js}$ and $\Lambda_{ks}$ represent the expected abundance of species $s$ per km$^2$, but the exact cells are not required to overlap. The ecological processes driving $\Lambda_{(jk)s}$ are assumed to be the same, however, such that:
 \begin{equation}
 log(\Lambda_{(j,k)s}) = b_s X_{(j,k)} \\
 \end{equation}
@@ -157,30 +155,30 @@ Finally, we calculated several quantities at the regional and local scales. Foll
 		\textbf{Parameter} & \textbf{Description} & \textbf{Type} \\
 		\hline
 		$i$ & structured sampling plots (0.75 $m^2$) & index \\
-		$j$ & structured sampling cells (1 $km^2$) & index \\
-		$k$ & citizen science cells (1 $km^2$) & index \\
+		$j$ & structured sampling cells (1 km$^2$) & index \\
+		$k$ & citizen science cells (1 km$^2$) & index \\
 		$s$ & species & index \\
 		$g$ & genus & index \\
 		$l$ & local covariates (0.75 $m^2$) & index \\
-		$r$ & regional covariates (1 $km^2$) & index \\
+		$r$ & regional covariates (1 km$^2$) & index \\
 		\hline
 		$\mathbf{Y}_{is}$ & structured sampling counts (0.75 $m^2$) & data \\
-		$\mathbf{W}_{ks}$ & citizen science counts (1 $km^2$) & data \\
+		$\mathbf{W}_{ks}$ & citizen science counts (1 km$^2$) & data \\
 		$\mathbf{V}_{il}$ & local covariates (0.75 $m^2$) & data \\
-		$\mathbf{X}_{(jk)r}$ & regional covariates (1 $km^2$) & data \\
+		$\mathbf{X}_{(jk)r}$ & regional covariates (1 km$^2$) & data \\
 		$h$ & structured sampling proportional effort & data \\
 		\hline
 		$\mathbf{\lambda}_{is}$ & colony intensity (0.75 $m^2$) & latent \\
-		$\mathbf{\Lambda}_{(jk)s}$ & colony intensity (1 $km^2$) & latent \\
+		$\mathbf{\Lambda}_{(jk)s}$ & colony intensity (1 km$^2$) & latent \\
 		\hline
 		$\alpha_{l}$ & aggregate ant responses (0.75 $m^2$) & slopes \\
 		$\mathbf{A}_{lg}$ & genus-level ant responses (0.75 $m^2$) & slopes \\
 		$\mathbf{a}_{ls}$ & species-level ant responses (0.75 $m^2$) & slopes \\
 		$\sigma^a_{l}$ & response sd among congeners & sd \\
 		$\mathbf{\Sigma^A}_{gg}$ & genus-level covariance matrix & cov mx \\
-		$\beta_{r}$ & aggregate ant responses (1 $km^2$) & slopes \\
-		$\mathbf{B}_{rg}$ & genus-level ant responses (1 $km^2$) & slopes \\
-		$\mathbf{b}_{rs}$ & species-level ant responses (1 $km^2$) & slopes \\
+		$\beta_{r}$ & aggregate ant responses (1 km$^2$) & slopes \\
+		$\mathbf{B}_{rg}$ & genus-level ant responses (1 km$^2$) & slopes \\
+		$\mathbf{b}_{rs}$ & species-level ant responses (1 km$^2$) & slopes \\
 		$\sigma^b_{r}$ & response sd among congeners & sd \\
 		$\mathbf{\Sigma^B}_{gg}$ & genus-level covariance matrix & cov mx \\
 		$D_{s}$ & citizen science species bias (proportional) & random effect \\
@@ -200,12 +198,12 @@ To evaluate the effect of including \textbf{W} and to perform variable selection
 % Model outputs
 \begin{figure}
 	\centering\includegraphics[width=6in]{figs/el_patterns.png}
-	\caption{\label{fig:el_patterns} Elevational patterns of posterior distributions at regional and local scales for (a) predicted species richness, (b) predicted Shannon H diversity, and (c) colony intensity. Lines and ribbons are loess lines using the posterior medians and 95\% Highest Density Interval, respectively, for the model using both datasets (Joint: purple) and the model using only the presence-absence data (Structured: green). All metrics were calculated in each sample from the posterior distribution using the predicted species-level colony intensities. }
+	\caption{\label{fig:el_patterns} Elevational patterns of posterior distributions at regional and local scales for (a) predicted species richness, (b) predicted Shannon H diversity, and (c) colony intensity. Lines and ribbons are loess lines using the posterior medians and 95\% Highest Density Interval, respectively, for the model using both datasets (Joint: purple) and the model using only the structured abundance data (Structured: green). All metrics were calculated in each sample from the posterior distribution using the predicted species-level colony intensities. }
 \end{figure}
 
 \begin{figure}
 \centering\includegraphics[width=4in]{figs/slope_means.png}
-\caption{\label{fig:slope_means} Distribution of species-level responses in optimal models. Density curves represent the distribution of species-level posterior medians for the responses to local and regional variables for the model using both datasets (Joint: purple) and the model using only the presence-absence data (Structured: green). Points and lines show the posterior median and 95\% Highest Density Interval for the aggregate ($\beta$) responses. }
+\caption{\label{fig:slope_means} Distribution of species-level responses in optimal models. Density curves represent the distribution of species-level posterior medians for the responses to local and regional variables for the model using both datasets (Joint: purple) and the model using only the abundance data (Structured: green). Points and lines show the posterior median and 95\% Highest Density Interval for the aggregate ($\beta$) responses. }
 \end{figure}
 
 \begin{figure}
@@ -215,7 +213,7 @@ To evaluate the effect of including \textbf{W} and to perform variable selection
 
 \begin{figure}
 	\centering\includegraphics[width=3in]{figs/genus_assemblages.png}
-	\caption{\label{fig:genus_assemblages} Relative abundance of genera in the presence-only (public) and presence-absence (structured) datasets across plateau and montane environments. Only genera that constitute $\geq 1\%$ of at least one subset are shown, with all others indicated as 'Other'.}
+	\caption{\label{fig:genus_assemblages} Relative abundance of genera in the presence-only (public) and abundance (structured) datasets across plateau and montane environments. Only genera that constitute $\geq 1\%$ of at least one subset are shown, with all others indicated as 'Other'.}
 \end{figure}
 
 \begin{figure}
