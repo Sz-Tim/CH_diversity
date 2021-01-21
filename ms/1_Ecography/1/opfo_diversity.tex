@@ -78,7 +78,7 @@ Keywords
 % Broad introduction: 
 What structures ant species richness, diversity, and community structure at different spatial scales? We know that at a coarse scale, climate is generally important, with some support for phylogenetically conserved temperature preferences. At a local scale, richness typically decreases with canopy cover. In general, abundance seems to be more idiosyncratic and variable, both temporally and spatially. This is particularly true for small species. In ants, abundance can be measured as either the number of colonies in a particular area (i.e., colony density) or as the number of workers (i.e., worker density). 
 
-Increasingly, ecologists have access to occurrence data collected in various and haphazard ways, typically in the form of online databases or citizen science projects (e.g., GBIF, BEIN, etc). These data are commonly used for species distribution models (CITE), including for individual species and hierarchical models of species communities (Ovaskainen 2017), which can incorporate trait data, phylogeny, and covariation among species in addition to environmental drivers. However, they are a recent development and so far rely on a single set of occurrence data. However, use of such occurrence data for predicting richness or diversity directly has been somewhat more limited, though it is perhaps conceptually similar to extracting richness from guidebooks, which is fairly common (macroecology examples). There are several reasons for this. First, the data do not generally come from communities or assemblages, but rather an aggregation of detections from many different collectors across a variety of time spans. We like to think of diversity and richness as properties of communities, and these are decidedly not samples of communities, obscuring the ability to detect or account for interactions among species. Second, the collections for each species may have differing spatial biases, rendering any simple aggregation methods erroneous. Third, there are biases in the species that are more likely to be detected, such that any estimate of richness or diversity will necessarily be of a subset of the community biased toward larger, more active, or more interesting species.
+Increasingly, ecologists have access to occurrence data collected in various and haphazard ways, typically in the form of online databases or citizen science projects (e.g., GBIF, BEIN, etc). These data are commonly used for species distribution models (CITE), including for individual species and hierarchical models of species communities \citep{Ovaskainen2017}, which can incorporate trait data, phylogeny, and covariation among species in addition to environmental drivers. However, they are a recent development and so far rely on a single set of occurrence data. However, use of such occurrence data for predicting richness or diversity directly has been somewhat more limited, though it is perhaps conceptually similar to extracting richness from guidebooks, which is fairly common (macroecology examples). There are several reasons for this. First, the data do not generally come from communities or assemblages, but rather an aggregation of detections from many different collectors across a variety of time spans. We like to think of diversity and richness as properties of communities, and these are decidedly not samples of communities, obscuring the ability to detect or account for interactions among species. Second, the collections for each species may have differing spatial biases, rendering any simple aggregation methods erroneous. Third, there are biases in the species that are more likely to be detected, such that any estimate of richness or diversity will necessarily be of a subset of the community biased toward larger, more active, or more interesting species.
 
 However, that doesn't mean these data can't be useful. Instead, the geographic breadth and rather indiscriminate collection methods can capture occurrences in unexpected locations or detect species that may be missed in alternative, more structured sampling methods. Leveraging the widely available occurrence data could thus clarify patterns of species distributions and diversity, and the drivers that shape them.
 
@@ -90,16 +90,17 @@ Here, we combine species occurrences of ants collected in a citizen science proj
 
 \section{Methods}
 \label{S:2}
+\subsection{Study region \& sampling design}
 This is a blurb about Vaud, including some about the climate, topography, as well as current and past human land use. Also a little bit about what is known about the ant fauna here, perhaps.
 
 
 \begin{figure}
-	\centering\includegraphics[width=3.5in]{figs/map_VD.png}
+	\centering\includegraphics[width=3.5in]{figs/map_VD+inset.png}
 	\caption{\label{fig:VD_map} Map of the canton of Vaud, Switzerland. Samples consisted of presence-only data (blue points) and structured abundance data collected at 1 km$^2$ long-term biodiversity monitoring sites (red squares). }
 \end{figure}
 
 % Methods for citizen science data
-Ants were collected during the summer of 2019 in two simultaneous collection efforts (Fig. \ref{fig:VD_map}). First, a citizen science project (Opération Fourmis: <https://wp.unil.ch/fourmisvaud/>) was organized to survey the ant fauna within the canton of Vaud. Vials of ethanol were distributed to interested citizen scientists, who were asked to collect approximately 10 ant workers per colony for each vial. Participants were encouraged to explore under rocks, on bark, inside twigs, and in downed wood, and an online map was updated periodically to highlight data-sparse areas. Collectors returned the vials along with the collection date and the locality of the sample including the latitude and longitude. A total of TK samples were returned, representing collections between TK and TK. For these presence-only data, we discretized the landscape into a 1 km$^2$ grid (3,558 km$^2$) and tallied the number of counts for each species in each cell (TK cells with occurrences). 
+Ants were collected during the summer of 2019 in two simultaneous collection efforts (Fig. \ref{fig:VD_map}). First, a citizen science project (Opération Fourmis: https://wp.unil.ch/fourmisvaud/) was organized to survey the ant fauna within the canton of Vaud. Vials of ethanol were distributed to interested citizen scientists, who were asked to collect approximately 10 ant workers per colony for each vial. Participants were encouraged to explore under rocks, on bark, inside twigs, and in downed wood, and an online map was updated periodically to highlight data-sparse areas. Collectors returned the vials along with the collection date and the locality of the sample including the latitude and longitude. A total of TK samples were returned, representing collections between TK and TK. For these presence-only data, we discretized the landscape into a 1 km$^2$ grid (3,558 km$^2$) and tallied the number of counts for each species in each cell (TK cells with occurrences). 
 
 % Methods for structured samples
 Second, a structured sampling effort collected local colony abundance data, where ants were collected within 44 sites of 1 km$^2$ each, with standardized effort across sites. Thirty-nine of the sites were a part of long-term biodiversity monitoring efforts by the federal government, and as such were arranged on a regular grid with approximately 5-7 km between adjacent sites. Five additional sites are established monitoring sites by the University of Lausanne. The ants at each site were characterized by 25 plots, distributed among habitat types in approximate proportion to the abundance of each habitat, where each habitat type present within the site was represented by at least one plot. Inaccessible areas (e.g., cliffs, water, property beyond Vaud) were excluded, resulting in several sites with areas less than 1 km$^2$, and the number of plots was reduced proportionally (TK total plots; Appendix 1). 
@@ -113,40 +114,42 @@ All ants were identified to species or species group based on morphology by loca
 
 
 \subsection{Model overview}
-To leverage the strengths of each dataset, we used a community-level hierarchical inhomogenous Poisson point process model (PPM). Inhomogenous Poisson PPMs assume that the distribution of occurrences is dependent on the variation in local intensity, $\lambda(x)$, across space, $x$, which may be observed imperfectly resulting in a thinned point process. One key benefit of PPMs is that the underlying latent intensity is continuous in space, and can be integrated to arbitrary spatial resolutions (CITE). Following the structure of the sampling design, we modelled the expected intensity of each species at two resolutions (regional: 1 km$^2$, local: 0.75 $m^2$), representing the area of the sampling sites and the area of the sampling plots respectively. The modelled local intensities are a function of species' responses to the local and regional environment, with the structured abundance data incorporated at the local scale, and the presence-only data incorporated at the regional scale. 
+To leverage the strengths of each dataset, we used a community-level hierarchical inhomogenous Poisson point process model (PPM). Inhomogenous Poisson PPMs assume that the distribution of occurrences is dependent on the variation in local intensity, $\lambda(x)$, across space, $x$, which may be observed imperfectly resulting in a thinned point process. One key benefit of PPMs is that the underlying latent intensity is continuous in space, and can be integrated to arbitrary spatial resolutions \citep{Baddeley2015,Hefley2016}. Following the structure of the sampling design, we modelled the expected intensity of each species at two resolutions (regional: 1 km$^2$, local: 0.75 $m^2$), representing the area of the sampling sites and the area of the sampling plots respectively. The modelled local intensities are a function of species' responses to the local and regional environment, with the structured abundance data incorporated at the local scale, and the presence-only data incorporated at the regional scale. 
 
 
 \subsection{Model structure}
 The hierarchical PPM unites the two datasets, $\textbf{W}$ (presence-only citizen science collections; resolution: 1 km$^2$) and $\textbf{Y}$ (structured local abundance collections; 0.75 $m^2$ plots within 1 km$^2$ sites). Thus, $\textbf{W}$ informs responses to regional environmental variables, and  $\textbf{Y}$ informs responses to both regional and local environmental variables. Similarly, $\textbf{W}$ helps to identify overall relative abundance among species, while $\textbf{Y}$ is a direct measurement of local abundance. We assume that local colony density for each species is a function of local and regional environmental conditions, with potential phylogenetic conservatism among species-specific responses.
 
-At a local scale, the number of observed colonies $Y_{is}$ of species $s$ at plot $i$ follows a generalized Poisson distribution with the latent colony intensity $\lambda_{is}$ and dispersion term $\theta$ to account for overdispersion (CITE). The local intensity $\lambda_{is}$ is a function of the local environment and the regional intensity of species $s$ at the encompassing 1 km$^2$ site $j$:
-
-\begin{equation}
-Y_{is} \sim GPoisson(\lambda_{is}, \theta) \\
-\label{eq:Y_GP}
-\end{equation}
-\begin{equation}
-log(\lambda_{is}) = a_s V_i + log(h\Lambda_{js}) \\
-\label{eq:lambda}
-\end{equation}
-
-where $V_i$ is a vector of local environmental covariates, $a_s$ is a vector of species-specific responses, $h$ is a constant scaling factor representing the proportion of site $j$ sampled by plot $i$ (0.75 $m^2 /$ 1 km$^2$ = 7.5e-7), and $\Lambda_{js}$ is the regional intensity of species $s$ at site $j$. Thus, $log(h\Lambda_{js})$ functions as a site-level intercept, determining the baseline expected intensity at each plot within each site, which local intensities further dependent on the effects of the local environment.
+At a local scale, the number of observed colonies $Y_{is}$ of species $s$ at plot $i$ follows a generalized Poisson distribution with the latent colony intensity $\lambda_{is}$ and dispersion term $\theta$ to account for overdispersion \citep{Consul1992,Ntzoufras2005}. The local intensity $\lambda_{is}$ is a function of the local environment and the regional intensity of species $s$ at the encompassing 1 km$^2$ site $j$:
+    \begin{equation}
+        Y_{is} \sim GPoisson(\lambda_{is}, \theta) \\
+        \label{eq:Y_GP}
+    \end{equation}
+    \begin{equation}
+        log(\lambda_{is}) = a_s V_i + log(h\Lambda_{js}) \\
+        \label{eq:lambda}
+    \end{equation}
+where \textbf{V} is a matrix of local environmental covariates, $a_s$ is a vector of species-specific responses, $h$ is a constant scaling factor representing the proportion of site $j$ sampled by plot $i$ (0.75 $m^2 /$ 1 km$^2$ = 7.5e-7), and $\Lambda_{js}$ is the regional intensity of species $s$ at site $j$. Thus, $log(h\Lambda_{js})$ functions as a site-level intercept, determining the baseline expected intensity at each plot within each site, which local intensities further dependent on the effects of the local environment.
 
 At a regional scale, the intensity within each 1 km$^2$ cell is informed indirectly by $Y_{is}$ following Eq. \ref{eq:Y_GP}-\ref{eq:lambda}, as well as $W_{ks}$. The species counts from the unstructured survey in cell $k$ are thinned such that:
-\begin{equation}
-W_{ks} \sim Multinomial(\Lambda_{ks}D_s) \\
-\end{equation}
-where $D_s$ is the detection bias for each species, which accounts for bias in the community composition based on species that are more readily observed. Thus, for each species $s$ in cell $k$, the observed count $W_{ks}$ for species $s$ is expected to be higher if the species is relatively abundant in cell $k$ ($\Lambda_{ks}$ is larger), more samples were collected in $k$ , or if species $s$ is likely to be over-represented in haphazard collections by non-experts ($D_s$ is larger).
+    \begin{equation}
+        W_{ks} \sim Multinomial(\sigma_k(\Lambda_{ks}D_s)) \\
+        \label{eq:W_Mn}
+    \end{equation}
+where $\sigma_k(\cdot)$ is the softmax function which converts the intensities to probabilities that sum to 1 within each cell $k$, and $D_s$ is the proportional detection bias for each species, which accounts for bias in the community composition based on species that are more readily observed. Therefore, for each species $s$ in cell $k$, the observed count $W_{ks}$ for species $s$ is expected to be higher if the species is relatively abundant in cell $k$ ($\Lambda_{ks}$ is larger), more samples were collected in $k$ ($\sum_{1}^{S} W_{ks}$ is larger), or if species $s$ is likely to be over-represented in the presence-only dataset ($D_s$ is larger). 
 
-Thus, both $\Lambda_{js}$ and $\Lambda_{ks}$ represent the expected abundance of species $s$ per km$^2$, but the exact cells are not required to overlap. The ecological processes driving $\Lambda_{(jk)s}$ are assumed to be the same, however, such that:
-\begin{equation}
-log(\Lambda_{(j,k)s}) = b_s X_{(j,k)} \\
-\end{equation}
-where $b_s$ is a vector of species-specific slopes, and $\mathbf{X}$ is a matrix of environmental covariates. 
+Thus, despite the distinct sampling methods for \textbf{W} and \textbf{Y}, both $\Lambda_{js}$ and $\Lambda_{ks}$ represent the latent intensity of species $s$ at a regional scale. The ecological processes driving regional intensity are assumed to be the same, however, such that:
+    \begin{equation}
+        log(\Lambda_{(j,k)s}) = b_s X_{(j,k)} \\
+        \label{eq:LAMBDA}
+    \end{equation}
+where $b_s$ is a vector of species-specific slopes, and \textbf{X} is a matrix of environmental covariates. 
 
-The slopes $a_s$ and $b_s$ are species-specific responses at $0.75 m^2$ and $1 km^2$ resolutions, respectively, and are distributed about genus-level means $A_g$ and $B_g$ with standard deviations $\sigma^a$ and $\sigma^b$. The genus-level means are in turn distributed about aggregate means, $\alpha$ and $\beta$ with covariance matrices $\Sigma^A$ and $\Sigma^B$, which reflect the overall responses of the ant community to environmental variables at each resolution while accounting for phylogenetic relatedness at the genus level.
+The slopes $a_s$ and $b_s$ are species-specific responses at $0.75 m^2$ and $1 km^2$ resolutions, respectively, and are distributed about genus-level means $A_g$ and $B_g$ with standard deviations $\sigma^a$ and $\sigma^b$. The genus-level means are in turn distributed about aggregate means, $\alpha$ and $\beta$ with covariance matrices $\Sigma^A$ and $\Sigma^B$, which reflect the overall responses of the ant community to environmental variables at each resolution while accounting for phylogenetic relatedness at the genus level \citep{Hadfield2010b,Szewczyk2018}.
 
-Finally, we calculated several quantities at the regional and local scales. Following Hefley \& Hooten (2016), we calculated the probability of presence as $\psi_is = 1 - e^{-\lambda_{is}}$ and $\Psi_js = 1 - e^{-\Lambda_{js}}$, as well as Shannon's H at each plot, $\beta$ diversity among plots within each site, and among sites, and overall $\gamma$ diversity at each site. 
+Finally, we calculated several quantities at the regional and local scales. We calculated the probability of presence as $\psi_{is} = 1 - e^{-\lambda_{is}}$ and $\Psi_{js} = 1 - e^{-\Lambda_{js}}$ \citep{Hefley2016}, as well as Shannon's H at each plot, $\beta$ diversity among plots within each site, and among sites, and overall $\gamma$ diversity at each site. 
+
+To evaluate the effect of including the presence-only data \textbf{W}, we compared a version of the model with and without \textbf{W}. We refer to the model that uses both \textbf{W} and \textbf{Y} as the 'Joint' model, and the model using only \textbf{Y} as the 'Structured' model. 
 
 \begin{table}[ht]
 	\centering
@@ -188,7 +191,7 @@ Finally, we calculated several quantities at the regional and local scales. Foll
 
 
 \subsection{Validation and model selection}
-To evaluate the effect of including \textbf{W} and to perform variable selection, we compared a version of the model with and without \textbf{W}. We randomly divided the 44 sites with data for \textbf{Y} into training (75\%) and testing (25\%) subsets (\textbf{Appendix 1}). For each combination of covariates, we parameterized the models with the training subset and evaluated the ability to predict $\lambda$ with the testing subset using the log predictive density, a metric that uses the full posterior predictive distribution. 
+We randomly divided the 44 sites with data for \textbf{Y} into training (75\%) and testing (25\%) subsets (\textbf{Appendix 1}). For each combination of covariates, we parameterized the models with the training subset and evaluated the ability to predict $\lambda$ with the testing subset using the log predictive density, a metric that uses the full posterior predictive distribution. We also performed a double principal coordinates analysis (DPCoA) using the posterior local intensities to assess taxonomically-weighted community structure \citep{Dray2015,Pavoine2019}
 
 
 
@@ -284,7 +287,7 @@ B_g \sim Norm_G(\beta, \Sigma^B) \\
 
 
 \section{Bibliography}
-\bibliography{opfo_diversity}
+\bibliography{ms/opfo_diversity}
 
 
 \end{document}
