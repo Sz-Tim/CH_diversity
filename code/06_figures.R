@@ -278,8 +278,8 @@ beta_post <- agg$beta %>% filter(ParName != "intercept") %>%
          Par=parName.df$full[match(ParName, parName.df$par)],
          Par=factor(Par, levels=rev(unique(parName.df$full))))
 
-p <- ggplot(b_post, aes(x=mean, y=Par, fill=model, colour=model)) +
-  ggridges::geom_density_ridges(colour="gray30", alpha=0.5, scale=0.8, 
+p.A <- ggplot(b_post, aes(x=mean, y=Par, fill=model, colour=model)) +
+  ggridges::geom_density_ridges(colour="gray30", alpha=0.75, scale=0.8, 
                                 size=0.25, rel_min_height=0.001) +
   geom_point(data=filter(beta_post, model=="Joint"), shape=1, 
              position=position_nudge(y=-0.05)) + 
@@ -297,24 +297,15 @@ p <- ggplot(b_post, aes(x=mean, y=Par, fill=model, colour=model)) +
   ms_fonts + 
   theme(panel.grid.major.y=element_line(size=0.1, colour="gray30"),
         legend.position="bottom")
-ggsave(paste0(ms_dir, "figs/slope_means.png"), p, width=6, height=6, units="in")
 
-
-
-
-
-########------------------------------------------------------------------------
-## Uncertainty in species responses
-########------------------------------------------------------------------------
-
-p <- agg$b %>% 
+p.B <- agg$b %>% 
   mutate(Scale=str_sub(ParName, 1L, 1L),
          Scale=factor(if_else(Scale=="i", "R", Scale),
                       levels=c("R", "L"), labels=c("Regional", "Local")), 
          Par=parName.df$full[match(ParName, parName.df$par)],
          Par=factor(Par, levels=rev(unique(parName.df$full))),
-         SppInY=c("Species not in structured", 
-                  "Species in structured")[(spp %in% det_Y)+1]) %>%
+         SppInY=c("Species not in Y", 
+                  "Species in Y")[(spp %in% det_Y)+1]) %>%
   ggplot(aes(x=abs(L95-L05), y=Par, fill=model)) + 
   geom_vline(xintercept=0, colour="gray30", size=0.1) +
   ggridges::geom_density_ridges(colour="gray30", alpha=0.75, scale=1, 
@@ -325,7 +316,12 @@ p <- agg$b %>%
   ms_fonts + 
   theme(panel.grid.major.y=element_line(size=0.1, colour="gray30"),
         legend.position="bottom")
-ggsave(paste0(ms_dir, "figs/slope_HDI.png"), p, width=6.75, height=6.5, units="in")
+
+p <- ggpubr::ggarrange(p.A, p.B, nrow=1, labels=c("a.", "b."), 
+                       widths=c(0.7, 1), label.x=c(0.05, 0.07),
+                       common.legend=T, legend="bottom") 
+ggsave(paste0(ms_dir, "figs/slope_means+HDI.png"), p, width=10, height=5, units="in")
+
 
 
 
