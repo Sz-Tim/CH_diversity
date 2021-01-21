@@ -118,29 +118,62 @@ for(i in 1:n_distinct(beta.lam.df$BDM)) {
   beta.lam.df$beta.BRAY[i] <- beta_i$beta.BRAY
 }
 
+# total
+AICcmodavg::aictab(list(lm(beta.BRAY ~ el, 
+                           data=filter(beta.lam.df, model=="Joint")),
+                        lm(beta.BRAY ~ el + I(el^2), 
+                           data=filter(beta.lam.df, model=="Joint"))),
+                   paste0("j.tot.", c("linear", "quadr")), sort=T)
+summary(lm(beta.BRAY ~ el, data=filter(beta.lam.df, model=="Joint")))
+
+AICcmodavg::aictab(list(lm(beta.BRAY ~ el, 
+                           data=filter(beta.lam.df, model!="Joint")),
+                        lm(beta.BRAY ~ el + I(el^2), 
+                           data=filter(beta.lam.df, model!="Joint"))),
+                   paste0("s.tot.", c("linear", "quadr")), sort=T)
+summary(lm(beta.BRAY ~ el + I(el^2), data=filter(beta.lam.df, model!="Joint")))
+
+
+# balanced variation
+AICcmodavg::aictab(list(lm(beta.BRAY.BAL ~ el, 
+                           data=filter(beta.lam.df, model=="Joint")),
+                        lm(beta.BRAY.BAL ~ el + I(el^2), 
+                           data=filter(beta.lam.df, model=="Joint"))),
+                   paste0("j.bal.", c("linear", "quadr")), sort=T)
+summary(lm(beta.BRAY.BAL ~ el + I(el^2), data=filter(beta.lam.df, model=="Joint")))
+
+AICcmodavg::aictab(list(lm(beta.BRAY.BAL ~ el, 
+                           data=filter(beta.lam.df, model!="Joint")),
+                        lm(beta.BRAY.BAL ~ el + I(el^2), 
+                           data=filter(beta.lam.df, model!="Joint"))),
+                   paste0("s.bal.", c("linear", "quadr")), sort=T)
+summary(lm(beta.BRAY.BAL ~ el + I(el^2), data=filter(beta.lam.df, model!="Joint")))
+
+
+# abundance gradient
+AICcmodavg::aictab(list(lm(beta.BRAY.GRA ~ el, 
+                           data=filter(beta.lam.df, model=="Joint")),
+                        lm(beta.BRAY.GRA ~ el + I(el^2), 
+                           data=filter(beta.lam.df, model=="Joint"))),
+                   paste0("j.gra.", c("linear", "quadr")), sort=T)
+summary(lm(beta.BRAY.GRA ~ el, data=filter(beta.lam.df, model=="Joint")))
+
+AICcmodavg::aictab(list(lm(beta.BRAY.GRA ~ el, 
+                           data=filter(beta.lam.df, model!="Joint")),
+                        lm(beta.BRAY.GRA ~ el + I(el^2), 
+                           data=filter(beta.lam.df, model!="Joint"))),
+                   paste0("s.gra.", c("linear", "quadr")), sort=T)
+summary(lm(beta.BRAY.GRA ~ el + I(el^2), data=filter(beta.lam.df, model!="Joint")))
 
 
 
-library(vegan)
-plot.mds <- metaMDS(lam.site.ls[,4:83], trymax=1e3, k=2)
-  mds.df <- as_tibble(plot.mds$points) %>%
-  mutate(el=d.i$V[,2])
-ggplot(mds.df, aes(MDS1, MDS2, colour=el)) + geom_point() + 
-  scale_colour_viridis_c(option="E")
 
 
 
 
-LAM.site.ls <- agg$LAM %>% 
-  filter(model=="Joint") %>%
-  filter(id > 1e5) %>%
-  select(sppName, el, id, L025) %>%
-  pivot_wider(names_from="sppName", values_from="L025")
-site.mds <- metaMDS(LAM.site.ls[,3:82], trymax=1e3, k=2)
-mds.df <- as_tibble(site.mds$points) %>%
-  mutate(el=LAM.site.ls$el)
-ggplot(mds.df, aes(MDS1, MDS2, colour=el>1000)) + geom_point() 
-
+########------------------------------------------------------------------------
+## DPCoA
+########------------------------------------------------------------------------
 
 tax_dist <- tax_i %>% select(contains("Full")) %>% as.data.frame
 rownames(tax_dist) <- paste(tax_dist$FullGen, tax_dist$FullSpp, sep="_")

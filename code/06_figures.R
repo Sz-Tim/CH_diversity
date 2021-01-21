@@ -67,7 +67,7 @@ rm(agg.ls)
 # summaries
 det_Y <- which(colSums(d.ls[[1]]$Y)>0)
 
-site.mns <- ants$str %>% filter(TypeOfSample=="soil") %>%
+site.mns <- ants_raw$str %>% filter(TypeOfSample=="soil") %>%
   st_set_geometry(NULL) %>% 
   mutate(spp_fac=factor(SPECIESID)) %>%
   group_by(BDM, Plot_id) %>%
@@ -352,15 +352,35 @@ for(i in 1:nrow(beta.lam.df)) {
   beta.lam.df$beta.BRAY[i] <- beta_i$beta.BRAY
 }
 
-p <- beta.lam.df %>% pivot_longer(10:12, names_to="BetaPart", values_to="Beta") %>%
+beta.df <- beta.lam.df %>% 
+  pivot_longer(10:12, names_to="BetaPart", values_to="Beta") %>%
   mutate(BetaPart=factor(BetaPart, 
                          levels=paste0("beta.BRAY", c("", ".BAL", ".GRA")), 
                          labels=c("Overall", "Balanced\nvariation",
-                                  "Abundance\ngradient"))) %>%
-  ggplot(aes(el, Beta, colour=model, linetype=BetaPart, shape=BetaPart)) + 
-  stat_smooth(size=0.5, se=F, method="lm", formula=y~x+I(x^2)) + 
+                                  "Abundance\ngradient"))) 
+p <- ggplot(beta.df, aes(el, Beta, colour=model, fill=model,
+                         linetype=BetaPart, shape=BetaPart)) + 
   geom_point(size=0.9) +
+  stat_smooth(data=filter(beta.df, BetaPart=="Overall" &
+                            model=="Joint"), 
+              alpha=0.25, size=0.5, se=F, method="lm", formula=y~x) + 
+  stat_smooth(data=filter(beta.df, BetaPart == "Balanced\nvariation" &
+                            model=="Joint"), 
+              alpha=0.25, size=0.5, se=F, method="lm", formula=y~x+I(x^2)) + 
+  stat_smooth(data=filter(beta.df, BetaPart == "Abundance\ngradient" &
+                            model=="Joint"), 
+              alpha=0.25, size=0.5, se=F, method="lm", formula=y~x) + 
+  stat_smooth(data=filter(beta.df, BetaPart=="Overall" &
+                            model=="Structured"), 
+              alpha=0.25, size=0.5, se=F, method="lm", formula=y~x+I(x^2)) + 
+  stat_smooth(data=filter(beta.df, BetaPart == "Balanced\nvariation" &
+                            model=="Structured"), 
+              alpha=0.25, size=0.5, se=F, method="lm", formula=y~x+I(x^2)) + 
+  stat_smooth(data=filter(beta.df, BetaPart == "Abundance\ngradient" &
+                            model=="Structured"), 
+              alpha=0.25, size=0.5, se=F, method="lm", formula=y~x+I(x^2)) + 
   scale_colour_manual("Model", values=mod_col) + 
+  scale_fill_manual("Model", values=mod_col) + 
   scale_linetype_manual(expression(beta~partition), values=c(1,5,3)) +
   scale_shape_manual(expression(beta~partition), values=c(1,4,0)) +
   labs(x="Elevation (m)", y=expression('Within-site'~beta~diversity)) + 
