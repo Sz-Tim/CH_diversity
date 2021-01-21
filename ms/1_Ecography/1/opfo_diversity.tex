@@ -95,7 +95,7 @@ This is a blurb about Vaud, including some about the climate, topography, as wel
 
 
 \begin{figure}
-	\centering\includegraphics[width=3.5in]{figs/map_VD+inset.png}
+	\centering\includegraphics[width=3.5in]{ms/1_Ecography/1/figs/map_VD+inset.png}
 	\caption{\label{fig:VD_map} Map of the canton of Vaud, Switzerland. Samples consisted of presence-only data (blue points) and structured abundance data collected at 1 km$^2$ long-term biodiversity monitoring sites (red squares). }
 \end{figure}
 
@@ -118,7 +118,7 @@ Paragraph for regional variables.
 
 Paragraph for local variables.
 
-Variable processing and summarising was performed in R 3.6.3 (CITE), with spatial computations performed using the \emph{raster} (v. 3.3.7) and \emph{sf} (v. 0.9.4) packages. All variables were centered and scaled after summarising to the appropriate spatial scale to improve model behavior using the R function \emph{scale}. Additional details and references for each variable are summarised in \textbf{Appendix 1 Table X}.
+Variable processing and summarising was performed in R 3.6.3 (CITE), with spatial computations performed using the \emph{raster} (v. 3.3.7) and \emph{sf} (v. 0.9.4) packages (CITE). All variables were centered and scaled after summarising to the appropriate spatial scale to improve model behavior using the R function \emph{scale}. Additional details and references for each variable are summarised in \textbf{Appendix 1 Table X}.
 
 
 \subsection{Model overview}
@@ -163,9 +163,9 @@ Finally, several quantities were calculated at the regional and local scales for
 \subsection{Variable selection \& model fitting}
 To evaluate the effect of including the presence-only data, \textbf{W}, we compared a version of the model with and without \textbf{W}. We refer to the model that uses both \textbf{W} and \textbf{Y} as the \emph{Joint} model, and the model using only \textbf{Y} as the \emph{Structured} model. The \emph{Structured} model therefore does not include Eq. \ref{eq:W_Mn}, but nevertheless includes species only detected in \textbf{W}. We performed variable selection separately on the two models.
 
-Because comparing all possible models was not feasible, variable selection was performed using a 4-fold cross-validation with a step-wise forward search. The 44 sites in the structured abundance dataset, \textbf{Y} were divided into 4 subsets using the \emph{caret} (v. 6.0.86) R package. The models were parameterized using 3 of the subsets and predictive ability assessed using the 4$^{th}$, with four separate model runs such that all subsets were predicted once. In each round, the log likelihood of the observed abundances given the predicted abundances for each set of variables was calculated and compared using the \emph{loo} (v. 2.3.1) R package. Variables were added sequentially until predictive ability unambiguously declined, and the variable sets for the \emph{Joint} and \emph{Structured} models with the best out-of-sample predictive ability were considered optimal.
+Because comparing all possible models was not feasible, variable selection was performed using a 4-fold cross-validation with a step-wise forward search. The 44 sites in the structured abundance dataset, \textbf{Y} were divided into 4 subsets using the \emph{caret} (v. 6.0.86) R package (CITE). The models were parameterized using 3 of the subsets and predictive ability assessed using the 4$^{th}$, with four separate model runs such that all subsets were predicted once. In each round, the log likelihood of the observed abundances given the predicted abundances for each set of variables was calculated and compared using the \emph{loo} (v. 2.3.1) R package (CITE). Variables were added sequentially until predictive ability unambiguously declined, and the variable sets for the \emph{Joint} and \emph{Structured} models with the best out-of-sample predictive ability were considered optimal.
 
-All Bayesian models were written in Stan (CITE) and run in \emph{CmdStan 2.23.0} (CITE). In contrast to BUGS or JAGS, which use a Gibbs sampler for the Markov Chain Monte Carlo algorithm, Stan uses a Hamiltonian Monte Carlo algorithm which requires a warm-up period to tune the sampler parameters rather than a burn-in period. During variable selection, we ran 3 chains for each model with 2,500 iterations per chain, with 2,000 iterations for the warm-up period. For the optimal models, we ran 12 chains with 2,250 iterations each, with 2,000 iterations for the warm-up period. Model behavior and convergence was assessed by confirming that all $\hat{R}$ values were $\leq$ 1.1, visually inspecting a subset of trace plots, and confirming that no divergent transitions occurred during the sampling, which would indicate a poor approximation of the joint posterior distribution. Highest Posterior Density Intervals (HPDIs) were calculated for all parameters of interest using the \emph{HDInterval} (v. 0.2.2) R package.
+All Bayesian models were written in Stan (CITE) and run in \emph{CmdStan 2.23.0} (CITE). In contrast to BUGS or JAGS, which use a Gibbs sampler for the Markov Chain Monte Carlo algorithm, Stan uses a Hamiltonian Monte Carlo algorithm which requires a warm-up period to tune the sampler parameters rather than a burn-in period. During variable selection, we ran 3 chains for each model with 2,500 iterations per chain, with 2,000 iterations for the warm-up period. For the optimal models, we ran 12 chains with 2,250 iterations each, with 2,000 iterations for the warm-up period. Model behavior and convergence was assessed by confirming that all $\hat{R}$ values were $\leq$ 1.1, visually inspecting a subset of trace plots, and confirming that no divergent transitions occurred during the sampling, which would indicate a poor approximation of the joint posterior distribution. Highest Posterior Density Intervals (HPDIs) were calculated for all parameters of interest using the \emph{HDInterval} (v. 0.2.2) R package (CITE).
 
 
 \begin{table}[ht]
@@ -207,8 +207,8 @@ All Bayesian models were written in Stan (CITE) and run in \emph{CmdStan 2.23.0}
 \end{table}
 
 
-\subsection{Validation and model selection}
-We randomly divided the 44 sites with data for \textbf{Y} into training (75\%) and testing (25\%) subsets (\textbf{Appendix 1}). For each combination of covariates, we parameterized the models with the training subset and evaluated the ability to predict $\lambda$ with the testing subset using the log predictive density, a metric that uses the full posterior predictive distribution. We also performed a double principal coordinates analysis (DPCoA) using the posterior local intensities to assess taxonomically-weighted community structure \citep{Dray2015,Pavoine2019}
+\subsection{Community analyses}
+Using the $\lambda$ posterior medians, we calculated the $\beta$-diversity among plots within each site using the \emph{betapart} (v. 1.5.1) R package (CITE). The overall $\beta$-diversity at each site was partitioned into the balanced variation and abundance-gradient components, representing changes in relative abundance among species and changes in total abundance, respectively \citep{Baselga2017}. Change across elevation was assessed using linear and quadratic regressions compared with AICc using the \emph{AICcmodavg} (v. ) R package (CITE). A double principal coordinates analysis (DPCoA) was also performed using $\lambda$ posterior medians to assess similarity in taxonomically-weighted community structure among plots \citep{Dray2015,Pavoine2019} using the \emph{ade4} (v. 1.7.15) and \emph{vegan} (v. 2.5.6) R packages (CITE). 
 
 
 
@@ -217,27 +217,27 @@ We randomly divided the 44 sites with data for \textbf{Y} into training (75\%) a
 \label{S:3}
 % Model outputs
 \begin{figure}
-	\centering\includegraphics[width=6in]{figs/el_patterns.png}
-	\caption{\label{fig:el_patterns} Elevational patterns of posterior distributions at regional and local scales for (a) predicted species richness, (b) predicted Shannon H diversity, and (c) colony intensity. Lines and ribbons are loess lines using the posterior medians and 95\% Highest Density Interval, respectively, for the model using both datasets (Joint: purple) and the model using only the structured abundance data (Structured: green). All metrics were calculated in each sample from the posterior distribution using the predicted species-level colony intensities. }
+	\centering\includegraphics[width=6in]{ms/1_Ecography/1/figs/el_patterns.png}
+	\caption{\label{fig:el_patterns} Elevational patterns of posterior distributions at regional and local scales for (a) predicted species richness, (b) predicted Shannon H diversity, and (c) total colony intensity. Lines and ribbons are loess lines using the posterior medians and 95\% Highest Posterior Density Interval, respectively, for the model using both datasets (\emph{Joint}: purple) and the model using only the structured abundance data (\emph{Structured}: green). All metrics were calculated in each sample from the posterior distribution using the predicted species-level colony intensities. }
 \end{figure}
 
 \begin{figure}
-\centering\includegraphics[width=4in]{figs/slope_means.png}
-\caption{\label{fig:slope_means} Distribution of species-level responses in optimal models. Density curves represent the distribution of species-level posterior medians for the responses to local and regional variables for the model using both datasets (Joint: purple) and the model using only the abundance data (Structured: green). Points and lines show the posterior median and 95\% Highest Density Interval for the aggregate ($\beta$) responses. }
+\centering\includegraphics[width=6in]{ms/1_Ecography/1/figs/slope_means+HDI.png}
+\caption{\label{fig:slope_means} Distribution of species-level responses in optimal models. (a) Density curves represent the distribution of species-level posterior medians for the responses to local and regional variables for the model using both datasets (\emph{Joint}: purple) and the model using only the abundance data (\emph{Structured}: green). Points and lines show the posterior median and 95\% Highest Posterior Density Interval (HPDI) for the aggregate ($\beta$) responses. (b) Distribution of 90\% HPDI widths in species responses for species observed in the structured abundance dataset \textbf{Y} (left panels) and observed only in the presence-only dataset \textbf{W} (right panels), in each model (\emph{Joint}: purple, \emph{Structured}: green). }
 \end{figure}
 
 \begin{figure}
-	\centering\includegraphics[width=5in]{figs/DPCoA.png}
+	\centering\includegraphics[width=5in]{ms/1_Ecography/1/figs/DPCoA.png}
 	\caption{\label{fig:dpcoa} Double principle coordinate analysis (DPCoA) of predicted local communities, with plots colored by (a) elevational bin, and (b) region. The central plateau includes hills from ~300m to ~1000m, with the Jura and the Alps rising steeply in the east and west, respectively. }
 \end{figure}
 
 \begin{figure}
-	\centering\includegraphics[width=3in]{figs/genus_assemblages.png}
+	\centering\includegraphics[width=3in]{ms/1_Ecography/1/figs/genus_assemblages.png}
 	\caption{\label{fig:genus_assemblages} Relative abundance of genera in the presence-only (public) and abundance (structured) datasets across plateau and montane environments. Only genera that constitute $\geq 1\%$ of at least one subset are shown, with all others indicated as 'Other'.}
 \end{figure}
 
 \begin{figure}
-\centering\includegraphics[width=3in]{figs/beta_diversity.png}
+\centering\includegraphics[width=3in]{ms/1_Ecography/1/figs/beta_diversity.png}
 \caption{\label{fig:beta_div} Multi-site $\beta$-diversity and its components across elevation. Within each $1 km^2$ site, the species-level colony intensity posterior medians were used to calculate a multi-site $\beta$-diversity index and its components, representing the variation among local plots. 'Balanced variation' represents changes in relative abundance among species, while the 'abundance gradient' partition denotes changes in total abundance.}
 \end{figure}
 
