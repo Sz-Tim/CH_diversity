@@ -118,15 +118,15 @@ Paragraph for regional variables.
 
 Paragraph for local variables.
 
-Variable processing and summarising was performed in R 3.6.3 (CITE), with spatial computations performed using the \emph{raster} (v. 3.3-7) and \emph{sf} (0.9-4) packages. All variables were centered and scaled after summarising to the appropriate spatial scale to improve model behavior using the R function \emph{scale}. Additional details and references for each variable are summarised in \textbf{Appendix 1 Table X}.
+Variable processing and summarising was performed in R 3.6.3 (CITE), with spatial computations performed using the \emph{raster} (v. 3.3.7) and \emph{sf} (v. 0.9.4) packages. All variables were centered and scaled after summarising to the appropriate spatial scale to improve model behavior using the R function \emph{scale}. Additional details and references for each variable are summarised in \textbf{Appendix 1 Table X}.
 
 
 \subsection{Model overview}
-To leverage the strengths of each dataset, we used a community-level hierarchical inhomogenous Poisson point process model (PPM). Inhomogenous Poisson PPMs assume that the distribution of occurrences is dependent on the variation in local intensity, $\lambda(x)$, across space, $x$, which may be observed imperfectly resulting in a thinned point process. One key benefit of PPMs is that the underlying latent intensity is continuous in space, and can be integrated to arbitrary spatial resolutions \citep{Baddeley2015,Hefley2016}. Following the structure of the sampling design, we modelled the expected intensity of each species at two resolutions (regional: 1 km$^2$, local: 0.75 $m^2$), representing the area of the sampling sites and the area of the sampling plots respectively. The modelled local intensities are a function of species' responses to the local and regional environment, with the structured abundance data incorporated at the local scale, and the presence-only data incorporated at the regional scale. 
+To leverage the strengths of each dataset, we used a community-level hierarchical inhomogenous Poisson point process model (PPM). Inhomogenous Poisson PPMs assume that the distribution of occurrences is dependent on the variation in local intensity, $\lambda(x)$, across space, $x$, which may be observed imperfectly resulting in a thinned point process. One key benefit of PPMs is that the underlying latent intensity is continuous in space, and can be integrated to arbitrary spatial resolutions \citep{Baddeley2015,Hefley2016}. Following the structure of the sampling design, we modelled the expected intensity of each species at two resolutions (regional: 1 km$^2$, local: 0.75 m$^2$), representing the area of the sampling sites and the area of the sampling plots respectively. The modelled local intensities are a function of species' responses to the local and regional environment, with the structured abundance data incorporated at the local scale, and the presence-only data incorporated at the regional scale. 
 
 
 \subsection{Model structure}
-The hierarchical PPM unites the two datasets, \textbf{W} (presence-only citizen science collections; resolution: 1 km$^2$) and \textbf{Y} (structured local abundance collections; 0.75 $m^2$ plots within 1 km$^2$ sites). Thus, \textbf{W} informs responses to regional environmental variables, and  \textbf{Y} informs responses to both regional and local environmental variables. Similarly, \textbf{W} helps to identify overall relative abundance among species, while \textbf{Y} is a direct measurement of local abundance. We assume that local colony density for each species is a function of local and regional environmental conditions, with potential phylogenetic conservatism among species-specific responses.
+The hierarchical PPM unites the two datasets, \textbf{W} (presence-only citizen science collections; resolution: 1 km$^2$) and \textbf{Y} (structured local abundance collections; 0.75 m$^2$ plots within 1 km$^2$ sites). Thus, \textbf{W} informs responses to regional environmental variables, and  \textbf{Y} informs responses to both regional and local environmental variables. Similarly, \textbf{W} helps to identify overall relative abundance among species, while \textbf{Y} is a direct measurement of local abundance. We assume that local colony density for each species is a function of local and regional environmental conditions, with potential phylogenetic conservatism among species-specific responses.
 
 The structured abundances, \textbf{Y}, are observed at the local scale. The number of observed colonies $Y_{is}$ of species $s$ at plot $i$ follows a generalized Poisson distribution with the latent colony intensity $\lambda_{is}$ and dispersion term $\theta$ to account for overdispersion \citep{Consul1992,Ntzoufras2005}. The local intensity $\lambda_{is}$ is a function of the local environment and the regional intensity of species $s$ at the encompassing 1 km$^2$ site $j$:
     \begin{equation}
@@ -155,17 +155,18 @@ where $b_s$ is a vector of species-specific slopes, and \textbf{X} is a matrix o
 
 The slopes $a_s$ and $b_s$ are species-specific responses at local and regional scales, respectively, and are distributed about genus-level means $A_g$ and $B_g$ with standard deviations $\sigma_a$ and $\sigma_b$. The genus-level means are in turn distributed about aggregate means, $\alpha$ and $\beta$ with correlation matrices $\Sigma_A$ and $\Sigma_B$, which reflect the overall responses of the ant community to environmental variables at each resolution while accounting for relatedness at the genus level \citep{Hadfield2010b,Szewczyk2018}.
 
+Prior distributions were lightly informative to constrain the sampling algorithm to plausible ranges. Specifically, aggregate slopes $\alpha$ and $\beta$ were distributed Normal($\mu=0$, $\sigma=1$), the intensity intercept $\beta_0$ was distributed Normal($\mu=-4$, $\sigma=2$), standard deviations for species and genus slopes were distributed Normal($\mu=0$, $\sigma=2$) and constrained to be positive, the correlation matrices used a Cholesky decomposition and followed an LKJ prior as recommended for better model fitting (CITE) with $\eta=2$, and the proportional taxonomic bias term $D$ was distributed Normal($\mu=1$, $\sigma=1$) and constrained to be positive. Code for the full model is available on GitHub (https://github.com/Sz-Tim/CH\_diversity).
 
-\subsection{Calculated quantities}
-Finally, we calculated several quantities at the regional and local scales. We calculated the probability of presence as $\psi_{is} = 1 - e^{-\lambda_{is}}$ and $\Psi_{js} = 1 - e^{-\Lambda_{js}}$ \citep{Hefley2016}, as well as Shannon's H at each plot, $\beta$ diversity among plots within each site, and among sites, and overall $\gamma$ diversity at each site. 
+Finally, several quantities were calculated at the regional and local scales for each sample from the posterior. Probability of presence was calculated as $1 - e^{-\Lambda_{(j,k)s}}$ at the regional scale  \citep{Hefley2016}, and $1 - pr(0 | \lambda_{is}, \theta)$ at the local scale. Predicted richness was calculated within each plot or grid cell as the sum of the species with $\geq$ 95\% probability of presence. Shannon's H was calculated at each plot using $\lambda_{i,1-S}$ and in each cell using $\Lambda_{(j,k),1-S}$. Total predicted intensity was calculated as $\sum_{s=1}^{S}\Lambda_{(j,k)s}$ and $\sum_{s=1}^{S}\lambda_{is}$. 
 
 
-\subsection{Model fitting}
-All Bayesian models were written in Stan (CITE) and run in \emph{CmdStan 2.23.0} (CITE). Number of chains, number of iterations, warm-up period. 
+\subsection{Variable selection \& model fitting}
+To evaluate the effect of including the presence-only data, \textbf{W}, we compared a version of the model with and without \textbf{W}. We refer to the model that uses both \textbf{W} and \textbf{Y} as the \emph{Joint} model, and the model using only \textbf{Y} as the \emph{Structured} model. The \emph{Structured} model therefore does not include Eq. \ref{eq:W_Mn}, but nevertheless includes species only detected in \textbf{W}. We performed variable selection separately on the two models.
 
-Prior distributions were lightly informative to constrain the sampling algorithm to plausible ranges. Specifically, aggregate slopes $\alpha$ and $\beta$ were distributed Normal($\mu=0$, $\sigma=1$), the intensity intercept $\beta_0$ was distributed Normal($\mu=-4$, $\sigma=2$), standard deviations for species and genus slopes were distributed Normal($\mu=0$, $\sigma=2$) and constrained to be positive, the correlation matrices used a Cholesky decomposition and followed an LKJ prior as recommended for better model fitting (CITE) with $\eta=2$, and the proportional taxonomic bias term $D$ was distributed Normal($\mu=1$, $\sigma=1$) and constrained to be positive. Code for the full model is available on GitHub (https://www.github.com/Sz-Tim/CH\_diversity).
+Because comparing all possible models was not feasible, variable selection was performed using a 4-fold cross-validation with a step-wise forward search. The 44 sites in the structured abundance dataset, \textbf{Y} were divided into 4 subsets using the \emph{caret} (v. 6.0.86) R package. The models were parameterized using 3 of the subsets and predictive ability assessed using the 4$^{th}$, with four separate model runs such that all subsets were predicted once. In each round, the log likelihood of the observed abundances given the predicted abundances for each set of variables was calculated and compared using the \emph{loo} (v. 2.3.1) R package. Variables were added sequentially until predictive ability unambiguously declined, and the variable sets for the \emph{Joint} and \emph{Structured} models with the best out-of-sample predictive ability were considered optimal.
 
-To evaluate the effect of including the presence-only data \textbf{W}, we compared a version of the model with and without \textbf{W}. We refer to the model that uses both \textbf{W} and \textbf{Y} as the 'Joint' model, and the model using only \textbf{Y} as the 'Structured' model. 
+All Bayesian models were written in Stan (CITE) and run in \emph{CmdStan 2.23.0} (CITE). In contrast to BUGS or JAGS, which use a Gibbs sampler for the Markov Chain Monte Carlo algorithm, Stan uses a Hamiltonian Monte Carlo algorithm which requires a warm-up period to tune the sampler parameters rather than a burn-in period. During variable selection, we ran 3 chains for each model with 2,500 iterations per chain, with 2,000 iterations for the warm-up period. For the optimal models, we ran 12 chains with 2,250 iterations each, with 2,000 iterations for the warm-up period. Model behavior and convergence was assessed by confirming that all $\hat{R}$ values were $\leq$ 1.1, visually inspecting a subset of trace plots, and confirming that no divergent transitions occurred during the sampling, which would indicate a poor approximation of the joint posterior distribution. Highest Posterior Density Intervals (HPDIs) were calculated for all parameters of interest using the \emph{HDInterval} (v. 0.2.2) R package.
+
 
 \begin{table}[ht]
 	\centering
@@ -173,26 +174,26 @@ To evaluate the effect of including the presence-only data \textbf{W}, we compar
 		\hline
 		\textbf{Parameter} & \textbf{Description} & \textbf{Type} \\
 		\hline
-		$i$ & structured sampling plots (0.75 $m^2$) & index \\
+		$i$ & structured sampling plots (0.75 m$^2$) & index \\
 		$j$ & structured sampling cells (1 km$^2$) & index \\
 		$k$ & citizen science cells (1 km$^2$) & index \\
 		$s$ & species & index \\
 		$g$ & genus & index \\
-		$l$ & local covariates (0.75 $m^2$) & index \\
+		$l$ & local covariates (0.75 m$^2$) & index \\
 		$r$ & regional covariates (1 km$^2$) & index \\
 		\hline
-		$\mathbf{Y}_{is}$ & structured sampling counts (0.75 $m^2$) & data \\
+		$\mathbf{Y}_{is}$ & structured sampling counts (0.75 m$^2$) & data \\
 		$\mathbf{W}_{ks}$ & citizen science counts (1 km$^2$) & data \\
-		$\mathbf{V}_{il}$ & local covariates (0.75 $m^2$) & data \\
+		$\mathbf{V}_{il}$ & local covariates (0.75 m$^2$) & data \\
 		$\mathbf{X}_{(jk)r}$ & regional covariates (1 km$^2$) & data \\
 		$h$ & structured sampling proportional effort & data \\
 		\hline
-		$\mathbf{\lambda}_{is}$ & colony intensity (0.75 $m^2$) & latent \\
+		$\mathbf{\lambda}_{is}$ & colony intensity (0.75 m$^2$) & latent \\
 		$\mathbf{\Lambda}_{(jk)s}$ & colony intensity (1 km$^2$) & latent \\
 		\hline
-		$\alpha_{l}$ & aggregate ant responses (0.75 $m^2$) & slopes \\
-		$\mathbf{A}_{lg}$ & genus-level ant responses (0.75 $m^2$) & slopes \\
-		$\mathbf{a}_{ls}$ & species-level ant responses (0.75 $m^2$) & slopes \\
+		$\alpha_{l}$ & aggregate ant responses (0.75 m$^2$) & slopes \\
+		$\mathbf{A}_{lg}$ & genus-level ant responses (0.75 m$^2$) & slopes \\
+		$\mathbf{a}_{ls}$ & species-level ant responses (0.75 m$^2$) & slopes \\
 		$\sigma^a_{l}$ & response sd among congeners & sd \\
 		$\mathbf{\Sigma^A}_{gg}$ & genus-level covariance matrix & cov mx \\
 		$\beta_{r}$ & aggregate ant responses (1 km$^2$) & slopes \\
