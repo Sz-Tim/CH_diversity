@@ -30,7 +30,7 @@ lc_sum <- readxl::read_xlsx("../1_opfo/data/landcover_id.xlsx", 1) %>%
 VD_raw <- st_read("../2_gis/data/VD_21781/Vaud_boundaries.shp") 
 VD <- st_union(VD_raw %>% filter(!grepl("Lac ", NAME)))
 dem <- raster::raster("../2_gis/data/VD_21781/dem_VD_21781.tif") %>%
-  raster::mask(., st_zm(VD_raw))
+  raster::mask(., st_zm(VD_raw %>% filter(!grepl("Lac ", NAME))))
 world <- st_read("../2_gis/data/world/World_Countries__Generalized_.shp") %>%
   st_transform(st_crs(VD_raw)) %>%
   select(COUNTRY)
@@ -117,10 +117,12 @@ png(paste0(ms_dir, "figs/map_VD.png"),
     height=7, width=7, res=400, units="in")
 par(mar=c(0.5, 0.5, 0, 0), fig=c(0, 1, 0, 1))
 raster::plot(dem, legend=F, axes=F, box=F, 
-             col=colorRampPalette(c("gray60", "white"))(255))
+             col=colorRampPalette(c("gray45", "white"))(255))
 raster::scalebar(d=10000, xy=c(570000, 162000), below="km", 
                  label=c(0, 5, 10), type="bar")
 plot(VD, add=TRUE, lwd=0.5)
+plot(select(d.i[[1]]$grd_W.sf, inbd), add=TRUE, 
+     col=NA, fill=NA, border="gray10", lwd=0.2)
 plot(select(ants$pub, TubeNo), add=TRUE, 
      col=rgb(5/256,113/256,176/256,0.75), cex=0.4)
 plot(select(site.sf, el), add=TRUE, col=NA, fill=NA, border="#b2182b", lwd=1.5)
