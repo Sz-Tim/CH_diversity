@@ -157,7 +157,7 @@ The slopes $a_s$ and $b_s$ are species-specific responses at local and regional 
 
 Prior distributions were lightly informative to constrain the sampling algorithm to plausible ranges. Specifically, aggregate slopes $\alpha$ and $\beta$ were distributed Normal($\mu=0$, $\sigma=1$), the intensity intercept $\beta_0$ was distributed Normal($\mu=-4$, $\sigma=2$), standard deviations for species and genus slopes were distributed Normal($\mu=0$, $\sigma=2$) and constrained to be positive, the correlation matrices used a Cholesky decomposition and followed an LKJ prior as recommended for better model fitting (CITE) with $\eta=2$, and the proportional taxonomic bias term $D$ was distributed Normal($\mu=1$, $\sigma=1$) and constrained to be positive. Code for the full model is available on GitHub (https://github.com/Sz-Tim/CH\_diversity).
 
-Finally, several quantities were calculated at the regional and local scales for each sample from the posterior. Probability of presence was calculated as $1 - e^{-\Lambda_{(j,k)s}}$ at the regional scale  \citep{Hefley2016}, and $1 - pr(0 | \lambda_{is}, \theta)$ at the local scale. Predicted richness was calculated within each plot or grid cell as the sum of the species with $\geq$ 95\% probability of presence. Shannon's H was calculated at each plot using $\lambda_{i,1-S}$ and in each cell using $\Lambda_{(j,k),1-S}$. Total predicted intensity was calculated as $\sum_{s=1}^{S}\Lambda_{(j,k)s}$ and $\sum_{s=1}^{S}\lambda_{is}$. 
+Finally, several quantities were calculated at the regional and local scales for each sample from the posterior. Probability of presence was calculated as $1 - e^{-\Lambda_{(j,k)s}}$ at the regional scale  \citep{Hefley2016}, and $1 - pr(0 | \lambda_{is}, \theta)$ at the local scale. Predicted richness was calculated within each plot or grid cell as the sum of the species with $\geq$ 95\% probability of presence. Shannon's H was calculated at each plot using $\lambda_{i,1-S}$ and in each cell using $\Lambda_{(j,k),1-S}$. Total predicted intensity was calculated as $\sum_{s=1}^{S}\Lambda_{(j,k)s}$ and $\sum_{s=1}^{S}\lambda_{is}$. Thus, posterior predictions of local patterns were based only on the local plots at the 44 structured sites, while those of regional patterns were based on the 44 structured sites and the entire gridded landscape for Vaud (Fig. \ref{fig:VD_map}). 
 
 
 \subsection{Variable selection \& model fitting}
@@ -167,6 +167,69 @@ Because comparing all possible models was not feasible, variable selection was p
 
 All Bayesian models were written in Stan (CITE) and run in \emph{CmdStan 2.23.0} (CITE). In contrast to BUGS or JAGS, which use Gibbs samplers for the Markov Chain Monte Carlo algorithm, Stan uses a Hamiltonian Monte Carlo algorithm which requires a warm-up period to tune the sampler parameters rather than a burn-in period. During variable selection, we ran 3 chains for each model with 2,500 iterations per chain, with 2,000 iterations for the warm-up period. For the optimal models, we ran 12 chains with 2,250 iterations each, with 2,000 iterations for the warm-up period. Model behavior and convergence was assessed by confirming that all $\hat{R}$ values were $\leq$ 1.1, visually inspecting a selection of trace plots, and confirming that no divergent transitions occurred during the sampling, which would indicate a poor approximation of the joint posterior distribution. Highest Posterior Density Intervals (HPDIs) were calculated for all parameters of interest using the \emph{HDInterval} (v. 0.2.2) R package (CITE).
 
+
+\subsection{Community analyses}
+Using the $\lambda$ posterior medians, we calculated the $\beta$-diversity among plots within each site using the \emph{betapart} (v. 1.5.1) R package (CITE). The overall $\beta$-diversity at each site was partitioned into the balanced variation and abundance-gradient components, representing changes in relative abundance among species and changes in total abundance, respectively \citep{Baselga2017}. Change across elevation was assessed using linear and quadratic regressions compared with AICc using the \emph{AICcmodavg} (v. 2.3.0) R package (CITE). A double principal coordinates analysis (DPCoA) was also performed using $\lambda$ posterior medians to assess similarity in taxonomically-weighted community structure among plots \citep{Dray2015,Pavoine2019} using the \emph{ade4} (v. 1.7.15) and \emph{vegan} (v. 2.5.6) R packages (CITE). 
+
+
+
+
+\section{Results}
+\label{S:3}
+% Model performance
+In the 4-fold cross-validation, the model parameterized with both the presence-only and structured abundance datasets (\emph{Joint} model) consistently outperformed the model parameterized with only the structured abundance dataset (\emph{Structured} model) in predicting local abundances (Table?). Both optimal models included growing degree days at a regional scale, and local effects of canopy type, cropland, and pastureland (Fig. \ref{fig:slope_means}). The optimal \emph{Joint} model also included regional effects of annual precipitation, forest proportion, and road length, and local effects of soil temperature. Most variables showed mixed effect across species
+
+\begin{figure}
+\centering\includegraphics[width=6in]{ms/1_Ecography/1/figs/slope_means+HDI.png}
+\caption{\label{fig:slope_means} Distribution of species-level responses in optimal models. (a) Density curves represent the distribution of species-level posterior medians for the responses to local and regional variables for the model using both datasets (\emph{Joint}: purple) and the model using only the abundance data (\emph{Structured}: green). Points and lines show the posterior median and 95\% Highest Posterior Density Interval (HPDI) for the aggregate ($\beta$) responses. (b) Distribution of 90\% HPDI widths in species responses for species observed in the structured abundance dataset \textbf{Y} (left panels) and observed only in the presence-only dataset \textbf{W} (right panels), in each model (\emph{Joint}: purple, \emph{Structured}: green). }
+\end{figure}
+
+% Elevational patterns
+Across the canton of Vaud, predicted ant richness showed a peak just below 1000m at a regional scale, with no clear trend at a local scale for the plots within the 44 structured sites (Fig. \ref{fig:el_patterns}a), regardless of whether the model was parameterized with both datasets (\emph{Joint}) or only the local structured abundance dataset (\emph{Structured}). In contrast, the \emph{Joint} model predicted higher regional diversity at lower elevations, while the \emph{Structured} model predicted a peak near 1000m (Fig. \ref{fig:el_patterns}b). Both models predicted lower local diversity at low elevations, though the \emph{Structured} model predicted a more increase from 300m–1000m. The \emph{Structured} model predicted higher regional colony intensities at lower elevations, in contrast to the more constant intensities predicted by the \emph{Joint} model (Fig. \ref{fig:el_patterns}c). Local predicted intensity was similar across models, with a slight dip near 1000m and a decline toward the highest elevations. 
+
+\begin{figure}
+	\centering\includegraphics[width=6in]{ms/1_Ecography/1/figs/el_patterns.png}
+	\caption{\label{fig:el_patterns} Elevational patterns of posterior distributions at regional and local scales for (a) predicted species richness, (b) predicted Shannon H diversity, and (c) total colony intensity. Lines and ribbons are loess lines using the posterior medians and 95\% Highest Posterior Density Interval, respectively, for the model using both datasets (\emph{Joint}: purple) and the model using only the structured abundance data (\emph{Structured}: green). All metrics were calculated in each sample from the posterior distribution using the predicted species-level colony intensities. }
+\end{figure}
+
+\begin{figure}
+	\centering\includegraphics[width=5in]{ms/1_Ecography/1/figs/DPCoA.png}
+	\caption{\label{fig:dpcoa} Double principle coordinate analysis (DPCoA) of local communities predicted by the \emph{Joint} model, with plots colored by (a) elevational bin, and (b) region. The central plateau includes hills from ~300m to ~1000m, with the Jura and the Alps rising steeply in the east and west, respectively. }
+\end{figure}
+
+\begin{figure}
+	\centering\includegraphics[width=3in]{ms/1_Ecography/1/figs/genus_assemblages.png}
+	\caption{\label{fig:genus_assemblages} Relative abundance of genera in the presence-only (public) and abundance (structured) datasets across plateau and montane environments. Only genera that constitute $\geq 1\%$ of at least one subset are shown, with all others indicated as 'Other'.}
+\end{figure}
+
+\begin{figure}
+\centering\includegraphics[width=3in]{ms/1_Ecography/1/figs/beta_diversity.png}
+\caption{\label{fig:beta_div} Multi-site $\beta$-diversity and its components across elevation. Within each $1 km^2$ site, the species-level colony intensity posterior medians were used to calculate a multi-site $\beta$-diversity index and its components, representing the variation among local plots. 'Balanced variation' represents changes in relative abundance among species, while the 'abundance gradient' partition denotes changes in total abundance.}
+\end{figure}
+
+
+ 
+
+
+
+
+\section{Discussion}
+\label{S:4}
+% Summary
+Discussion goes here.
+
+% Conclusion
+Conclusion
+
+
+
+\section{Acknowledgments}
+Thanks to everyone.
+
+
+
+\section{Appendixes}
+\textbf{Appendix 1.} Supplementary methods.  
 
 \begin{table}[ht]
 	\centering
@@ -205,64 +268,6 @@ All Bayesian models were written in Stan (CITE) and run in \emph{CmdStan 2.23.0}
 	\end{tabular}
 	\caption{\label{table:params} Parameters in the model. Could be moved to an appendix, or shortened since many of these don't need to be highlighted. }
 \end{table}
-
-
-\subsection{Community analyses}
-Using the $\lambda$ posterior medians, we calculated the $\beta$-diversity among plots within each site using the \emph{betapart} (v. 1.5.1) R package (CITE). The overall $\beta$-diversity at each site was partitioned into the balanced variation and abundance-gradient components, representing changes in relative abundance among species and changes in total abundance, respectively \citep{Baselga2017}. Change across elevation was assessed using linear and quadratic regressions compared with AICc using the \emph{AICcmodavg} (v. 2.3.0) R package (CITE). A double principal coordinates analysis (DPCoA) was also performed using $\lambda$ posterior medians to assess similarity in taxonomically-weighted community structure among plots \citep{Dray2015,Pavoine2019} using the \emph{ade4} (v. 1.7.15) and \emph{vegan} (v. 2.5.6) R packages (CITE). 
-
-
-
-
-\section{Results}
-\label{S:3}
-% Model outputs
-\begin{figure}
-	\centering\includegraphics[width=6in]{ms/1_Ecography/1/figs/el_patterns.png}
-	\caption{\label{fig:el_patterns} Elevational patterns of posterior distributions at regional and local scales for (a) predicted species richness, (b) predicted Shannon H diversity, and (c) total colony intensity. Lines and ribbons are loess lines using the posterior medians and 95\% Highest Posterior Density Interval, respectively, for the model using both datasets (\emph{Joint}: purple) and the model using only the structured abundance data (\emph{Structured}: green). All metrics were calculated in each sample from the posterior distribution using the predicted species-level colony intensities. }
-\end{figure}
-
-\begin{figure}
-\centering\includegraphics[width=6in]{ms/1_Ecography/1/figs/slope_means+HDI.png}
-\caption{\label{fig:slope_means} Distribution of species-level responses in optimal models. (a) Density curves represent the distribution of species-level posterior medians for the responses to local and regional variables for the model using both datasets (\emph{Joint}: purple) and the model using only the abundance data (\emph{Structured}: green). Points and lines show the posterior median and 95\% Highest Posterior Density Interval (HPDI) for the aggregate ($\beta$) responses. (b) Distribution of 90\% HPDI widths in species responses for species observed in the structured abundance dataset \textbf{Y} (left panels) and observed only in the presence-only dataset \textbf{W} (right panels), in each model (\emph{Joint}: purple, \emph{Structured}: green). }
-\end{figure}
-
-\begin{figure}
-	\centering\includegraphics[width=5in]{ms/1_Ecography/1/figs/DPCoA.png}
-	\caption{\label{fig:dpcoa} Double principle coordinate analysis (DPCoA) of local communities predicted by the \emph{Joint} model, with plots colored by (a) elevational bin, and (b) region. The central plateau includes hills from ~300m to ~1000m, with the Jura and the Alps rising steeply in the east and west, respectively. }
-\end{figure}
-
-\begin{figure}
-	\centering\includegraphics[width=3in]{ms/1_Ecography/1/figs/genus_assemblages.png}
-	\caption{\label{fig:genus_assemblages} Relative abundance of genera in the presence-only (public) and abundance (structured) datasets across plateau and montane environments. Only genera that constitute $\geq 1\%$ of at least one subset are shown, with all others indicated as 'Other'.}
-\end{figure}
-
-\begin{figure}
-\centering\includegraphics[width=3in]{ms/1_Ecography/1/figs/beta_diversity.png}
-\caption{\label{fig:beta_div} Multi-site $\beta$-diversity and its components across elevation. Within each $1 km^2$ site, the species-level colony intensity posterior medians were used to calculate a multi-site $\beta$-diversity index and its components, representing the variation among local plots. 'Balanced variation' represents changes in relative abundance among species, while the 'abundance gradient' partition denotes changes in total abundance.}
-\end{figure}
-
-We used simulated data to validate the model, testing versions of the model using only \textbf{W}, only \textbf{Y}, and both \textbf{W} and \textbf{Y}. The model using both datasets performs best at predicting both site-level and plot-level abundances for testing subsets. I don't have any statistics yet, and will need to do full runs to be more confident. It is, of course, unsurprising that the site-level abundance $\Lambda$ is predicted more accurately, as the use of both datasets effectively increases the sample size for estimating the site-level slopes. The more accurate prediction of $\lambda$ is more exciting, since \textbf{W} doesn't directly include any information about it, but rather helps indirectly by improving predictions of $\Lambda$ at each site, which helps to constrain the intercept in the plot-level equation. 
-
-
-
-
-\section{Discussion}
-\label{S:4}
-% Summary
-Discussion goes here.
-
-% Conclusion
-Conclusion
-
-
-
-\section{Acknowledgments}
-Thanks to everyone.
-
-
-
-\section{Appendixes}
-\textbf{Appendix 1.} Supplementary methods.  
 
 \textbf{Appendix 2.} Model code.
 
