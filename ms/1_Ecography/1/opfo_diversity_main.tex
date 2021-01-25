@@ -176,6 +176,8 @@ Using the $\lambda$ posterior medians, we calculated the $\beta$-diversity among
 
 \section{Results}
 \label{S:3}
+A total of 80 species were detected across both datasets, with TK in the presence-only dataset and TK in the structured abundance dataset. The total number of samples in each dataset, the number of grid-cells with presences in the public dataset, the range of counts across cells. The species only detected in one but not the other, and then vice versa.
+
 % Model performance & covariates
 In the 4-fold cross-validation, the model parameterized with both the presence-only and structured abundance datasets (\emph{Joint} model) consistently outperformed the model parameterized with only the structured abundance dataset (\emph{Structured} model) in predicting local abundances (Table?). Both optimal models included growing degree days at a regional scale, and local effects of canopy type, cropland, and pastureland (Fig. \ref{fig:slope_means}). The optimal \emph{Joint} model also included regional effects of annual precipitation, forest proportion, and road length, and local effects of soil temperature. For many variables, species showed a variety of responses, resulting in no clear aggregate effect as the 95\% Highest Posterior Density Intervals (HPDIs) for $\beta$ included zero. However, the aggregate effect of growing degree days was positive in the \emph{Joint} model, and the aggregate effects of squared growing degree days and cropland were negative in both models. For soil temperature, pasture, and mixed canopy, nearly all species with non-zero HPDIs showed positive responses (\textbf{Appendix 2 Figure}). The \emph{Joint} model reduced uncertainty in species' responses compared to the \emph{Structured} model across most covariates (Fig. \ref{fig:slope_means}b). This reduction occurred on average across all species, but was greater for species that did not occur in the structured abundance dataset \textbf{Y}.
 
@@ -199,16 +201,18 @@ The local ant communities showed strong separation across elevations. Using the 
 	\caption{\label{fig:dpcoa} Double principle coordinate analysis (DPCoA) of local communities predicted by the \emph{Joint} model, with plots colored by (a) elevational bin, and (b) region. The central plateau includes hills from ~300m to ~1000m, with the Jura and the Alps rising steeply in the east and west, respectively. }
 \end{figure}
 
-Both the presence-only (\textbf{W}) and structured abundance (\textbf{Y}) datasets showed strong differences in the genus composition between the plateau and montane samples (Fig. \ref{fig:genus_assemblages}). In both datasets, the plateau ($<$1000m) was dominated by \emph{Lasius spp.}, with high representation of \emph{Formica spp.} in the montane zone ($\geq$1000m). The presence-only dataset contained an under-representation of \emph{Myrmica spp.} compared to the structured abundance dataset (\textbf{Appendix 2 Fig}), which was the most abundant genus in the montane structured abundance samples. 
+Both the presence-only (\textbf{W}) and structured abundance (\textbf{Y}) datasets showed strong differences in the genus composition between the plateau and montane samples (Fig. \ref{fig:genus_assemblages}). In both datasets, the plateau ($<$1000m) was dominated by \emph{Lasius spp.}, with high representation of \emph{Formica spp.} in the montane zone ($\geq$1000m). The structured abundance dataset also showed high relative abundance of \emph{Myrmica spp.}, particularly in montane environments. Compared to the structured abundance dataset, the presence-only dataset under-represented 15 species (19\%) based on 95\% HPDIs (\textbf{Appendix 2 Fig}). Nine of those species were in the genus \emph{Myrmica}, which was particularly prevalent in the montane structured abundance samples. In contrast, only 3 species were over-represented, including the anthropophilic pavement ant \emph{Tetramorium immigrans}, and two species of large-bodied mound-building \emph{Formica}. 
 
 \begin{figure}
 	\centering\includegraphics[width=3in]{ms/1_Ecography/1/figs/genus_assemblages.png}
-	\caption{\label{fig:genus_assemblages} Relative abundance of genera in the presence-only (public) and abundance (structured) datasets across plateau and montane environments. Only genera that constitute $\geq 1\%$ of at least one subset are shown, with all others indicated as 'Other'.}
+	\caption{\label{fig:genus_assemblages} Genus composition in the presence-only and structured abundance datasets across plateau and montane environments. Only genera that constitute $\geq 1\%$ of at least one subset are shown, with others indicated as 'Other'.}
 \end{figure}
+
+Patterns of $\beta$-diversity and its components did not strongly differ between models (Fig. \ref{fig:beta_div}). Overall $\beta$-diversity among plots within each structured site decreased somewhat with elevation. At lower elevations, the variation among local plots was driven largely by the \emph{balanced variation} component, indicating changes in the relative intensity of species among plots. At higher elevations, the \emph{abundance gradient} component increased, indicating changes in total intensity among plots, with less variation in species' relative intensity. At the highest sites, the overall $\beta$-diversity was partitioned approximately equally between the two components.
 
 \begin{figure}
 \centering\includegraphics[width=3in]{ms/1_Ecography/1/figs/beta_diversity.png}
-\caption{\label{fig:beta_div} Multi-site $\beta$-diversity and its components across elevation. Within each $1 km^2$ site, the species-level colony intensity posterior medians were used to calculate a multi-site $\beta$-diversity index and its components, representing the variation among local plots. 'Balanced variation' represents changes in relative abundance among species, while the 'abundance gradient' partition denotes changes in total abundance.}
+\caption{\label{fig:beta_div} Multi-site $\beta$-diversity and its components across elevation. Posterior medians were used to calculate multi-site $\beta$-diversity and its components within each 1 km$^2$ site, representing the variation among plots. \emph{Balanced variation} quantifies changes in relative abundance among species, while \emph{abundance gradient} denotes changes in total abundance.}
 \end{figure}
 
 
@@ -220,7 +224,7 @@ Both the presence-only (\textbf{W}) and structured abundance (\textbf{Y}) datase
 \section{Discussion}
 \label{S:4}
 % Summary
-Discussion goes here.
+The \emph{Joint} model outperformed the \emph{Structured} model, indicating that the information provided by the presence-only dataset at a regional scale improved predictions of ant communities at a local scale as well. Further, the \emph{Joint} model reduced uncertainty in species-level responses at both spatial scales, and for species detected or undetected in the structured abundance dataset. At a regional scale, ant richness was predicted to increase somewhat through the Swiss plateau, peak at the base of the mountain ranges, and then decline with further increases in elevation. In contrast, Shannon diversity was predicted to decline from low elevations until the mountain base, and then remain steady. Patterns were best predicted by growing degree days, precipitation, forest cover, and road length at a regional scale, and soil temperature, canopy cover, and crop or pasture land use at a local scale. Local ant communities cluster into plateau and montane communities, with large differences in the relative abundance of genera across elevations. At low elevations, the variation among local communities is dominated by variation in relative abundance among species, while at high elevations it is equally determined by variation in relative abundance and total abundance.
 
 % Conclusion
 Conclusion
@@ -233,7 +237,17 @@ Thanks to everyone.
 
 
 \section{Appendixes}
-\textbf{Appendix 1.} Supplementary methods.  
+\textbf{Appendix 1. Supplementary methods.}
+\begin{enumerate}
+    \item Further description of the sampling?
+    \item Figure of grid with number of samples?
+    \item Table of covariate information
+    \item Table of land cover types and canopy classification
+    \item Table of parameters?
+    \item Further description of the model?
+    \item Prior distributions
+    \item Model code
+\end{enumerate}
 
 \begin{table}[ht]
 	\centering
@@ -273,42 +287,17 @@ Thanks to everyone.
 	\caption{\label{table:params} Parameters in the model. Could be moved to an appendix, or shortened since many of these don't need to be highlighted. }
 \end{table}
 
-\textbf{Appendix 2.} Model code.
+\textbf{Appendix 2. Supplementary results.}
+\begin{enumerate}
+    \item Table of species, with taxonomic info and total counts (or elevational bins?) for each dataset
+    \item Table of variable selection loo
+    \item Figure of species-level responses
+    \item Figure of taxonomic bias
+    \item Covariance or sd for slopes?
+    \item Maps of richness (total, by SF, by genus)
+\end{enumerate}
 
-\textbf{Full equations}  
-\begin{equation}
-Y_{is} \sim Poisson(\lambda_{is}) \\
-\end{equation}
 
-\begin{equation}
-log(\lambda_{is}) = a_s V_i + log(h\Lambda_{js}) \\
-\end{equation}
-
-\begin{equation}
-W_{ks} \sim Poisson(\Lambda_{ks}E_kD_s) \\
-\end{equation}
-
-\begin{equation}
-log(\Lambda_{(j,k)s}) = b_s X_{(j,k)} \\
-\end{equation}
-
-\begin{equation}
-logit(E_k) = \eta U_k \\
-\end{equation}
-
-\begin{equation}
-\begin{gathered}
-a_s \sim Norm(A_g, \sigma^a) \\
-A_g \sim Norm_G(\alpha, \Sigma^A) \\
-\end{gathered}
-\end{equation}
-
-\begin{equation}
-\begin{gathered}
-b_s \sim Norm(B_g, \sigma^b) \\
-B_g \sim Norm_G(\beta, \Sigma^B) \\
-\end{gathered}
-\end{equation}
 
 
 
