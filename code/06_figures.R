@@ -526,8 +526,8 @@ ggsave(paste0(ms_dir, "figs/genus_assemblages.png"), p, width=5, height=5)
 p <- agg$D %>%
   mutate(genFull=tax_i$FullGen[match(sppName, tax_i$species)],
          sppName=str_replace(str_remove(sppName, "-GR"), "_", ".")) %>%
-  ggplot(aes(x=median, xmin=L05, xmax=L95, y=sppName,
-             colour=sign(L05-1)==sign(L95-1))) + 
+  ggplot(aes(x=median, xmin=L025, xmax=L975, y=sppName,
+             colour=sign(L025-1)==sign(L975-1))) + 
   geom_vline(xintercept=1, colour="gray") +
   geom_point() + geom_linerange() + 
   facet_grid(genFull~., scales="free_y", space="free_y") +
