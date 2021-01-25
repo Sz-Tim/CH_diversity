@@ -281,16 +281,20 @@ beta_post <- agg$beta %>% filter(ParName != "intercept") %>%
          Par=factor(Par, levels=rev(unique(parName.df$full))))
 
 p.A <- ggplot(b_post, aes(x=mean, y=Par, fill=model, colour=model)) +
-  ggridges::geom_density_ridges(colour="gray30", alpha=0.75, scale=0.8, 
+  ggridges::geom_density_ridges(colour="gray30", alpha=0.75, scale=0.7, 
                                 size=0.25, rel_min_height=0.001) +
   geom_point(data=filter(beta_post, model=="Joint"), shape=1, 
-             position=position_nudge(y=-0.05)) + 
+             position=position_nudge(y=-0.075)) + 
+  geom_linerange(data=filter(beta_post, model=="Joint"), aes(xmin=L10, xmax=L90), 
+                 size=0.75, position=position_nudge(y=-0.075)) + 
   geom_linerange(data=filter(beta_post, model=="Joint"), aes(xmin=L025, xmax=L975), 
-                 size=0.5, position=position_nudge(y=-0.05)) + 
+                 size=0.3, position=position_nudge(y=-0.075)) + 
   geom_point(data=filter(beta_post, model!="Joint"), shape=1, 
-             position=position_nudge(y=-0.1)) + 
+             position=position_nudge(y=-0.2)) + 
+  geom_linerange(data=filter(beta_post, model!="Joint"), aes(xmin=L10, xmax=L90), 
+                 size=0.75, position=position_nudge(y=-0.2)) + 
   geom_linerange(data=filter(beta_post, model!="Joint"), aes(xmin=L025, xmax=L975), 
-                 size=0.5, position=position_nudge(y=-0.1)) + 
+                 size=0.3, position=position_nudge(y=-0.2)) + 
   geom_vline(xintercept=0, linetype=3, colour="gray30", size=0.5) +
   scale_colour_manual("Model", values=mod_col) + 
   scale_fill_manual("Model", values=mod_col) + 
@@ -308,12 +312,12 @@ p.B <- agg$b %>%
          Par=factor(Par, levels=rev(unique(parName.df$full))),
          SppInY=c("Species not in Y", 
                   "Species in Y")[(spp %in% det_Y)+1]) %>%
-  ggplot(aes(x=abs(L95-L05), y=Par, fill=model)) + 
+  ggplot(aes(x=abs(L975-L025), y=Par, fill=model)) + 
   geom_vline(xintercept=0, colour="gray30", size=0.1) +
   ggridges::geom_density_ridges(colour="gray30", alpha=0.75, scale=1, 
                                 size=0.25, rel_min_height=0.001) + 
   scale_fill_manual("Model", values=mod_col) +
-  labs(x="Posterior 90% HDI width", y="") +
+  labs(x="Posterior 95% HDI width", y="") +
   facet_grid(Scale~SppInY, scales="free_y", space="free_y") +
   ms_fonts + 
   theme(panel.grid.major.y=element_line(size=0.1, colour="gray30"),
