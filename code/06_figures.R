@@ -304,30 +304,75 @@ p.A <- ggplot(b_post, aes(x=mean, y=Par, fill=model, colour=model)) +
   theme(panel.grid.major.y=element_line(size=0.1, colour="gray30"),
         legend.position="bottom")
 
-p.B <- agg$b %>% 
+# p.B <- agg$b %>% 
+#   mutate(Scale=str_sub(ParName, 1L, 1L),
+#          Scale=factor(if_else(Scale=="i", "R", Scale),
+#                       levels=c("R", "L"), labels=c("Regional", "Local")), 
+#          Par=parName.df$full[match(ParName, parName.df$par)],
+#          Par=factor(Par, levels=rev(unique(parName.df$full))),
+#          SppInY=c("Species not in Y", 
+#                   "Species in Y")[(spp %in% det_Y)+1]) %>%
+#   ggplot(aes(x=abs(L975-L025), y=Par, fill=model)) + 
+#   geom_vline(xintercept=0, colour="gray30", size=0.1) +
+#   ggridges::geom_density_ridges(colour="gray30", alpha=0.75, scale=1, 
+#                                 size=0.25, rel_min_height=0.001) + 
+#   scale_fill_manual("Model", values=mod_col) +
+#   labs(x="95% HPDI width", y="") +
+#   facet_grid(Scale~SppInY, scales="free_y", space="free_y") +
+#   ms_fonts + 
+#   theme(panel.grid.major.y=element_line(size=0.1, colour="gray30"),
+#         legend.position="bottom")
+# 
+# p <- ggpubr::ggarrange(p.A, p.B, nrow=1, labels=c("a.", "b."), 
+#                        widths=c(0.7, 1), label.x=c(0.05, 0.07),
+#                        common.legend=T, legend="bottom") 
+# ggsave(paste0(ms_dir, "figs/slope_means+HDI.png"), p, width=10, height=5, units="in")
+
+hdi_width.df <- agg$b %>% 
   mutate(Scale=str_sub(ParName, 1L, 1L),
          Scale=factor(if_else(Scale=="i", "R", Scale),
                       levels=c("R", "L"), labels=c("Regional", "Local")), 
          Par=parName.df$full[match(ParName, parName.df$par)],
          Par=factor(Par, levels=rev(unique(parName.df$full))),
          SppInY=c("Species not in Y", 
-                  "Species in Y")[(spp %in% det_Y)+1]) %>%
-  ggplot(aes(x=abs(L975-L025), y=Par, fill=model)) + 
-  geom_vline(xintercept=0, colour="gray30", size=0.1) +
-  ggridges::geom_density_ridges(colour="gray30", alpha=0.75, scale=1, 
+                  "Species in Y")[(spp %in% det_Y)+1],
+         HDI_w=L975-L025) %>%
+  select(Scale, Par, sppName, SppInY, model, HDI_w) %>%
+  pivot_wider(names_from="model", values_from="HDI_w") %>%
+  mutate(HDI_diff=Joint-Structured) %>%
+  filter(!is.na(HDI_diff))
+hdi_width.sum <- hdi_width.df %>%
+  group_by(Scale, Par, SppInY) %>%
+  summarise(mn=mean(HDI_diff),
+            se=sd(HDI_diff)/sqrt(n())) 
+
+p.B <- ggplot(hdi_width.df, aes(y=Par, fill=SppInY, colour=SppInY)) + 
+  ggridges::geom_density_ridges(aes(x=HDI_diff),
+                                colour="gray30", alpha=0.75, scale=0.7, 
                                 size=0.25, rel_min_height=0.001) + 
-  scale_fill_manual("Model", values=mod_col) +
-  labs(x="Posterior 95% HDI width", y="") +
-  facet_grid(Scale~SppInY, scales="free_y", space="free_y") +
+  geom_point(data=filter(hdi_width.sum, SppInY=="Species in Y"), 
+             aes(x=mn), shape=1, position=position_nudge(y=-0.075)) + 
+  geom_linerange(data=filter(hdi_width.sum, SppInY=="Species in Y"), 
+                 aes(xmin=mn-2*se, xmax=mn+2*se), 
+                 size=0.5, position=position_nudge(y=-0.075)) + 
+  geom_point(data=filter(hdi_width.sum, SppInY!="Species in Y"), 
+             aes(x=mn), shape=1, position=position_nudge(y=-0.2)) + 
+  geom_linerange(data=filter(hdi_width.sum, SppInY!="Species in Y"), 
+                 aes(xmin=mn-2*se, xmax=mn+2*se), 
+                 size=0.5, position=position_nudge(y=-0.2)) + 
+  geom_vline(xintercept=0, colour="gray30", size=0.1) +
+  labs(x="Change in 95% HPDI width\n(Joint - Structured)", y="") +
+  facet_grid(Scale~., scales="free_y", space="free_y") +
   ms_fonts + 
+  scale_fill_brewer("", type="qual", palette=3, direction=-1) + 
+  scale_colour_brewer("", type="qual", palette=3, direction=-1) + 
   theme(panel.grid.major.y=element_line(size=0.1, colour="gray30"),
         legend.position="bottom")
 
 p <- ggpubr::ggarrange(p.A, p.B, nrow=1, labels=c("a.", "b."), 
-                       widths=c(0.7, 1), label.x=c(0.05, 0.07),
-                       common.legend=T, legend="bottom") 
+                       label.x=c(0.05, 0.07),
+                       common.legend=F, legend="bottom") 
 ggsave(paste0(ms_dir, "figs/slope_means+HDI.png"), p, width=10, height=5, units="in")
-
 
 
 
