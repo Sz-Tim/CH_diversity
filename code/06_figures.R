@@ -495,7 +495,7 @@ genProp.df <- ants$all %>%
          elCat=c("Montane", "Plateau")[(el < 1000) + 1],
          elCat=factor(elCat, levels=c("Plateau", "Montane")),
          genFull=tax_i$FullGen[match(SPECIESID, tax_i$species)],
-         source=factor(source, labels=c("Public", "Structured"))) %>%
+         source=factor(source, labels=c("Presence\nonly", "Structured\nabundance"))) %>%
   st_set_geometry(NULL) %>% filter(!is.na(elCat))
 gen_1pct <- unique((genProp.df %>% 
                       group_by(genFull, elCat, source) %>% summarise(N=n()) %>%
