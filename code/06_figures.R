@@ -652,7 +652,7 @@ p.C <-
 
 p <- ggpubr::ggarrange(p.A, p.B, nrow=1, labels=c("a.", "b."), 
                        label.x=c(0.08, 0.08),
-                       common.legend=F, legend="bottom") 
+                       common.legend=T, legend="bottom") 
 ggsave(paste0(ms_dir, "figs/lambda_zones.png"), p, width=10, height=13, units="in")
 
 
