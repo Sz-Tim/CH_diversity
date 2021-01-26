@@ -525,13 +525,17 @@ ggsave(paste0(ms_dir, "figs/genus_assemblages.png"), p, width=5, height=5)
 
 p <- agg$D %>%
   mutate(genFull=tax_i$FullGen[match(sppName, tax_i$species)],
-         sppName=str_replace(str_remove(sppName, "-GR"), "_", ".")) %>%
-  ggplot(aes(x=median, xmin=L025, xmax=L975, y=sppName,
-             colour=sign(L025-1)==sign(L975-1))) + 
+         sppName=str_replace(str_remove(sppName, "-GR"), "_", "."),
+         sig=case_when(sign(L10-1)==sign(L90-1) & sign(L025-1)!=sign(L975-1) ~ "sig80",
+                       sign(L025-1)==sign(L975-1) ~ "sig95",
+                       sign(L10-1)!=sign(L90-1) ~ "ns")) %>%
+  ggplot(aes(x=median, xmin=L025, xmax=L975, y=sppName, colour=sig)) + 
   geom_vline(xintercept=1, colour="gray") +
-  geom_point() + geom_linerange() + 
+  geom_point() + 
+  geom_linerange(size=0.5) + 
+  geom_linerange(aes(xmin=L10, xmax=L90), size=1) + 
   facet_grid(genFull~., scales="free_y", space="free_y") +
-  scale_colour_manual(values=c("gray", "darkred"), guide=F) +
+  scale_colour_manual(values=c("gray", "#fc9272", "#99000d"), guide=F) +
   ms_fonts  + theme(axis.text.y=element_text(hjust=1, vjust=0.5),
                     strip.background=element_blank(),
                     strip.text=element_blank(), 
