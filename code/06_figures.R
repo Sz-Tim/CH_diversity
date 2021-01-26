@@ -660,6 +660,72 @@ ggsave(paste0(ms_dir, "figs/lambda_zones.png"), p, width=10, height=13, units="i
 
 
 
+########------------------------------------------------------------------------
+## Species responses
+########------------------------------------------------------------------------
+
+p <- agg$b %>% filter(ParName != "intercept") %>%
+  mutate(Scale=factor(str_sub(ParName, 1L, 1L), levels=c("R", "L"), 
+                      labels=c("Regional", "Local")),
+         Par=parName.df$full[match(ParName, parName.df$par)],
+         Par=factor(Par, levels=rev(unique(parName.df$full))),
+         genName=tax_i$FullGen[match(sppName, tax_i$species)],
+         sppName=str_replace(str_remove(sppName, "-GR"), "_", ".")) %>%
+  ggplot(aes(x=sppName, y=median, colour=model)) + 
+  geom_hline(yintercept=0, linetype=3, colour="gray30", size=0.5) +
+  geom_point(aes(shape=sign(L025)==sign(L975)),
+             position=position_dodge(width=0.5)) + 
+  scale_shape_manual("95% HPDI", values=c(1, 19), labels=c("incl. 0", "excl. 0")) +
+  geom_linerange(aes(ymin=L25, ymax=L75), 
+                 position=position_dodge(width=0.5), size=0.5) + 
+  geom_linerange(aes(ymin=L025, ymax=L975),
+                 position=position_dodge(width=0.5), size=0.2) + 
+  coord_flip() + scale_colour_manual("Model:", values=mod_col) + 
+  facet_grid(genName~Par, space="free_y", scales="free",
+             labeller=label_wrap_gen(width=10)) +
+  labs(y="Species-level responses (b)", x="") + 
+  ms_fonts +
+  theme(strip.text.y=element_blank(), 
+        strip.background.y=element_blank(),
+        panel.spacing.y=unit(0.05, 'cm'), 
+        legend.position="bottom",
+        axis.text.x=element_text(size=8))
+ggsave(paste0(ms_dir, "figs/b_opt_byParam.png"), p, width=13, height=15)
+
+p <- agg$b %>% filter(cov != "1") %>% 
+  mutate(Scale=factor(str_sub(ParName, 1L, 1L), levels=c("R", "L"), 
+                      labels=c("Regional", "Local")),
+         Par=parName.df$full[match(ParName, parName.df$par)],
+         Par=factor(Par, levels=rev(unique(parName.df$full)))) %>%
+  mutate(effect=case_when(L025<0 & L975<0 ~ "negative",
+                          L025>0 & L975>0 ~ "positive",
+                          L025<0 & L975>0 ~ "incl. 0",
+                          L025>0 & L975<0 ~ "incl. 0"),
+         sig=sign(L025)==sign(L975)) %>%
+  group_by(model, Par, Scale, ParName, effect) %>% 
+  summarise(nSpp=n(), nSig=sum(sig)) %>%
+  group_by(model, Par, Scale, ParName) %>%
+  mutate(effect=factor(effect, levels=c("incl. 0", "negative", "positive")),
+         nSig=sum(nSig)) %>%
+  arrange(model, Scale, nSig) %>% ungroup %>%
+  mutate(Par=factor(Par, levels=unique(Par))) %>%
+  ggplot(aes(nSpp/80, Par, fill=effect)) + 
+  geom_bar(stat="identity", colour="gray30", size=0.25) +
+  facet_grid(Scale~model, scales="free", space="free_y") + 
+  scale_fill_manual("95% HPDI", values=c("gray90", "blue", "red")) + 
+  scale_x_continuous(breaks=seq(0,1,0.25), 
+                     labels=c("0", "0.25", "0.5", "0.75", "1")) +
+  labs(y="", x="Proportion of species", title="Species Responses") + 
+  ms_fonts
+ggsave(paste0(ms_dir, "figs/b_opt_bar.png"), p, width=7, height=4)
+
+
+
+
+
+
+
+
 
 
 
