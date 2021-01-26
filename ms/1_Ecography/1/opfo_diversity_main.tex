@@ -103,11 +103,11 @@ This is a blurb about Vaud, including some about the climate, topography, as wel
 Ants were collected during the summer of 2019 in two simultaneous collection efforts (Fig. \ref{fig:VD_map}). First, a citizen science project (Opération Fourmis: https://wp.unil.ch/fourmisvaud/) was organized to survey the ant fauna within the canton of Vaud. Vials of ethanol were distributed to interested citizen scientists, who were asked to collect approximately 10 ant workers per colony for each vial. Participants were encouraged to explore under rocks, on bark, inside twigs, and in downed wood, and an online map was updated periodically to highlight data-sparse areas. Collectors returned the vials along with the collection date and the locality of the sample including the latitude and longitude. A total of TK samples were returned, representing collections between TK and TK. For these presence-only data, we discretized the landscape into a 1 km$^2$ grid (3,558 km$^2$) and tallied the number of counts for each species in each cell (TK cells with occurrences). 
 
 % Methods for structured samples
-Second, a structured sampling effort collected local colony abundance data, where ants were collected within 44 sites of 1 km$^2$ each, with standardized effort across sites. Thirty-nine of the sites were a part of long-term biodiversity monitoring efforts by the federal government (CITE), and as such were arranged on a regular grid with approximately 5-7 km between adjacent sites. Five additional sites are established monitoring sites by the University of Lausanne. The ants at each site were characterized by 25 plots, distributed among 15 habitat types (CITE) in approximate proportion to the abundance of each habitat, where each habitat type present within the site was represented by at least one plot. Inaccessible areas (e.g., cliffs, water, property beyond Vaud) were excluded, resulting in several sites with areas less than 1 km$^2$, and the number of plots was reduced proportionally (TK total plots; Appendix 1). 
+Second, a structured sampling effort collected local colony abundance data, where ants were collected within 44 sites of 1 km$^2$ each, with standardized effort across sites. Thirty-nine of the sites were a part of long-term biodiversity monitoring efforts by the federal government (CITE), and as such were arranged on a regular grid with approximately 5-7 km between adjacent sites. Five additional sites are established monitoring sites by the University of Lausanne. The ants at each site were characterized by 25 plots, distributed among 15 habitat types \citep{Gago-Silva2017} in approximate proportion to the abundance of each habitat, where each habitat type present within the site was represented by at least one plot. Inaccessible areas (e.g., cliffs, water, property beyond Vaud) were excluded, resulting in several sites with areas less than 1 km$^2$, and the number of plots was reduced proportionally (TK total plots; Appendix 1). 
 
 Each sampling plot consisted of a 2m radius circle, with soil temperature recorded in the center at a depth of approximately 6 cm, and vegetation characterized according to Braun-Blanquet coverage classes for grass, forb, shrub, litter, bare, and moss within the plot \citep{Douglas1978}. Six flags were evenly spaced around the circumference. Within $\sim$ 20 cm of each flag (total surface area $\sim$ 0.75 m$^2$), we searched for ant colonies within any downed wood or stumps, under large rocks, and in 2 L of soil, litter, and small rocks using 18 cm Hori Hori gardening knives. We haphazardly collected 10 workers from each colony, placing them directly into vials of ethanol. A total of TK colonies were detected across the 44 sites. Within each plot, all trees $\geq$3 cm diameter at breast height were also inspected for ant workers which were collected regardless of whether or not a colony was identifiable. Lastly, transect lines were mapped \emph{a priori}, distributed proportionally among habitat types and totalling 2 km, and surveyed at a moderate pace. Workers were collected from all permanent above-ground mounds within 2 m of the transect line. Because of the distinct sampling methods, the tree and transect collections were treated as presence-only data, and incorporated into the citizen science dataset (TK additional occurrences). 
 
-Thus, each dataset has distinct strengths and limitations. The presence-only dataset was collected very broadly spatially, with a subset of detections resulting from free investigation of subjectively suitable habitats by skilled myrmecologists, and was therefore more likely to include rare or secretive species. However, many collections form citizen scientists occurred in or near human-dominant areas, with a likely bias toward larger, more obvious, or more anthropophilic species. The sampling effort also varied widely across space. In contrast, the structured abundance dataset was collected with uniform sampling effort, with a sampling design aimed to produce representative samples of colony density within each site. The communities from this dataset are thus expected to be more representative of the ground-nesting ant community structure, despite detecting a smaller number of species. 
+Thus, each dataset has distinct strengths and limitations. The presence-only dataset was collected very broadly spatially, with a subset of detections resulting from free investigation of subjectively suitable habitats by skilled myrmecologists, and was therefore more likely to include rare or secretive species. However, many collections form citizen scientists occurred in or near human-dominant areas, with a likely bias toward larger, more obvious, or more anthropophilic species \citep{Ward2014, Troudet2017}. The sampling effort also varied widely across space. In contrast, the structured abundance dataset was collected with uniform sampling effort, with a sampling design aimed to produce representative samples of colony density within each site. The communities from this dataset are thus expected to be more representative of the ground-nesting ant community structure, despite detecting a smaller number of species. 
 
 % Identification and storage
 All ants were identified to species or species group based on morphology by experts (names?). Specimens are stored at the Natural History Museum of Lausanne in Lausanne, Switzerland in TK\% ethanol or mounted on pins. 
@@ -163,7 +163,7 @@ Finally, several quantities were calculated at the regional and local scales for
 \subsection{Variable selection \& model fitting}
 To evaluate the effect of including the presence-only data, \textbf{W}, we compared a version of the model with and without \textbf{W}. We refer to the model that uses both \textbf{W} and \textbf{Y} as the \emph{Joint} model, and the model using only \textbf{Y} as the \emph{Structured} model. The \emph{Structured} model therefore does not include Eq. \ref{eq:W_Mn}, but nevertheless includes species only detected in \textbf{W}. We performed variable selection separately on the two models.
 
-Because comparing all possible models was not feasible, variable selection was performed using a 4-fold cross-validation with a step-wise forward search. The 44 sites in the structured abundance dataset \textbf{Y} were divided into 4 subsets using the \emph{caret} (v. 6.0.86) R package (CITE). The models were parameterized using 3 of the subsets and predictive ability assessed using the 4$^{th}$, with four separate model runs such that all subsets were predicted once. In each round, the log likelihood of the observed abundances given the predicted abundances for each set of variables was calculated and compared using the \emph{loo} (v. 2.3.1) R package (CITE). Variables were added sequentially until predictive ability unambiguously declined, and the variable sets for the \emph{Joint} and \emph{Structured} models with the best out-of-sample predictive ability were considered optimal.
+Because comparing all possible models was not feasible, variable selection was performed using a 4-fold cross-validation with a step-wise forward search. The 44 sites in the structured abundance dataset \textbf{Y} were divided into 4 subsets using the \emph{caret} (v. 6.0.86) R package (CITE). The models were parameterized using 3 of the subsets and predictive ability assessed using the 4$^{th}$, with four separate model runs such that all subsets were predicted once. In each round, the log pointwise predictive density of the observed abundances given the predicted local intensities for each candidate model was calculated and compared using the \emph{loo} (v. 2.3.1) R package (CITE). Variables were added sequentially until predictive ability unambiguously declined, and the variable sets for the \emph{Joint} and \emph{Structured} models with the best out-of-sample predictive ability were considered optimal.
 
 All Bayesian models were written in Stan (CITE) and run in \emph{CmdStan 2.23.0} (CITE). In contrast to BUGS or JAGS, which use Gibbs samplers for the Markov Chain Monte Carlo algorithm, Stan uses a Hamiltonian Monte Carlo algorithm which requires a warm-up period to tune the sampler parameters rather than a burn-in period. During variable selection, we ran 3 chains for each model with 2,500 iterations per chain, with 2,000 iterations for the warm-up period. For the optimal models, we ran 12 chains with 2,250 iterations each, with 2,000 iterations for the warm-up period. Model behavior and convergence was assessed by confirming that all $\hat{R}$ values were $\leq$ 1.1, visually inspecting a selection of trace plots, and confirming that no divergent transitions occurred during the sampling, which would indicate a poor approximation of the joint posterior distribution. Highest Posterior Density Intervals (HPDIs) were calculated for all parameters of interest using the \emph{HDInterval} (v. 0.2.2) R package (CITE).
 
@@ -223,6 +223,8 @@ Patterns of $\beta$-diversity and its components did not strongly differ between
 
 \section{Discussion}
 \label{S:4}
+Citizen science papers: \citep{Altwegg2019, Pernat2020, Henckel2020, Duan2020, Johnston2020,Robinson2019, Beck2010, Poisson2020}
+
 % Summary
 The \emph{Joint} model outperformed the \emph{Structured} model, indicating that the information provided by the presence-only dataset at a regional scale improved predictions of ant communities at a local scale as well. Further, the \emph{Joint} model reduced uncertainty in species-level responses at both spatial scales, and for species detected or undetected in the structured abundance dataset. At a regional scale, ant richness was predicted to increase somewhat through the Swiss plateau, peak at the base of the mountain ranges, and then decline with further increases in elevation. In contrast, Shannon diversity was predicted to decline from low elevations until the mountain base, and then remain steady. Patterns were best predicted by growing degree days, precipitation, forest cover, and road length at a regional scale, and soil temperature, canopy cover, and crop or pasture land use at a local scale. Local ant communities cluster into plateau and montane communities, with large differences in the relative abundance of genera across elevations. At low elevations, the variation among local communities is dominated by variation in relative abundance among species, while at high elevations it is equally determined by variation in relative abundance and total abundance.
 
@@ -250,7 +252,7 @@ Conclusion
 Thanks to everyone.
 
 
-
+\newpage
 \section{Appendixes}
 \textbf{Appendix 1. Supplementary methods.}
 \begin{enumerate}
@@ -306,19 +308,21 @@ Thanks to everyone.
 \begin{enumerate}
     \item Table of species, with taxonomic info and total counts (or elevational bins?) for each dataset
     \item Table of variable selection loo
-    \item Figure of species-level responses
+    \item Figure of species-level responses (points + HPDIs)
+    \item Figure of species-level responses (bar proportions)
     \item Figure of taxonomic bias
+    \item Figure of plateau vs montane
     \item Covariance or sd for slopes?
     \item Maps of richness (total, by SF, by genus)
 \end{enumerate}
 
 \begin{figure}
-	\centering\includegraphics[height=8in]{ms/1_Ecography/1/figs/b_opt_byParam.png}
+	\centering\includegraphics[height=7.5in]{ms/1_Ecography/1/figs/b_opt_byParam.png}
 	\caption{\label{fig:b_byParam} Posterior species responses to local and regional covariates. Points show posterior medians, while bars show the Highest Posterior Density Intervals (HPDIs: 80\%: thick; 95\%: thin). Solid points indicate 90\% HPDIs that exclude zero in the \emph{Joint} (purple) and \emph{Structured} (green) models.}
 \end{figure}
 
 \begin{figure}
-	\centering\includegraphics[height=8in]{ms/1_Ecography/1/figs/b_opt_bar.png}
+	\centering\includegraphics[width=4in]{ms/1_Ecography/1/figs/b_opt_bar.png}
 	\caption{\label{fig:b_bars} Proportion of species with clear responses to each covariate. Responses are considered positive (red) or negative (blue) if the 95\% Highest Posterior Density Interval (HPDI) excluded zero. }
 \end{figure}
 
@@ -335,7 +339,7 @@ Thanks to everyone.
 
 
 
-
+\newpage
 \section{Bibliography}
 \bibliography{ms/opfo_diversity}
 
