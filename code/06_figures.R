@@ -648,7 +648,6 @@ p.B <- ggplot(lam.zone, aes(x=prop, y=sppOrd, fill=zone)) +
   facet_wrap(~model) +
   labs(x=expression("Local: Proportion of total"~lambda), y="") +
   ms_fonts + theme(legend.position="bottom")
-p.C <- 
 
 p <- ggpubr::ggarrange(p.A, p.B, nrow=1, labels=c("a.", "b."), 
                        label.x=c(0.08, 0.08),
