@@ -566,6 +566,102 @@ ggsave(paste0(ms_dir, "figs/D_opt.png"), p, width=4, height=13)
 
 
 
+########------------------------------------------------------------------------
+## Elevational ranges
+########------------------------------------------------------------------------
+
+ant.assemblages <- bind_rows(as_tibble(d.ls[[1]]$Y) %>% 
+                               mutate(el=d.i[[1]]$V[,"el"], 
+                                      Dataset="Structured"), 
+                             as_tibble(d.ls[[1]]$W) %>%
+                               mutate(el=d.i[[1]]$X[1:d.ls[[1]]$K, "el"],
+                                      Dataset="Cit. Sci.")) %>%
+  pivot_longer(1:80, names_to="Species", values_to="nDet") %>%
+  uncount(nDet) %>%
+  mutate(sppName=str_replace(str_remove(Species, "-GR"), "_", "."),
+         Genus=tax_i$FullGen[match(Species, tax_i$species)],
+         Subf=tax_i$FullSF[match(Species, tax_i$species)]) %>%
+  group_by(sppName, Genus, Subf) %>%
+  summarise(minEl=min(el, na.rm=T), 
+            maxEl=max(el, na.rm=T)) %>%
+  mutate(medEl=minEl + (maxEl-minEl)/2,
+         assemblage=case_when(maxEl <= 1000 ~ 'Plateau',
+                              maxEl > 1000 & minEl > 1000 ~ 'Montane',
+                              maxEl >= 1000 & minEl < 1000 ~ 'Mixed')) %>%
+  mutate(assemblage=factor(assemblage, 
+                           levels=c("Plateau", "Mixed", "Montane"))) %>%
+  arrange(assemblage, medEl, desc(minEl))
+ant.assemblages$spOrd <- factor(ant.assemblages$sppName, 
+                                levels=ant.assemblages$sppName)
+p <- ant.assemblages %>%
+  ggplot(aes(y=spOrd, xmin=minEl, xmax=maxEl, colour=assemblage)) + 
+  geom_vline(xintercept=1000, colour="gray80", size=0.2) +
+  geom_errorbar(width=0.5, size=0.8) + 
+  scale_colour_manual("", values=c(col_region[3], "seagreen3", "blue3")) +
+  theme(legend.position=c(0.8, 0.1)) +
+  ms_fonts +
+  labs(title="Observed elevational ranges", x="Elevation (m)")
+ggsave(paste0(ms_dir, "figs/obs_rng.png"), p, width=5, height=13)
+
+LAM.zone <- agg$LAM %>% 
+  mutate(sppName=str_replace(str_remove(sppName, "-GR"), "_", "."),
+         zone=if_else(el<1000, "Plateau", "Montane")) %>%
+  group_by(sppName, zone, model) %>%
+  summarise(tot=sum(median)) %>%
+  group_by(sppName, model) %>%
+  mutate(prop=tot/sum(tot)) %>%
+  ungroup %>%
+  arrange(model, zone, desc(prop))
+LAM.zone$sppOrd <- factor(LAM.zone$sppName, levels=unique(LAM.zone$sppName))
+lam.zone <- agg$lam %>% 
+  mutate(sppName=str_replace(str_remove(sppName, "-GR"), "_", "."),
+         zone=if_else(el<1000, "Plateau", "Montane")) %>%
+  group_by(sppName, zone, model) %>%
+  summarise(tot=sum(median)) %>%
+  group_by(sppName, model) %>%
+  mutate(prop=tot/sum(tot)) %>%
+  ungroup %>%
+  arrange(model, zone, desc(prop))
+lam.zone$sppOrd <- factor(lam.zone$sppName, levels=levels(LAM.zone$sppOrd))
+
+p.A <- ggplot(LAM.zone, aes(x=prop, y=sppOrd, fill=zone)) + 
+  geom_bar(stat="identity", position="fill") + 
+  geom_vline(xintercept=c(0, 1), col="gray", size=0.2) +
+  geom_vline(xintercept=c(0.05, 0.95), col="gray20", size=0.15) +
+  geom_vline(xintercept=c(0.1, 0.9), col="gray20", size=0.25) +
+  geom_vline(xintercept=c(0.2, 0.80), col="gray20", size=0.35) +
+  scale_fill_manual("", values=c("cadetblue", col_region[3])) + 
+  scale_x_continuous(breaks=seq(0,1,0.25), 
+                     labels=c("0", "0.25", "0.5", "0.75", "1")) +
+  facet_wrap(~model) +
+  labs(x=expression("Regional: Proportion of total"~Lambda), y="") +
+  ms_fonts + theme(legend.position="bottom")
+p.B <- ggplot(lam.zone, aes(x=prop, y=sppOrd, fill=zone)) + 
+  geom_bar(stat="identity", position="fill") + 
+  geom_vline(xintercept=c(0, 1), col="gray", size=0.2) +
+  geom_vline(xintercept=c(0.05, 0.95), col="gray20", size=0.15) +
+  geom_vline(xintercept=c(0.1, 0.9), col="gray20", size=0.25) +
+  geom_vline(xintercept=c(0.2, 0.80), col="gray20", size=0.35) +
+  scale_fill_manual("", values=c("cadetblue", col_region[3])) + 
+  scale_x_continuous(breaks=seq(0,1,0.25), 
+                     labels=c("0", "0.25", "0.5", "0.75", "1")) +
+  facet_wrap(~model) +
+  labs(x=expression("Local: Proportion of total"~lambda), y="") +
+  ms_fonts + theme(legend.position="bottom")
+p.C <- 
+
+p <- ggpubr::ggarrange(p.A, p.B, nrow=1, labels=c("a.", "b."), 
+                       label.x=c(0.08, 0.08),
+                       common.legend=F, legend="bottom") 
+ggsave(paste0(ms_dir, "figs/lambda_zones.png"), p, width=10, height=13, units="in")
+
+
+
+
+
+
+
+
 
 ################################################################################
 ############-------- DRAFTS AND EDA
