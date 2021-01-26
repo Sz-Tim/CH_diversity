@@ -515,6 +515,20 @@ p <- ggplot(genProp.df, aes(elCat, fill=genus_1pct)) +
 
 ggsave(paste0(ms_dir, "figs/genus_assemblages.png"), p, width=5, height=5)
 
+# matrix[I,R+L] Z = append_col(X[(K+1):(K+J),][IJ,], V);
+Z <- cbind(
+  d.ls[[1]]$X[(d.ls[[1]]$K+1):(d.ls[[1]]$K+d.ls[[1]]$J),][d.ls[[1]]$IJ,],
+  d.ls[[1]]$V
+  )
+
+
+library(vegan)
+env.pca <- rda(Z[,-1])
+bp <- biplot(env.pca, type=c("text", "points"), col=c(NA, "red"))
+points(bp$sites, col=viridis::viridis_pal()(n_distinct(env.plot$el))[env.plot$el])
+ordihull(env.pca, group=env.plot$region, lwd=2,
+         col=col_region)
+
 
 
 
