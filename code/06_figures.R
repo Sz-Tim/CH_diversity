@@ -676,8 +676,8 @@ p <- agg$b %>% filter(ParName != "intercept") %>%
   geom_point(aes(shape=sign(L025)==sign(L975)),
              position=position_dodge(width=0.5)) + 
   scale_shape_manual("95% HPDI", values=c(1, 19), labels=c("incl. 0", "excl. 0")) +
-  geom_linerange(aes(ymin=L25, ymax=L75), 
-                 position=position_dodge(width=0.5), size=0.5) + 
+  geom_linerange(aes(ymin=L10, ymax=L90), 
+                 position=position_dodge(width=0.5), size=0.6) + 
   geom_linerange(aes(ymin=L025, ymax=L975),
                  position=position_dodge(width=0.5), size=0.2) + 
   coord_flip() + scale_colour_manual("Model:", values=mod_col) + 
