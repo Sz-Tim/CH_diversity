@@ -40,6 +40,8 @@ ms/*/*.gz
 eda/
 cmdstan-2.23.0/
 code/dev/
+ms/1_Ecography/1/figs/maps/sf/
+ms/1_Ecography/1/figs/maps/gen/
 
 # Session Data files
 .RData

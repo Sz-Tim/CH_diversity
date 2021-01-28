@@ -751,6 +751,123 @@ ggsave(paste0(ms_dir, "figs/b_opt_bar.png"), p, width=12, height=5, units="in")
 
 
 
+########------------------------------------------------------------------------
+## Subtaxon richness maps
+########------------------------------------------------------------------------
+
+library(viridis)
+X_all <- rbind(d.i[[1]]$X, d.i[[1]]$X_) %>% as.data.frame
+S.site <- agg$S_R %>% filter(id<1e5) %>% 
+  group_by(id, model) %>% 
+  summarise(S_lo=sum(L05),
+            S_md=sum(median),
+            S_mn=sum(mean),
+            S_hi=sum(L95)) %>%
+  mutate(model=case_when(model=="Joint" ~ "Joint",
+                         model=="Structured" ~ "Str")) %>%
+  pivot_wider(names_from="model", values_from=3:6)
+out.sf <- d.i[[1]]$grd_W.sf %>% 
+  left_join(., S.site) 
+
+ggplot(out.sf, aes(fill=S_md_Joint)) + 
+  geom_sf(colour="black", size=0.1) + 
+  scale_fill_viridis(expression(S[Joint]), limits=c(41, 79))
+
+ggplot(out.sf, aes(fill=S_md_Str)) + 
+  geom_sf(colour="black", size=0.1) + 
+  scale_fill_viridis(expression(S[Str]), limits=c(41, 79))
+
+ggplot(out.sf, aes(fill=S_mn_Joint - S_mn_Str)) + 
+  geom_sf(colour="black", size=0.1) + 
+  scale_fill_gradient2()
+
+
+map_theme <- theme(legend.position=c(0.35, 0.075), 
+                   legend.direction="horizontal",
+                   legend.key.height=unit(0.3, "cm"), 
+                   legend.title=element_text(size=8, hjust=1), 
+                   legend.text=element_text(size=5), 
+                   axis.text=element_blank(), 
+                   axis.ticks=element_blank(), 
+                   axis.title=element_blank(), 
+                   panel.border=element_rect(size=0.2, colour="grey30", fill=NA)) 
+
+for(m in 1:2) {
+  m.full <- unique(agg$lLAM$model)[m]
+  m.abb <- ifelse(m.full=="Joint", "WY", "Y")
+  
+  gen.S <- vector("list", n_distinct(tax_i$FullGen))
+  sf.S <- vector("list", n_distinct(tax_i$FullSF))
+  
+  for(i in 1:n_distinct(tax_i$FullGen)) {
+    gen.i <- unique(tax_i$FullGen)[i]
+    gen.sppNum <- which(tax_i$FullGen == gen.i)
+    obs.i <- filter(ants$all, SPECIESID %in% tax_i$species[gen.sppNum])
+    if(m.abb=="Y") obs.i <- filter(obs.i, source=="s")
+    S.i <- filter(agg$pP_R, spp %in% gen.sppNum & model==m.full) %>% 
+      group_by(id) %>%
+      summarise(mean=sum(L025>0.95))
+    
+    gen.S[[i]] <- out.sf %>%
+      mutate(S_gen=S.i$mean[match(id, S.i$id)]) %>%
+      filter(!is.na(S_gen)) %>%
+      ggplot() + geom_sf(aes(fill=S_gen), colour="black", size=0.02) + 
+      annotate("text", label=paste0(m.full, "\n", gen.i), size=3, 
+               x=495000, y=200000, hjust=0, vjust=0.5) + 
+      scale_fill_viridis("Pred.\nRich.", limits=c(0, length(gen.sppNum))) + 
+      map_theme
+    ggsave(paste0(ms_dir, "figs/maps/gen/", gen.i, "_S_", m.abb, ".png"), 
+           gen.S[[i]] + 
+             geom_sf(data=obs.i, colour="deepskyblue1", alpha=0.8, shape=1, size=0.1), 
+           width=4, height=4, units="in", dpi=300)
+  }
+  
+  for(i in 1:n_distinct(tax_i$FullSF)) {
+    sf.i <- unique(tax_i$FullSF)[i]
+    sf.sppNum <- which(tax_i$FullSF == sf.i)
+    obs.i <- filter(ants$all, SPECIESID %in% tax_i$species[sf.sppNum])
+    if(m.abb=="Y") obs.i <- filter(obs.i, source=="s")
+    S.i <- filter(agg$pP_R, spp %in% sf.sppNum & model==m.full) %>% 
+      group_by(id) %>%
+      summarise(mean=sum(L025>0.95))
+    
+    sf.S[[i]] <- out.sf %>%
+      mutate(S_sf=S.i$mean[match(id, S.i$id)]) %>%
+      filter(!is.na(S_sf)) %>%
+      ggplot() + geom_sf(aes(fill=S_sf), colour="black", size=0.02) + 
+      annotate("text", label=paste0(m.full, "\n", sf.i), size=3, 
+               x=495000, y=200000, hjust=0, vjust=0.5) + 
+      scale_fill_viridis("Pred.\nRich.", limits=c(0, length(sf.sppNum))) + 
+      map_theme
+    ggsave(paste0(ms_dir, "figs/maps/sf/", sf.i, "_S_", m.abb, ".png"), 
+           sf.S[[i]] + 
+             geom_sf(data=obs.i, colour="deepskyblue1", alpha=0.8, shape=1, size=0.1), 
+           width=4, height=4, units="in", dpi=300)
+  }
+  
+  gen_2spp <- which(table(tax_i$genus)>1)
+  ggpubr::ggarrange(plotlist=gen.S[gen_2spp], ncol=3, nrow=3) %>%
+    ggsave(paste0(ms_dir, "figs/maps/gen_S_", m.abb, ".png"), ., 
+           width=9, height=9, units="in", dpi=300)
+  ggpubr::ggarrange(plotlist=sf.S, ncol=2, nrow=2) %>%
+    ggsave(paste0(ms_dir, "figs/maps/sf_S_", m.abb, ".png"), ., 
+           width=6, height=6, units="in", dpi=300)
+  
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
