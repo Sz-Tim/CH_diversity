@@ -75,9 +75,28 @@ agg$beta
 ## RICHNESS
 ########------------------------------------------------------------------------
 
+library(iNEXT)
+J_obs <- cbind(index=d.ls[[1]]$IJ, d.ls[[1]]$Y) %>% as_tibble %>%
+  group_by(index) %>% summarise_all(sum) %>% ungroup %>% select(-index)
+chao <- do.call('rbind', apply(J_obs, 1, ChaoRichness)) %>%
+  mutate(BDM=d.i[[1]]$X[(d.ls[[1]]$K+1):(d.ls[[1]]$K+d.ls[[1]]$J),1][unique(d.ls[[1]]$IJ)],
+         el=d.i[[1]]$X[(d.ls[[1]]$K+1):(d.ls[[1]]$K+d.ls[[1]]$J),2][unique(d.ls[[1]]$IJ)])
 
+ggplot(chao, aes(el, Estimator, ymin=`95% Lower`, ymax=`95% Upper`)) + 
+  geom_point() + geom_linerange() + 
+  geom_point(aes(y=Observed), shape=1, size=2)
 
+ggplot(chao, aes(Observed, Estimator)) + geom_point()
 
+ggplot(chao, aes(el, `95% Upper`)) + geom_point()
+
+inext.out <- iNEXT(as.data.frame(t(as.matrix(J_obs))))
+
+Y_0 <- which(rowSums(d.ls[[1]]$Y)==0)
+chao_Y <- do.call('rbind', apply(d.ls[[1]]$Y[-Y_0,], 1, ChaoRichness)) %>%
+  mutate(el=d.i[[1]]$V[-Y_0,2])
+
+ggplot(chao_Y, aes(el, Estimator)) + geom_point()
 
 
 
