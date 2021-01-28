@@ -7,7 +7,7 @@
 
 ##--- set up
 # cv: cross-validation; vs = single test/train; pred = predict all of VD
-set_type <- c("cv", "vs", "pred")[3]  
+set_type <- c("cv", "vs", "pred")[1]  
 library(tidyverse); library(sf); library(googlesheets)
 gis.dir <- "../2_gis/data/VD_21781/"
 ant.dir <- "../1_opfo/data/"
@@ -49,13 +49,13 @@ X_vars <- c("grwnDD0", "grwnDD0_sq",
             "lcH",
             "Edge",
             "Forest",
+            "Ag",
             "bldgPer", "rdLen",
             "aspctN")
 V_vars <- c("SoilTSt", 
             "VegTot",
             "CnpyOpn", "CnpyMxd",
-            "Pasture", "Crop", 
-            "Built")
+            "Pasture", "Crop")
 
 
 
@@ -224,6 +224,18 @@ lc.W <- st_read(paste0(gis.dir, "lc_1kmZones_21781.shp")) %>%
 lc.Y <- st_read(paste0(gis.dir, "site_lcZones_21781.shp")) %>% 
   arrange(BDM) %>% st_set_geometry(NULL) %>% select(1,3:17) %>%
   mutate(LC_Forest=LC_4+LC_5+LC_6)
+lu.W <- st_read(paste0(gis.dir, "open_landuse_21781.shp")) %>%
+  rename(lu_id=id) %>% st_intersection(., filter(grd_W.sf, inbd)) %>%
+  mutate(area=st_area(.)) %>%
+  st_set_geometry(NULL) %>% group_by(id, type) %>% 
+  summarise(totArea=as.numeric(sum(area))) %>%
+  pivot_wider(names_from="type", values_from="totArea", values_fill=0)
+lu.Y <- st_read(paste0(gis.dir, "open_landuse_21781.shp")) %>%
+  rename(lu_id=id) %>% st_intersection(., site.sf %>% st_set_crs(21781)) %>%
+  mutate(area=st_area(.)) %>%
+  st_set_geometry(NULL) %>% group_by(BDM, type) %>% 
+  summarise(totArea=as.numeric(sum(area))) %>%
+  pivot_wider(names_from="type", values_from="totArea", values_fill=0)
 pop <- raster::raster(paste0(gis.dir, "popDensity_VD_21781.tif")) 
 roads <- st_read(paste0(gis.dir, "roads_VD_21781.shp")) %>% st_set_crs(21781) 
 # rdLen.W <- roads %>% st_intersection(., filter(grd_W.sf, inbd)) %>%
@@ -247,10 +259,12 @@ bldgs.Y <- st_read(paste0(gis.dir, "bldgs_site_21781.shp")) %>%
 
 ##--- X
 # calculate means within W cells
-# X_W.df <- filter(grd_W.sf, inbd) %>% 
+# X_W.df <- filter(grd_W.sf, inbd)
 #   mutate(lcH=vegan::diversity(as.matrix(lc.W)[,-16]),
-#          Forest=lc.W$LC_Forest,
-#          Edge=lc.W$LC_9,
+#          Forest=log(lc.W$LC_Forest+1),
+#          Edge=log(lc.W$LC_9+1),
+#          Ag=lu.W$crop[match(id, lu.W$id)],
+#          Ag=log(replace(Ag, is.na(Ag), 0)+1),
 #          bldgArea=bldgs.W$area[match(id, bldgs.W$id)],
 #          bldgArea=log(replace(bldgArea, is.na(bldgArea), 0)+1),
 #          bldgPer=bldgs.W$perimeter[match(id, bldgs.W$id)],
@@ -268,7 +282,7 @@ bldgs.Y <- st_read(paste0(gis.dir, "bldgs_site_21781.shp")) %>%
 
 # cos(aspect*pi/180): N=1, S=-1, E/W=0
 # sin(aspect*pi/180): E=1, W=-1, N/S=0
-X_W.df <- st_read("data/cov/X_W-df.shp") %>% arrange(id)
+X_W.df <- st_read("data/cov/X_W-df.shp") %>% arrange(id) 
 # select covariates and add quadratic terms
 X_W.mx <- as.matrix(
   X_W.df %>% st_set_geometry(NULL) %>% 
@@ -281,9 +295,11 @@ X_W.mx <- as.matrix(
 X_Y.mx <- as.matrix(
   site.sf %>% select(-region, -Sample_date, -contains("nPlot"), -npp) %>%
     mutate(lcH=vegan::diversity(as.matrix(lc.Y[,-c(1, 17)])),
-           Forest=lc.Y$LC_Forest,
-           Edge=lc.Y$LC_9,
+           Forest=log(lc.Y$LC_Forest+1),
+           Edge=log(lc.Y$LC_9+1),
            grwnDD0=raster::extract(envirem$growingDegDays0, ., fun=mean),
+           Ag=lu.Y$crop[match(BDM, lu.Y$BDM)],
+           Ag=log(replace(Ag, is.na(Ag), 0)+1),
            bldgPer=bldgs.Y$perimeter[match(BDM, bldgs.Y$BDM)],
            bldgPer=replace(bldgPer, is.na(bldgPer), 0),
            bldgPer=log(bldgPer+1),
