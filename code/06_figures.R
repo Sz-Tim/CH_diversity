@@ -691,7 +691,7 @@ p <- agg$b %>% filter(ParName != "intercept") %>%
         axis.text.x=element_text(size=8))
 ggsave(paste0(ms_dir, "figs/b_opt_byParam.png"), p, width=13, height=15)
 
-p <- agg$b %>% filter(cov != "1") %>% 
+bar_95 <- agg$b %>% filter(cov != "1") %>% 
   mutate(Scale=factor(str_sub(ParName, 1L, 1L), levels=c("R", "L"), 
                       labels=c("Regional", "Local")),
          Par=parName.df$full[match(ParName, parName.df$par)],
@@ -707,16 +707,45 @@ p <- agg$b %>% filter(cov != "1") %>%
   mutate(effect=factor(effect, levels=c("incl. 0", "negative", "positive")),
          nSig=sum(nSig)) %>%
   arrange(model, Scale, nSig) %>% ungroup %>%
-  mutate(Par=factor(Par, levels=unique(Par))) %>%
+  mutate(Par=factor(Par, levels=unique(Par)))
+p.A <- bar_95 %>%
   ggplot(aes(nSpp/80, Par, fill=effect)) + 
   geom_bar(stat="identity", colour="gray30", size=0.25) +
   facet_grid(Scale~model, scales="free", space="free_y") + 
-  scale_fill_manual("95% HPDI", values=c("gray90", "blue", "red")) + 
+  scale_fill_manual("Response", values=c("gray90", "blue", "red")) + 
   scale_x_continuous(breaks=seq(0,1,0.25), 
                      labels=c("0", "0.25", "0.5", "0.75", "1")) +
-  labs(y="", x="Proportion of species", title="Species Responses") + 
+  labs(y="", x="Proportion of species (95% HPDI)") + 
   ms_fonts
-ggsave(paste0(ms_dir, "figs/b_opt_bar.png"), p, width=7, height=4)
+p.B <- agg$b %>% filter(cov != "1") %>% 
+  mutate(Scale=factor(str_sub(ParName, 1L, 1L), levels=c("R", "L"), 
+                      labels=c("Regional", "Local")),
+         Par=parName.df$full[match(ParName, parName.df$par)],
+         Par=factor(Par, levels=rev(unique(parName.df$full)))) %>%
+  mutate(effect=case_when(L10<0 & L90<0 ~ "negative",
+                          L10>0 & L90>0 ~ "positive",
+                          L10<0 & L90>0 ~ "incl. 0",
+                          L10>0 & L90<0 ~ "incl. 0"),
+         sig=sign(L10)==sign(L90)) %>%
+  group_by(model, Par, Scale, ParName, effect) %>% 
+  summarise(nSpp=n(), nSig=sum(sig)) %>%
+  group_by(model, Par, Scale, ParName) %>%
+  mutate(effect=factor(effect, levels=c("incl. 0", "negative", "positive")),
+         nSig=sum(nSig)) %>%
+  mutate(Par=factor(Par, levels=levels(bar_95$Par))) %>%
+  ggplot(aes(nSpp/80, Par, fill=effect)) + 
+  geom_bar(stat="identity", colour="gray30", size=0.25) +
+  facet_grid(Scale~model, scales="free", space="free_y") + 
+  scale_fill_manual("Response", values=c("gray90", "blue", "red")) + 
+  scale_x_continuous(breaks=seq(0,1,0.25), 
+                     labels=c("0", "0.25", "0.5", "0.75", "1")) +
+  labs(y="", x="Proportion of species (80% HPDI)") + 
+  ms_fonts
+p <- ggpubr::ggarrange(p.A, p.B, nrow=1, labels=c("a.", "b."), 
+                       label.x=c(0.08, 0.08),
+                       common.legend=T, legend="bottom") 
+ggsave(paste0(ms_dir, "figs/b_opt_bar.png"), p, width=12, height=5, units="in")
+
 
 
 
