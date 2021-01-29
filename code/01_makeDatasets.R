@@ -261,10 +261,10 @@ bldgs.Y <- st_read(paste0(gis.dir, "bldgs_site_21781.shp")) %>%
 # calculate means within W cells
 # X_W.df <- filter(grd_W.sf, inbd)
 #   mutate(lcH=vegan::diversity(as.matrix(lc.W)[,-16]),
-#          Forest=log(lc.W$LC_Forest+1),
-#          Edge=log(lc.W$LC_9+1),
+#          Forest=lc.W$LC_Forest,
+#          Edge=lc.W$LC_9,
 #          Ag=lu.W$crop[match(id, lu.W$id)],
-#          Ag=log(replace(Ag, is.na(Ag), 0)+1),
+#          Ag=replace(Ag, is.na(Ag), 0),
 #          bldgArea=bldgs.W$area[match(id, bldgs.W$id)],
 #          bldgArea=log(replace(bldgArea, is.na(bldgArea), 0)+1),
 #          bldgPer=bldgs.W$perimeter[match(id, bldgs.W$id)],
@@ -295,11 +295,11 @@ X_W.mx <- as.matrix(
 X_Y.mx <- as.matrix(
   site.sf %>% select(-region, -Sample_date, -contains("nPlot"), -npp) %>%
     mutate(lcH=vegan::diversity(as.matrix(lc.Y[,-c(1, 17)])),
-           Forest=log(lc.Y$LC_Forest+1),
-           Edge=log(lc.Y$LC_9+1),
+           Forest=lc.Y$LC_Forest,
+           Edge=lc.Y$LC_9,
            grwnDD0=raster::extract(envirem$growingDegDays0, ., fun=mean),
            Ag=lu.Y$crop[match(BDM, lu.Y$BDM)],
-           Ag=log(replace(Ag, is.na(Ag), 0)+1),
+           Ag=replace(Ag, is.na(Ag), 0),
            bldgPer=bldgs.Y$perimeter[match(BDM, bldgs.Y$BDM)],
            bldgPer=replace(bldgPer, is.na(bldgPer), 0),
            bldgPer=log(bldgPer+1),
