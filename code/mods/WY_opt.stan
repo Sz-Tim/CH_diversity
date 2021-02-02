@@ -160,6 +160,7 @@ generated quantities {
   vector[K+J] tot_LAM;
   vector[K_] tot_LAM_;
   matrix[G,G] Sigma_B[R+L];
+  real log_lik;
   
   // calculate plot-scale quantities:
   // tot_llam, tot_lam, prPresL, RichL, ShannonH_L
@@ -167,18 +168,21 @@ generated quantities {
     // temporary variables
     matrix[I,S] p_L;
     matrix[I,S] lambda = exp(llambda);
+    matrix[I,S] log_lik_is;
     
     for(i in 1:I) {
       tot_llam[i] = sum(llambda[i,]);
       tot_lam[i] = sum(exp(llambda[i,]));
       p_L[i,] = lambda[i,] / tot_lam[i];
       for(s in 1:S) {
+        log_lik_is[i,s] = GP_point_log_lpdf(Y[i,s] | disp_lam, llambda[i,s]);
         prPresL[i,s] = 1 - exp(GP_point_log_lpdf(0 | disp_lam, llambda[i,s]));
         pred_YL[i,s] = bernoulli_rng(prPresL[i,s]);
       }
       RichL[i] = sum(pred_YL[i,]);
     }
     ShannonH_L = - rows_dot_product(p_L, log(p_L));
+    log_lik = sum(log_lik_is);
   }
   
   // calculate cell-scale quantities:
