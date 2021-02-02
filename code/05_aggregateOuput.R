@@ -39,7 +39,7 @@ agg_opt <- aggregate_output(d.f="data/opt/Y__opt_var_set",
                                         "Rich", "Rich_", "RichL",
                                         "pred_Y", "pred_Y_", "pred_YL",
                                         "beta", "B", "b", "sigma_b", "Sigma_B",
-                                        "disp_lam", "D"))
+                                        "disp_lam", "D", "log_lik"))
 
 saveRDS(agg_opt$summaries, "out/agg_opt_Y.rds")
 saveRDS(agg_opt$full, "out/agg_opt_full_Y.rds")

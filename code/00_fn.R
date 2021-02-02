@@ -653,15 +653,19 @@ aggregate_output <- function(d.f, mods, pars_save, out.dir="out") {
     
     #### log likelihood ---------------
     if("log_lik" %in% pars) {
-      out.pars$log_lik[[i]] <- out.ls$log_lik %>%
-        mutate(plot=str_split_fixed(Parameter, "\\.", n=3)[,2],
-               spp=str_split_fixed(Parameter, "\\.", n=3)[,3]) %>%
-        mutate(plot=as.numeric(plot), spp=as.numeric(spp)) %>% 
-        mutate(sppName=d.i$tax_i$species[match(spp, d.i$tax_i$sNum)]) %>%
-        arrange(plot, spp) %>%
-        mutate(id=d.i$V[plot,"Plot_id"], el=d.i$V[plot,"el"],
-               Parameter=as.character(Parameter), model=as.character(model)) 
-    }
+      if(type=="pred") {
+        out.pars$LL[[i]] <- out.ls$log_lik %>% 
+          mutate(Parameter=as.character(Parameter), model=as.character(model))
+      } else {
+        out.pars$log_lik[[i]] <- out.ls$log_lik %>%
+          mutate(plot=str_split_fixed(Parameter, "\\.", n=3)[,2],
+                 spp=str_split_fixed(Parameter, "\\.", n=3)[,3]) %>%
+          mutate(plot=as.numeric(plot), spp=as.numeric(spp)) %>% 
+          mutate(sppName=d.i$tax_i$species[match(spp, d.i$tax_i$sNum)]) %>%
+          arrange(plot, spp) %>%
+          mutate(id=d.i$V[plot,"Plot_id"], el=d.i$V[plot,"el"],
+                 Parameter=as.character(Parameter), model=as.character(model)) 
+      }
 
   }
   return(list(full=out.stan, summaries=map(out.pars, ~do.call('rbind', .))))
