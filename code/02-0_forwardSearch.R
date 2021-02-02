@@ -6,6 +6,7 @@ source("code/00_fn.R")
 d.dir <- "data/stan_data/"
 d.f <- "cv_k_"
 fS_out <- "out/fwdSearch/"
+fS_out <- "/VOLUMES/Rocinante/opfo_div_cluster/new/"
 fS_dat <- "data/fwdSearch/"
 n_folds <- length(dir(d.dir, paste0(d.f, ".*Rdump")))
 
@@ -494,20 +495,33 @@ loo.df <- tibble(mod=str_split_fixed(loo.f, "_", 3)[,2],
                  nCov=as.numeric(str_sub(str_split_fixed(loo.f, "_", 3)[,3], 1, -7)), 
                  elpd=map_dbl(loo.f, ~read_csv(paste0(fS_out, .x))$elpd_loo[1]),
                  elpd_se=map_dbl(loo.f, ~read_csv(paste0(fS_out, .x))$se_elpd_loo[1]),
+                 looic=map_dbl(loo.f, ~read_csv(paste0(fS_out, .x))$looic[1]),
+                 looic_se=map_dbl(loo.f, ~read_csv(paste0(fS_out, .x))$se_looic[1]),
                  v_full=map_chr(loo.f, ~read_csv(paste0(fS_out, .x))$X1[1])) %>%
   mutate(v_scale=str_sub(str_split_fixed(v_full, "__", 2)[,2], 1, 1),
-         v_name=str_sub(str_split_fixed(v_full, "__", 2)[,2], 3, -1)) %>%
-  mutate(model=case_when(mod=="WY" ~ "Joint",
-                         mod=="Y" ~ "Structured"))
+         v_name=str_sub(str_split_fixed(v_full, "__", 2)[,2], 3, -1),
+         model=case_when(mod=="WY" ~ "Joint",
+                         mod=="Y" ~ "Structured")) %>%
+  group_by(model) %>% arrange(model, looic) %>%
+  mutate(elpd_diff=elpd-first(elpd),
+         looic_diff=looic-first(looic))
   
 ggplot(loo.df, aes(x=nCov, y=elpd, colour=model, group=model)) + 
   geom_point(size=3) + geom_line() + 
   scale_colour_manual("", values=mod_col) + 
   labs(x="Number of covariates") + 
-  # geom_errorbar(aes(ymin=elpd-elpd_se, ymax=elpd+elpd_se), width=0.1) +
+  geom_errorbar(aes(ymin=elpd-elpd_se, ymax=elpd+elpd_se), width=0.1) +
   geom_text(aes(label=v_name), colour=1, hjust=0, vjust=1, size=3, nudge_x=0.05) +
-  scale_shape_manual(values=c(1, 16))
+  scale_shape_manual(values=c(1, 16)) + theme_bw()
 # ggsave("eda/TEMP_varsel.jpg", width=8, height=5)
+
+ggplot(loo.df, aes(x=nCov, y=looic, colour=model, group=model)) + 
+  geom_point(size=3) + geom_line() + 
+  scale_colour_manual("", values=mod_col) + 
+  labs(x="Number of covariates") + 
+  # geom_errorbar(aes(ymin=looic-looic_se, ymax=looic+looic_se), width=0.1) +
+  geom_text(aes(label=v_name), colour=1, hjust=0, vjust=1, size=3, nudge_x=0.05) +
+  scale_shape_manual(values=c(1, 16)) + theme_bw()
 
 
 
