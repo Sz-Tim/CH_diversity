@@ -13,8 +13,8 @@ for(i in names(agg)) {
 }
 rm(agg.ls)
 
-d.ls <- readRDS("data/opt/Y__opt_var_set_ls.rds")
-d.i <- readRDS("data/opt/Y__opt_var_set_i.rds")
+d.ls <- readRDS("data_orig/opt/Y__opt_var_set_ls.rds")
+d.i <- readRDS("data_orig/opt/Y__opt_var_set_i.rds")
 site_i <- read_csv("../1_opfo/data/opfo_siteSummaryProcessed.csv")
 
 ants <- load_ant_data(str_type="soil", clean_spp=T)
@@ -65,6 +65,77 @@ agg$beta
 ## LAMBDAS
 ########------------------------------------------------------------------------
 
+
+
+
+
+
+
+########------------------------------------------------------------------------
+## PSEUDO-R2
+########------------------------------------------------------------------------
+
+mod_col <- c("Joint"="#7b3294", "Structured"="#008837")
+
+# REDO WITH RE-FIT FINAL MODELS !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+obs_lam <- agg$lam %>% 
+  mutate(obs=rep(c(t(d.ls$Y)), times=2),
+         null=rep(agg_null$summaries$lam$mean, times=2),
+         LL=LaplacesDemon::dgpois(obs, mean, agg$disp$mean, log=T),
+         LL_null=LaplacesDemon::dgpois(obs, null, agg_null$summaries$disp$mean, log=T))
+obs_lam %>% group_by(model) %>% 
+  summarise(LL=sum(LL), LL_null=sum(LL_null)) %>%
+  mutate(R2_mcf=1-(LL/LL_null),
+         D2=((-2*LL_null) - (-2*LL))/(-2*LL_null))
+
+R2_spp <- obs_lam %>% group_by(model, sppName) %>% 
+  summarise(LL=sum(LL), LL_null=sum(LL_null), obs=any(obs>0), N_Y=sum(obs)) %>%
+  mutate(Pr_Y=N_Y/sum(N_Y),
+         N_W=colSums(d.ls$W), 
+         Pr_W=N_W/sum(N_W), 
+         R2_mcf=1-(LL/LL_null),
+         D2=((-2*LL_null) - (-2*LL))/(-2*LL_null))
+
+ggplot(R2_spp, aes(R2_mcf, fill=model)) + 
+  geom_density(alpha=0.75) + 
+  scale_fill_manual("Model", values=mod_col) +
+  labs(x=expression('Pseudo-R'^2~'by species'), y="Density")
+
+ggplot(R2_spp, aes(R2_mcf, obs, fill=model)) + 
+  ggridges::geom_density_ridges(alpha=0.75) + 
+  scale_fill_manual("Model", values=mod_col) +
+  labs(x=expression('Pseudo-R'^2), y="Species observed in Y")
+
+ggplot(R2_spp, aes(Pr_Y - Pr_W, R2_mcf, colour=model)) + geom_point() +
+  scale_colour_manual("Model", values=mod_col) 
+
+R2_spp %>% filter(R2_mcf < 0)
+R2_spp %>% group_by(model) %>% 
+  summarise(PrImprove=sum(R2_mcf>0)/n(),
+            mn=mean(R2_mcf),
+            se=sd(R2_mcf)/sqrt(n()))
+# Mean pseudo-R2 among species:
+#  - Structured: 0.16 ± 0.01
+#  - Joint: 0.24 ± 0.02
+
+
+ggplot(R2_spp, aes(R2_mcf, sppName, colour=model)) + 
+  geom_point() +
+  scale_colour_manual("Model", values=mod_col) +
+  labs(x="", y=expression('Pseudo-R'^2))
+
+R2_spp %>% arrange(sppName, model) %>% group_by(sppName) %>%
+  summarise(diff=first(R2_mcf)-last(R2_mcf), 
+            obs=first(obs)) %>%
+  ggplot(aes(diff, fill=obs)) + 
+  geom_density(alpha=0.7) +
+  geom_vline(xintercept=0)
+
+(R2_spp %>% arrange(sppName, model) %>% group_by(sppName) %>%
+    summarise(diff=first(R2_mcf)-last(R2_mcf), 
+              obs=as.factor(first(obs))) %>%
+    group_by(obs) %>%
+    summarise(t=list(t.test(diff))))$t
 
 
 
