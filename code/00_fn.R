@@ -666,7 +666,7 @@ aggregate_output <- function(d.f, mods, pars_save, out.dir="out") {
           mutate(id=d.i$V[plot,"Plot_id"], el=d.i$V[plot,"el"],
                  Parameter=as.character(Parameter), model=as.character(model)) 
       }
-
+    }
   }
   return(list(full=out.stan, summaries=map(out.pars, ~do.call('rbind', .))))
 }
