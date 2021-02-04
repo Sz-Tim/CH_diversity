@@ -11,8 +11,7 @@ Altwegg, R., and Nichols, J. D. (2019). Occupancy models for citizen-science dat
 - Consequences of decisions (spatial resolution, effort)
 - **USE FOR OPFO PUBLIC DESIGN**
 - **USE FOR INTERPRETATION OF LAMBDA AS UPPER BOUND**
-- "However, grid cell size also affects the interpretation of occu-
-pancy as a state variable (Efford & Dawson, 2012). We consider a grid cell occupied if it overlaps with the home range of at least one individual of the species in question at some time during the period of data collection. For constant home range sizes, occupancy tends to increase with increasing grid cell size. Occupancy estimates are therefore specific to grid cell size."
+- "However, grid cell size also affects the interpretation of occupancy as a state variable (Efford & Dawson, 2012). We consider a grid cell occupied if it overlaps with the home range of at least one individual of the species in question at some time during the period of data collection. For constant home range sizes, occupancy tends to increase with increasing grid cell size. Occupancy estimates are therefore specific to grid cell size."
 - "Even though grid cell size is clearly defined in most atlas projects, only very small grid cells can in practice be searched comprehensively during a single visit. When the entire grid cell is not searched for a particular checklist, then the species-level detec- tion probability for that checklist/occasion can be written as the product of Pr(species is locally present in sampled area|presence in sample unit) and Pr(species detected|local presence in sampled area). Random selection of sampled areas in each checklist within grid cells guards against problems with bias, but random selection can not always be undertaken."
 
 ### Duan2020
