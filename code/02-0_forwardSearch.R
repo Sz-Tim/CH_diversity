@@ -532,12 +532,12 @@ ggplot(loo.df, aes(x=nCov, y=looic, colour=model, group=model)) +
 #--- relocate, but for curiosity...
 best <- list(Y=map(1:n_folds, 
                    ~rstan::read_stan_csv(
-                     dir("out/fwdSearch",
-                         paste0("Y_7__k-", .x, "_R_bldgPer"), full.names=T))),
+                     dir(fS_out,
+                         paste0("^Y_4__k-", .x, "_L_CnpyOpn"), full.names=T))),
              WY=map(1:n_folds, 
                     ~rstan::read_stan_csv(
-                      dir("out/fwdSearch",
-                          paste0("WY_5__k-", .x, "_R_rdLen"), full.names=T))))
+                      dir(fS_out,
+                          paste0("WY_5__k-", .x, "_L_VegTot"), full.names=T))))
 
 best.beta <- map(best, ~do.call("rbind", 
                                 map(.x, ~do.call("rbind", 
@@ -564,8 +564,8 @@ p <- ggplot(hdi.b$WY, aes(value, spp)) +
 ggsave("~/Desktop/WY.pdf", p)
 
 
-best.i <- list(Y=readRDS("data/fwdSearch/Y_3__k-1_L_SoilTSt_ls.rds"),
-               WY=readRDS("data/fwdSearch/WY_2__k-1_L_SoilTSt_ls.rds"))
+best.i <- list(Y=readRDS("data/fwdSearch/Y_4__k-1_L_CnpyOpn_ls.rds"),
+               WY=readRDS("data/fwdSearch/WY_5__k-1_L_VegTot_ls.rds"))
 
 plot(best$Y, pars="beta") + xlim(-2.5,2.5)
 c(colnames(best.i$Y$X), colnames(best.i$Y$V))
