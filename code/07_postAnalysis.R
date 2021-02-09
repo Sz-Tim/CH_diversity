@@ -13,6 +13,7 @@ for(i in names(agg)) {
 }
 rm(agg.ls)
 
+
 agg.ls <- map(paste0("out/agg_LV2_", c("Y"), ".rds"), readRDS) %>%
   map(., ~discard(.x, is.null))
 agg <- vector("list", n_distinct(c(names(agg.ls[[1]]), names(agg.ls[[1]])))) %>%
@@ -76,7 +77,74 @@ agg$beta
 ## LAMBDAS
 ########------------------------------------------------------------------------
 
+spp_obs <- which(colSums(d.i$Y)>0)
 
+agg$lam %>% mutate(obs=rep(c(t(d.i$Y)), times=2)) %>%
+  mutate(resid=mean - obs) %>%
+  filter(obs > 0) %>%
+  group_by(model, el) %>%
+  summarise(RMSE=sqrt(mean(resid^2))) %>%
+  ggplot(aes(el, RMSE, colour=model)) + geom_point() +
+  scale_colour_manual(values=mod_col)
+
+agg$lam %>% mutate(obs=rep(c(t(d.i$Y)), times=2)) %>%
+  mutate(resid=mean - obs) %>%
+  group_by(model) %>%
+  summarise(RMSE=sqrt(mean(resid^2)),
+            SS_tot=sum((obs - mean(obs))^2),
+            SS_resid=sum(resid^2),
+            R2=1 - SS_resid/SS_tot)
+
+agg$pP_L %>% mutate(obs=rep(c(t(d.i$Y)), times=2)) %>%
+  mutate(obs=as.numeric(obs>0),
+         resid=mean - obs) %>%
+  group_by(model) %>%
+  summarise(RMSE=sqrt(mean(resid^2)),
+            SS_tot=sum((obs - mean(obs))^2),
+            SS_resid=sum(resid^2),
+            R2=1 - SS_resid/SS_tot)
+
+agg$pP_L %>% mutate(obs=rep(c(t(d.i$Y)), times=2)) %>%
+  mutate(obs=as.numeric(obs>0), 
+         resid=mean - obs) %>%
+  filter(spp %in% spp_obs) %>%
+  group_by(model, sppName) %>%
+  summarise(RMSE=sqrt(mean(resid^2)),
+            SS_tot=sum((obs - mean(obs))^2),
+            SS_resid=sum(resid^2),
+            R2=1 - SS_resid/SS_tot) %>% arrange(desc(R2))
+
+agg$lam %>% mutate(obs=rep(c(t(d.i$Y)), times=2)) %>%
+  mutate(resid=mean - obs) %>%
+  filter(spp %in% spp_obs) %>%
+  group_by(model, sppName) %>%
+  summarise(RMSE=sqrt(mean(resid^2)),
+            SS_tot=sum((obs - mean(obs))^2),
+            SS_resid=sum(resid^2),
+            R2=1 - SS_resid/SS_tot) %>% 
+  group_by(sppName) %>% arrange(model) %>% 
+  summarise(pctDiff=(last(RMSE)-first(RMSE))/last(RMSE)) %>% ungroup %>% summary()
+
+agg$lam %>% mutate(obs=rep(c(t(d.i$Y)), times=2)) %>%
+  filter(spp %in% spp_obs) %>%
+  # filter(obs > 0) %>%
+  ggplot(aes(mean, obs, colour=model)) + geom_point(shape=1, alpha=0.5) +
+  stat_smooth(method="lm") +
+  # facet_wrap(~sppName) +
+  scale_colour_manual(values=mod_col)
+
+agg$pP_L %>% mutate(obs=rep(c(t(d.i$Y)), times=2)) %>%
+  filter(spp %in% spp_obs) %>%
+  ggplot(aes(mean, as.numeric(obs>0), colour=model)) + 
+  geom_point(shape=1, alpha=0.5) +
+  stat_smooth(method="glm", size=0.5, se=F,
+              method.args=list(family="binomial"), fullrange=T) + 
+  facet_wrap(~sppName) +
+  scale_colour_manual(values=mod_col) + xlim(0, 1) + ylim(0, 1)
+
+agg$pP_L %>% mutate(obs=rep(c(t(d.i$Y)), times=2)) %>%
+  mutate(resid=median - (obs>0)) %>%
+  ggplot(aes(x=obs>0, y=L975, fill=model)) + geom_boxplot() + ylim(0,1)
 
 
 

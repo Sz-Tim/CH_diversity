@@ -440,8 +440,7 @@ Tobler, M. W., Kéry, M., Hui, F. K. C., Guillera-Arroita, G., Knaus, P., and Sa
 - Imperfect detection and species correlations improved estimation of occupancy, betas, and species correlations
 - Use latent site-level covariates (l[T]) with species-level slopes (theta[i]), such that log(lambda) = X*beta + l*theta + error, and sigma2[i] = 1 - sum(theta[i]^2), and then the correlation matrix is theta * t(theta) + diag(sigma[i]). 
 - BUT Needed n/2 latent variables to represent the species correlation matrix. Maybe not realistic for a community of 80 with this many sites...
-- "It is important to point out that although co-occur-
-rence models can separate out environmental correlation that is explained by covariates that are included in the model from residual correlation, these models cannot tell us if the residual correlation is caused by missing environmental covariates or by true interactions among species, such as competition, predation, or mutualism."
+- "It is important to point out that although co-occurrence models can separate out environmental correlation that is explained by covariates that are included in the model from residual correlation, these models cannot tell us if the residual correlation is caused by missing environmental covariates or by true interactions among species, such as competition, predation, or mutualism."
 
 ### Warton2010
 Warton, D. I., and Shepherd, L. C. (2010). Poisson point process models solve the “pseudo-absence problem” for presence-only data in ecology. Ann. Appl. Stat. 4, 1383–1402. doi:10.1214/10-AOAS331.
