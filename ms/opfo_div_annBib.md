@@ -15,6 +15,10 @@ Altwegg, R., and Nichols, J. D. (2019). Occupancy models for citizen-science dat
 pancy as a state variable (Efford & Dawson, 2012). We consider a grid cell occupied if it overlaps with the home range of at least one individual of the species in question at some time during the period of data collection. For constant home range sizes, occupancy tends to increase with increasing grid cell size. Occupancy estimates are therefore specific to grid cell size."
 - "Even though grid cell size is clearly defined in most atlas projects, only very small grid cells can in practice be searched comprehensively during a single visit. When the entire grid cell is not searched for a particular checklist, then the species-level detec- tion probability for that checklist/occasion can be written as the product of Pr(species is locally present in sampled area|presence in sample unit) and Pr(species detected|local presence in sampled area). Random selection of sampled areas in each checklist within grid cells guards against problems with bias, but random selection can not always be undertaken."
 
+### ElBizri2020
+El Bizri, H. R., Fa, J. E., Lemos, L. P., Campos-Silva, J. V., Vasconcelos Neto, C. F. A., Valsecchi, J., et al. (2020). Involving local communities for effective citizen science: Determining game species’ reproductive status to assess hunting effects in tropical forests. J. Appl. Ecol., 224–235. doi:10.1111/1365-2664.13633.
+- **Example of CitSci use in conservation**
+
 ### Duan2020
 Duan, H., Xia, S., Yu, X., Liu, Y., Teng, J., and Dou, Y. (2020). Using citizen science data to inform the relative sensitivity of waterbirds to natural versus human-dominated landscapes in China. Ecol. Evol., 1–9. doi:10.1002/ece3.6449.
 - **Example of CitSci use in conservation**
@@ -437,6 +441,8 @@ Tobler, M. W., Kéry, M., Hui, F. K. C., Guillera-Arroita, G., Knaus, P., and Sa
 - Imperfect detection and species correlations improved estimation of occupancy, betas, and species correlations
 - Use latent site-level covariates (l[T]) with species-level slopes (theta[i]), such that log(lambda) = X*beta + l*theta + error, and sigma2[i] = 1 - sum(theta[i]^2), and then the correlation matrix is theta * t(theta) + diag(sigma[i]). 
 - BUT Needed n/2 latent variables to represent the species correlation matrix. Maybe not realistic for a community of 80 with this many sites...
+- "It is important to point out that although co-occur-
+rence models can separate out environmental correlation that is explained by covariates that are included in the model from residual correlation, these models cannot tell us if the residual correlation is caused by missing environmental covariates or by true interactions among species, such as competition, predation, or mutualism."
 
 ### Warton2010
 Warton, D. I., and Shepherd, L. C. (2010). Poisson point process models solve the “pseudo-absence problem” for presence-only data in ecology. Ann. Appl. Stat. 4, 1383–1402. doi:10.1214/10-AOAS331.
