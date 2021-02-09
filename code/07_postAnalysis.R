@@ -13,6 +13,18 @@ for(i in names(agg)) {
 }
 rm(agg.ls)
 
+
+agg.ls <- map(paste0("out/agg_LV2_", c("Y"), ".rds"), readRDS) %>%
+  map(., ~discard(.x, is.null))
+agg <- vector("list", n_distinct(c(names(agg.ls[[1]]), names(agg.ls[[1]])))) %>%
+  setNames(unique(names(agg.ls[[1]]), names(agg.ls[[1]])))
+for(i in names(agg)) {
+  agg[[i]] <- rbind(agg.ls[[1]][[i]]) %>%
+    mutate(., model=case_when(model=="Y" ~ "Structured", 
+                              model=="WY" ~ "Joint"))
+}
+rm(agg.ls)
+
 d.ls <- readRDS("data_orig/opt/Y__opt_var_set_ls.rds")
 d.i <- readRDS("data_orig/opt/Y__opt_var_set_i.rds")
 site_i <- read_csv("../1_opfo/data/opfo_siteSummaryProcessed.csv")
@@ -133,6 +145,108 @@ agg$pP_L %>% mutate(obs=rep(c(t(d.i$Y)), times=2)) %>%
 agg$pP_L %>% mutate(obs=rep(c(t(d.i$Y)), times=2)) %>%
   mutate(resid=median - (obs>0)) %>%
   ggplot(aes(x=obs>0, y=L975, fill=model)) + geom_boxplot() + ylim(0,1)
+
+
+
+
+
+########------------------------------------------------------------------------
+## PSEUDO-R2
+########------------------------------------------------------------------------
+
+mod_col <- c("Joint"="#7b3294", "Structured"="#008837")
+
+# REDO WITH RE-FIT FINAL MODELS !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+obs_lam <- agg$lam %>% 
+  mutate(obs=rep(c(t(d.ls$Y)), times=1),
+         null=rep(agg_null$summaries$lam$mean, times=1),
+         LL=LaplacesDemon::dgpois(obs, mean, agg$disp$mean, log=T),
+         LL_null=LaplacesDemon::dgpois(obs, null, agg_null$summaries$disp$mean, log=T))
+obs_lam %>% group_by(model) %>% 
+  summarise(LL=sum(LL), LL_null=sum(LL_null)) %>%
+  mutate(R2_mcf=1-(LL/LL_null),
+         D2=((-2*LL_null) - (-2*LL))/(-2*LL_null))
+
+1 - (agg_LV$LL$mean/agg_null$summaries$LL$mean)
+1 - (agg_LV2$summaries$LL$mean/agg_null$summaries$LL$mean)
+
+R2_spp <- obs_lam %>% group_by(model, sppName) %>% 
+  summarise(LL=sum(LL), LL_null=sum(LL_null), obs=any(obs>0), N_Y=sum(obs)) %>%
+  mutate(Pr_Y=N_Y/sum(N_Y),
+         N_W=colSums(d.ls$W), 
+         Pr_W=N_W/sum(N_W), 
+         R2_mcf=1-(LL/LL_null),
+         D2=((-2*LL_null) - (-2*LL))/(-2*LL_null))
+
+ggplot(R2_spp, aes(R2_mcf, fill=model)) + 
+  geom_density(alpha=0.75) + 
+  scale_fill_manual("Model", values=mod_col) +
+  labs(x=expression('Pseudo-R'^2~'by species'), y="Density")
+
+ggplot(R2_spp, aes(R2_mcf, obs, fill=model)) + 
+  ggridges::geom_density_ridges(alpha=0.75) + 
+  scale_fill_manual("Model", values=mod_col) +
+  labs(x=expression('Pseudo-R'^2), y="Species observed in Y")
+
+ggplot(R2_spp, aes(Pr_Y - Pr_W, R2_mcf, colour=model)) + geom_point() +
+  scale_colour_manual("Model", values=mod_col) 
+
+R2_spp %>% filter(R2_mcf < 0)
+R2_spp %>% group_by(model) %>% 
+  summarise(PrImprove=sum(R2_mcf>0)/n(),
+            mn=mean(R2_mcf),
+            se=sd(R2_mcf)/sqrt(n()))
+# Mean pseudo-R2 among species:
+#  - Structured: 0.16 ± 0.01
+#  - Joint: 0.24 ± 0.02
+
+
+ggplot(R2_spp, aes(R2_mcf, sppName, colour=model)) + 
+  geom_point() +
+  scale_colour_manual("Model", values=mod_col) +
+  labs(x="", y=expression('Pseudo-R'^2))
+
+R2_spp %>% arrange(sppName, model) %>% group_by(sppName) %>%
+  summarise(diff=first(R2_mcf)-last(R2_mcf), 
+            obs=first(obs)) %>%
+  ggplot(aes(diff, fill=obs)) + 
+  geom_density(alpha=0.7) +
+  geom_vline(xintercept=0)
+
+(R2_spp %>% arrange(sppName, model) %>% group_by(sppName) %>%
+    summarise(diff=first(R2_mcf)-last(R2_mcf), 
+              obs=as.factor(first(obs))) %>%
+    group_by(obs) %>%
+    summarise(t=list(t.test(diff))))$t
+
+
+
+
+
+
+
+
+agg_LV$LV_Sigma %>% filter(spp1 != spp2) %>% 
+  filter(sppName1 %in% names(det_Y) & sppName2 %in% names(det_Y)) %>%
+  ggplot(aes(sppName1, sppName2, fill=mean)) + 
+  geom_point(size=3, shape=22, colour="gray") + 
+  scale_fill_gradient2(low=scales::muted("blue"), 
+                       high=scales::muted("red"), limits=c(-1,1)) + 
+  theme(axis.text.x=element_text(angle=270, hjust=0, vjust=0.5)) + 
+  facet_grid(genName2~genName1, scales="free", space="free")
+
+agg$LV_Sigma %>% filter(spp1 != spp2) %>%
+  ggplot(aes(genName1, mean, colour=genName2)) + 
+  geom_point() + facet_wrap(~genName2, scales="free")
+agg$LV_Sigma %>% filter(spp1 != spp2) %>%
+  ggplot(aes(mean, sppName1, fill=genName1==genName2)) + 
+  geom_vline(xintercept=0) +
+  ggridges::geom_density_ridges(rel_min_height=0.01, alpha=0.5, size=0.1)
+agg$LV_Sigma %>% filter(genName1 != genName2) %>%
+  ggplot(aes(mean, genName1)) + 
+  geom_vline(xintercept=0) +
+  ggridges::geom_density_ridges()
+  
 
 
 

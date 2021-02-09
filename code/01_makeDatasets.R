@@ -487,7 +487,7 @@ if(set_type=="cv") {
                  X_=X.all[[i]][K$W+J$Y[[i]]+(1:J$Y_[[i]]),], 
                  V=V.all[[i]][1:I$Y[[i]],][-na.Y[[i]],], 
                  V_=V.all[[i]][I$Y[[i]]+(1:I$Y_[[i]]),][-na.Y_[[i]],],
-                 h=7.5e-7)
+                 h=1.2e-6)
     d.i <- list(X=X.mx[[i]][1:(K$W+J$Y[[i]]),][-na.W[[i]],],
                 X_=X.mx[[i]][K$W+J$Y[[i]]+(1:J$Y_[[i]]),],
                 V=V.mx[[i]][1:I$Y[[i]],][-na.Y[[i]],],
@@ -525,7 +525,7 @@ if(set_type=="cv") {
                  X_=X.all[K$W+J$Y+(1:J$Y_),], 
                  V=V.scale[1:I$Y,][-na.Y,], 
                  V_=V.scale[I$Y+(1:I$Y_),][-na.Y_,],
-                 h=7.5e-7)
+                 h=1.2e-6)
     d.i <- list(X=X.mx[1:(K$W+J$Y),][-na.W,],
                 X_=X.mx[K$W+J$Y+(1:J$Y_),],
                 V=V.mx[1:I$Y,][-na.Y,],
@@ -557,7 +557,7 @@ if(set_type=="cv") {
                  Y=Y[IJ$id_Y,][-na.Y,],
                  X=X.all[1:(K$W+J$Y),], 
                  V=V.scale[1:I$Y,][-na.Y,], 
-                 h=7.5e-7)
+                 h=1.2e-6)
     d.i <- list(X=X.mx[1:(K$W+J$Y),],
                 V=V.mx[1:I$Y,][-na.Y,],
                 W=W[K$id_W,], 
@@ -597,7 +597,7 @@ if(set_type=="cv") {
                X=X.all[1:(K$W+J$Y),], 
                X_=X.all[K$W+J$Y+(1:(K$W_)),], 
                V=V.scale[1:I$Y,][-na.Y,], 
-               h=7.5e-7)
+               h=1.2e-6)
   d.i <- list(X=X.mx[1:(K$W+J$Y),],
               X_=X.mx[K$W+J$Y+(1:(K$W_)),],
               V=V.mx[1:I$Y,][-na.Y,],
