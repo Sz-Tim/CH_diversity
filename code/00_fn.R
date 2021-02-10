@@ -403,33 +403,35 @@ aggregate_output <- function(d.f, mods, pars_save, out.dir="out") {
       mutate(Parameter=as.character(Parameter), model=as.character(model))
     
     # gamma & zeta
-    out.pars$gamma[[i]] <- out.ls$gamma %>%
-      mutate(spp=str_split_fixed(Parameter, "\\.", n=3)[,2]) %>%
-      mutate(sppName=d.i$tax_i$species[match(spp, d.i$tax_i$sNum)],
-             genName=str_split_fixed(sppName, "_", 2)[,1]) %>%
-      mutate(Parameter=as.character(Parameter), model=as.character(model))
-
-    out.pars$gamm_sig2[[i]] <- out.ls$gamma_sig2 %>%
-      mutate(spp=str_split_fixed(Parameter, "\\.", n=3)[,2]) %>%
-      mutate(sppName=d.i$tax_i$species[match(spp, d.i$tax_i$sNum)],
-             genName=str_split_fixed(sppName, "_", 2)[,1]) %>%
-      mutate(Parameter=as.character(Parameter), model=as.character(model))
-
-    out.pars$gamma_Sigma[[i]] <- out.ls$gamma_Sigma %>%
-      mutate(spp1=str_split_fixed(Parameter, "\\.", n=3)[,2],
-             spp2=str_split_fixed(Parameter, "\\.", n=3)[,3]) %>%
-      mutate(sppName1=d.i$tax_i$species[match(spp1, d.i$tax_i$sNum)],
-             genName1=str_split_fixed(sppName1, "_", 2)[,1],
-             sppName2=d.i$tax_i$species[match(spp2, d.i$tax_i$sNum)],
-             genName2=str_split_fixed(sppName2, "_", 2)[,1]) %>%
-      mutate(Parameter=as.character(Parameter), model=as.character(model))
-    
-    out.pars$zeta[[i]] <- out.ls$zeta %>%
-      mutate(plot=str_split_fixed(Parameter, "\\.", n=2)[,2]) %>%
-      mutate(plot=as.numeric(plot)) %>%
-      arrange(plot) %>%
-      mutate(id=d.i$V[plot,"Plot_id"], el=d.i$V[plot,"el"],
-             Parameter=as.character(Parameter), model=as.character(model))
+    if("gamma" %in% pars) {
+      out.pars$gamma[[i]] <- out.ls$gamma %>%
+        mutate(spp=str_split_fixed(Parameter, "\\.", n=3)[,2]) %>%
+        mutate(sppName=d.i$tax_i$species[match(spp, d.i$tax_i$sNum)],
+               genName=str_split_fixed(sppName, "_", 2)[,1]) %>%
+        mutate(Parameter=as.character(Parameter), model=as.character(model))
+      
+      out.pars$gamm_sig2[[i]] <- out.ls$gamma_sig2 %>%
+        mutate(spp=str_split_fixed(Parameter, "\\.", n=3)[,2]) %>%
+        mutate(sppName=d.i$tax_i$species[match(spp, d.i$tax_i$sNum)],
+               genName=str_split_fixed(sppName, "_", 2)[,1]) %>%
+        mutate(Parameter=as.character(Parameter), model=as.character(model))
+      
+      out.pars$gamma_Sigma[[i]] <- out.ls$gamma_Sigma %>%
+        mutate(spp1=str_split_fixed(Parameter, "\\.", n=3)[,2],
+               spp2=str_split_fixed(Parameter, "\\.", n=3)[,3]) %>%
+        mutate(sppName1=d.i$tax_i$species[match(spp1, d.i$tax_i$sNum)],
+               genName1=str_split_fixed(sppName1, "_", 2)[,1],
+               sppName2=d.i$tax_i$species[match(spp2, d.i$tax_i$sNum)],
+               genName2=str_split_fixed(sppName2, "_", 2)[,1]) %>%
+        mutate(Parameter=as.character(Parameter), model=as.character(model))
+      
+      out.pars$zeta[[i]] <- out.ls$zeta %>%
+        mutate(plot=str_split_fixed(Parameter, "\\.", n=2)[,2]) %>%
+        mutate(plot=as.numeric(plot)) %>%
+        arrange(plot) %>%
+        mutate(id=d.i$V[plot,"Plot_id"], el=d.i$V[plot,"el"],
+               Parameter=as.character(Parameter), model=as.character(model))
+    }
     
     
     #### intensities ------------------
