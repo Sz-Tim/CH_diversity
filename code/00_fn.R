@@ -410,7 +410,7 @@ aggregate_output <- function(d.f, mods, pars_save, out.dir="out") {
                genName=str_split_fixed(sppName, "_", 2)[,1]) %>%
         mutate(Parameter=as.character(Parameter), model=as.character(model))
       
-      out.pars$gamm_sig2[[i]] <- out.ls$gamma_sig2 %>%
+      out.pars$gamma_sig2[[i]] <- out.ls$gamma_sig2 %>%
         mutate(spp=str_split_fixed(Parameter, "\\.", n=3)[,2]) %>%
         mutate(sppName=d.i$tax_i$species[match(spp, d.i$tax_i$sNum)],
                genName=str_split_fixed(sppName, "_", 2)[,1]) %>%
