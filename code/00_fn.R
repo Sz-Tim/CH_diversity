@@ -687,6 +687,16 @@ aggregate_output <- function(d.f, mods, pars_save, out.dir="out") {
       if(type=="pred") {
         out.pars$LL[[i]] <- out.ls$log_lik %>% 
           mutate(Parameter=as.character(Parameter), model=as.character(model))
+        out.pars$LL_S[[i]] <- out.ls$log_lik_S %>%
+          mutate(spp=str_split_fixed(Parameter, "\\.", 2)[,2]) %>%
+          mutate(sppName=d.i$tax_i$species[match(spp, d.i$tax_i$sNum)],
+                 Parameter=as.character(Parameter), model=as.character(model))
+        out.pars$LL_I[[i]] <- out.ls$log_lik_I %>%
+          mutate(plot=str_split_fixed(Parameter, "\\.", n=2)[,2]) %>%
+          mutate(plot=as.numeric(plot)) %>%
+          arrange(plot) %>%
+          mutate(id=d.i$V[plot,"Plot_id"], el=d.i$V[plot,"el"],
+                 Parameter=as.character(Parameter), model=as.character(model))
       } else {
         out.pars$log_lik[[i]] <- out.ls$log_lik %>%
           mutate(plot=str_split_fixed(Parameter, "\\.", n=3)[,2],
