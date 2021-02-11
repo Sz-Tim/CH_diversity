@@ -22,6 +22,7 @@ data/stan_data/vs*
 data/stan_data/test*
 data/opt/
 data/opt_a/
+data_orig/
 
 # large output files
 out/fwdSearch/Y_*.csv
@@ -29,6 +30,8 @@ out/fwdSearch/WY_*.csv
 out/agg_opt*rds
 out/opt/*.csv
 out/opt_a/*.csv
+out/null/*.csv
+out/LV*/*.csv
 
 # temp manuscript files
 ms/outline.key
