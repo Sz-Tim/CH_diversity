@@ -39,7 +39,7 @@ make_next_datasets <- function(full_data_base, out_base, opt_names, mod_size, ty
     # identify parameters to add
     if("L_CnpyOpn" %in% opt_names) opt_names <- c(opt_names, "L_CnpyMxd")
     if("L_Pasture" %in% opt_names) opt_names <- c(opt_names, "L_Crop")
-    if("R_grwnDD0" %in% opt_names) opt_names <- c(opt_names, "R_grwnDD0_sq")
+    if("R_grwnDD5" %in% opt_names) opt_names <- c(opt_names, "R_grwnDD5_sq")
     par_names_all <- c(colnames(d.ls$X), colnames(d.ls$V))
     if(is.null(opt_names)) {
       par_names <- "R_"
@@ -59,9 +59,9 @@ make_next_datasets <- function(full_data_base, out_base, opt_names, mod_size, ty
         par_i <- c(par_i, "L_Crop")
       } else if(par_i =="L_Crop") {
         next
-      } else if(par_i == "R_grwnDD0") {
-        par_i <- c(par_i, "R_grwnDD0_sq")
-      } else if(par_i =="R_grwnDD0_sq") {
+      } else if(par_i == "R_grwnDD5") {
+        par_i <- c(par_i, "R_grwnDD5_sq")
+      } else if(par_i =="R_grwnDD5_sq") {
         next
       }
       
