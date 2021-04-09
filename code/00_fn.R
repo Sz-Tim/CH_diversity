@@ -151,7 +151,7 @@ make_next_datasets <- function(full_data_base, out_base, opt_names, mod_size, ty
 #' Calculate loo metrics for model set
 #' @param fit_dir Directory with cmdstan output; loo output will also be saved
 #'   here if \code{save=T}
-#' @param mod Model version; either \code{"Y"} or \code{"WY"}
+#' @param mod Model version: \code{"cov_Y"}, \code{"LV_Y"}, \code{"cov_WY"}, \code{"LV_WY"}
 #' @param mod_size Number of variables in model set
 #' @param comp_all If \code{TRUE}, any saved loo .rds files for smaller models
 #'   are also included in the comparison
@@ -161,28 +161,37 @@ make_next_datasets <- function(full_data_base, out_base, opt_names, mod_size, ty
 #'   loo::loo_compare()
 compare_models <- function(fit_dir, mod, mod_size, comp_all=F, save=T, type="cv") {
   
-  library(tidyverse)
+  library(tidyverse); library(foreach); library(doParallel)
   
   # load (fit | mod, mod_size) and calculate loo metrics
-  fit.f <- unique(str_sub(dir(fit_dir, paste0("^", mod, "_", mod_size, "__")), 1, -7))
+  chains.f <- dir(fit_dir, paste0("^", mod, "_", mod_size, "__"))
+  fit.f <- unique(str_sub(chains.f, 1, -7))
   if(type=="cv") {
     # create lookup table for folds within variables
     fold.lu <- tibble(f=fit.f,
                       k=as.numeric(str_sub(str_split_fixed(fit.f, "k-", 2)[,2], 1, 1)),
                       vars=str_sub(str_split_fixed(fit.f, "k-", 2)[,2], 3, -1))
     # extract log_lik for each fold
-    fit.ll <- map(fit.f, 
-                  ~rstan::read_stan_csv(dir(fit_dir, paste0("^", .x), full.names=T)) %>%
-                    rstan::extract(pars="log_lik")) %>%
-      setNames(fit.f) %>%
-      map(~matrix(.x$log_lik, nrow=dim(.x$log_lik)[1]))
+    cl <- makeCluster(4)
+    registerDoParallel(cl)
+    fit.ll <- foreach(i=seq_along(fit.f), .packages="tidyverse") %dopar% {
+      names.i <- scan(dir(fit_dir, fit.f[i], full.names=T)[1], 
+                      what="char", nlines=1, sep=",", quiet=T)
+      map(dir(fit_dir, fit.f[i]),
+          ~scan(paste0(fit_dir, .x), skip=1, sep=",", quiet=T,
+                what=map(seq_along(names.i), ~"char")) %>%
+            map(as.numeric) %>% do.call(cbind, .)) %>%
+        do.call(rbind, .)
+    }
+    stopCluster(cl)
+    fit.ll <- fit.ll %>% setNames(fit.f)
     
     # concatenate log_lik across folds for each variable set and calculate loo
     fit.loo <- vector("list", n_distinct(fold.lu$vars)) %>% 
       setNames(., unique(fold.lu$vars))
     for(i in seq_along(fit.loo)) {
       ll.index <- match(fold.lu$f[fold.lu$vars==names(fit.loo)[i]], names(fit.ll))
-      fit.loo[[i]] <- loo::loo(do.call("cbind", fit.ll[ll.index]))
+      fit.loo[[i]] <- loo::loo(do.call(cbind, fit.ll[ll.index]))
     }
     names(fit.loo) <- paste0(mod, "_", mod_size, "__", names(fit.loo))
   } else {
