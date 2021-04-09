@@ -43,7 +43,7 @@ if(set_type=="cv") {
 } else if(set_type=="pred") {
   test_prop_Y <- 0
 }
-X_vars <- c("grwnDD0", "grwnDD0_sq", 
+X_vars <- c("grwnDD5", "grwnDD5_sq", 
             "AP",
             "npp",
             "lcH",
@@ -191,18 +191,6 @@ if(set_type=="cv") {  # k-fold cross-validation
 
 
 
-##--- tax_i: temporary
-if(is.null(tax_i)) {
-  tax_i <- tibble(species=sort(unique(ants$all$SPECIESID)),
-                  genus=str_split_fixed(species, "_", 2)[,1],
-                  sNum=as.numeric(factor(species)),
-                  gNum=as.numeric(factor(genus)),
-                  Dprior=1)
-  write_csv(tax_i, "data/tax_i.csv")
-}
-
-
-
 
 ##--- covariates
 clim <- dir(gis.dir, "chelsa") %>%
@@ -298,7 +286,7 @@ X_Y.mx <- as.matrix(
     mutate(lcH=vegan::diversity(as.matrix(lc.Y[,-c(1, 17)])),
            Forest=lc.Y$LC_Forest,
            Edge=lc.Y$LC_9,
-           grwnDD0=raster::extract(envirem$growingDegDays0, ., fun=mean),
+           grwnDD5=raster::extract(envirem$growingDegDays5, ., fun=mean),
            Ag=lu.Y$crop[match(BDM, lu.Y$BDM)],
            Ag=replace(Ag, is.na(Ag), 0),
            bldgPer=bldgs.Y$perimeter[match(BDM, bldgs.Y$BDM)],
