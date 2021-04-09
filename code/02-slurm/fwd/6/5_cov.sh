@@ -29,16 +29,7 @@ do
   do
 	  outj=$out
 	  outj+=$j
-	  code/mods/Y_fwd_cov sample  
-   	    algorithm=hmc  
-   	      engine=nuts  
-          metric=diag_e  
-        num_samples=$nSamp  
-        num_warmup=$nWarm  
-        data file="${d[$f]}"  
-        init=0  
-        output file=$outj.csv  
-        refresh=10 &
+	  code/mods/Y_fwd_cov sample num_samples=$nSamp num_warmup=$nWarm data file="${d[$f]}" init=0 output file=$outj.csv refresh=10 &
   done
 done
 
@@ -63,16 +54,7 @@ do
   do
 	  outj=$out
 	  outj+=$j
-	  code/mods/WY_fwd_cov sample  
-   	    algorithm=hmc  
-   	      engine=nuts  
-          metric=diag_e  
-        num_samples=$nSamp  
-        num_warmup=$nWarm  
-        data file="${d[$f]}"  
-        init=0  
-        output file=$outj.csv  
-        refresh=10 &
+	  code/mods/WY_fwd_cov sample num_samples=$nSamp num_warmup=$nWarm data file="${d[$f]}" init=0 output file=$outj.csv refresh=10 &
   done
 done
 
