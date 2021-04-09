@@ -5,8 +5,7 @@ library(rstan)
 source("code/00_fn.R")
 d.dir <- "data/stan_data/"
 d.f <- "cv_k_"
-fS_out <- "out/fwdSearch/"
-fS_out <- "/VOLUMES/Rocinante/opfo_div_cluster/new/"
+fS_out <- "/VOLUMES/Rocinante/opfo_div_cluster/fwd_ll/"
 fS_dat <- "data/fwdSearch/"
 n_folds <- length(dir(d.dir, paste0(d.f, ".*Rdump")))
 
@@ -28,13 +27,19 @@ map(1:n_folds,
 
 
 #--- Run models with only intercept
-# code/02-0_run.sh
+# code/02-slurm/fwd_0_cov.sh
 
-Y_loo <- compare_models(fit_dir=fS_out, mod="Y", mod_size=mod_size, type="cv")
-saveRDS("R_", paste0(fS_out, "opt_Y.rds"))
+cov_Y_loo <- compare_models(fit_dir=fS_out, mod="cov_Y", mod_size=mod_size, type="cv")
+saveRDS("R_", paste0(fS_out, "opt_cov_Y.rds"))
 
-WY_loo <- compare_models(fit_dir=fS_out, mod="WY", mod_size=mod_size)
-saveRDS("R_", paste0(fS_out, "opt_WY.rds"))
+LV_Y_loo <- compare_models(fit_dir=fS_out, mod="LV_Y", mod_size=mod_size, type="cv")
+saveRDS("R_", paste0(fS_out, "opt_LV_Y.rds"))
+
+cov_WY_loo <- compare_models(fit_dir=fS_out, mod="cov_WY", mod_size=mod_size, type="cv")
+saveRDS("R_", paste0(fS_out, "opt_cov_WY.rds"))
+
+LV_WY_loo <- compare_models(fit_dir=fS_out, mod="LV_WY", mod_size=mod_size, type="cv")
+saveRDS("R_", paste0(fS_out, "opt_LV_WY.rds"))
 
 
 
@@ -49,16 +54,25 @@ map(1:n_folds,
 
 
 #--- Run 14 models with 1 variable each -- intercept + 1 
-# code/02-1/02-1-[1-7]_[WY-Y].sh
+# code/02-slurm/fwd_1_cov.sh
+# code/02-slurm/fwd_1_LV.sh
 
 #--- Use loo to compare models based on ability to predict test subset
-Y_loo <- compare_models(fit_dir=fS_out, mod="Y", mod_size=mod_size, type="cv")
-Y_loo$comp
-update_opt_vars(out_dir=fS_out, mod="Y", mod_size=mod_size, comp=Y_loo$comp)
+cov_Y_loo <- compare_models(fS_out, "cov_Y", mod_size, type="cv")
+update_opt_vars(fS_out, "cov_Y", mod_size, cov_Y_loo$comp)
+cov_Y_loo$comp
 
-WY_loo <- compare_models(fit_dir=fS_out, mod="WY", mod_size=mod_size)
-WY_loo$comp
-update_opt_vars(out_dir=fS_out, mod="WY", mod_size=mod_size, comp=WY_loo$comp)
+LV_Y_loo <- compare_models(fS_out, "LV_Y", mod_size, type="cv")
+update_opt_vars(fS_out, "LV_Y", mod_size, LV_Y_loo$comp)
+LV_Y_loo$comp
+
+cov_WY_loo <- compare_models(fS_out, "cov_WY", mod_size, type="cv")
+update_opt_vars(fS_out, "cov_WY", mod_size, cov_WY_loo$comp)
+cov_WY_loo$comp
+
+LV_WY_loo <- compare_models(fS_out, "LV_WY", mod_size, type="cv")
+update_opt_vars(fS_out, "LV_WY", mod_size, LV_WY_loo$comp)
+LV_WY_loo$comp
 
 
 
@@ -68,28 +82,46 @@ mod_size <- 2
 #--- Make new datasets with selected variable + each other individually
 map(1:n_folds, 
     ~make_next_datasets(full_data_base=paste0(d.dir, d.f, .x), type="cv", 
-                        out_base=paste0(fS_dat, "Y_"),
-                        opt_names=readRDS(paste0(fS_out, "opt_Y.rds"))[1:mod_size],
+                        out_base=paste0(fS_dat, "cov_Y_"),
+                        opt_names=readRDS(paste0(fS_out, "opt_cov_Y.rds"))[1:mod_size],
                         mod_size=mod_size))
 map(1:n_folds, 
     ~make_next_datasets(full_data_base=paste0(d.dir, d.f, .x), type="cv", 
-                        out_base=paste0(fS_dat, "WY_"),
-                        opt_names=readRDS(paste0(fS_out, "opt_WY.rds"))[1:mod_size],
+                        out_base=paste0(fS_dat, "LV_Y_"),
+                        opt_names=readRDS(paste0(fS_out, "opt_LV_Y.rds"))[1:mod_size],
+                        mod_size=mod_size))
+map(1:n_folds, 
+    ~make_next_datasets(full_data_base=paste0(d.dir, d.f, .x), type="cv", 
+                        out_base=paste0(fS_dat, "cov_WY_"),
+                        opt_names=readRDS(paste0(fS_out, "opt_cov_WY.rds"))[1:mod_size],
+                        mod_size=mod_size))
+map(1:n_folds, 
+    ~make_next_datasets(full_data_base=paste0(d.dir, d.f, .x), type="cv", 
+                        out_base=paste0(fS_dat, "LV_WY_"),
+                        opt_names=readRDS(paste0(fS_out, "opt_LV_WY.rds"))[1:mod_size],
                         mod_size=mod_size))
 
 
 #--- Run 13 models with 2 variables each -- optimal + 1 
-# code/02-2/02-2-[1-7]_[WY-Y].sh
-
+# code/02-slurm/fwd_2_cov.sh
+# code/02-slurm/fwd_2_LV.sh
 
 #--- Use loo to compare models based on ability to predict test subset
-Y_loo <- compare_models(fit_dir=fS_out, mod="Y", mod_size=mod_size)
-Y_loo$comp
-update_opt_vars(out_dir=fS_out, mod="Y", mod_size=mod_size, comp=Y_loo$comp)
+cov_Y_loo <- compare_models(fS_out, "cov_Y", mod_size, type="cv")
+update_opt_vars(fS_out, "cov_Y", mod_size, cov_Y_loo$comp)
+cov_Y_loo$comp
 
-WY_loo <- compare_models(fit_dir=fS_out, mod="WY", mod_size=mod_size)
-WY_loo$comp
-update_opt_vars(out_dir=fS_out, mod="WY", mod_size=mod_size, comp=WY_loo$comp)
+LV_Y_loo <- compare_models(fS_out, "LV_Y", mod_size, type="cv")
+update_opt_vars(fS_out, "LV_Y", mod_size, LV_Y_loo$comp)
+LV_Y_loo$comp
+
+cov_WY_loo <- compare_models(fS_out, "cov_WY", mod_size, type="cv")
+update_opt_vars(fS_out, "cov_WY", mod_size, cov_WY_loo$comp)
+cov_WY_loo$comp
+
+LV_WY_loo <- compare_models(fS_out, "LV_WY", mod_size, type="cv")
+update_opt_vars(fS_out, "LV_WY", mod_size, LV_WY_loo$comp)
+LV_WY_loo$comp
 
 
 
