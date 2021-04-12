@@ -43,7 +43,7 @@ if(set_type=="cv") {
 } else if(set_type=="pred") {
   test_prop_Y <- 0
 }
-X_vars <- c("grwnDD5", "grwnDD5_sq", 
+X_vars <- c("grwnDD0", "grwnDD0_sq", 
             "AP",
             "npp",
             "lcH",
@@ -286,7 +286,7 @@ X_Y.mx <- as.matrix(
     mutate(lcH=vegan::diversity(as.matrix(lc.Y[,-c(1, 17)])),
            Forest=lc.Y$LC_Forest,
            Edge=lc.Y$LC_9,
-           grwnDD5=raster::extract(envirem$growingDegDays5, ., fun=mean),
+           grwnDD0=raster::extract(envirem$growingDegDays0, ., fun=mean),
            Ag=lu.Y$crop[match(BDM, lu.Y$BDM)],
            Ag=replace(Ag, is.na(Ag), 0),
            bldgPer=bldgs.Y$perimeter[match(BDM, bldgs.Y$BDM)],
