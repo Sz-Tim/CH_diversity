@@ -21,7 +21,7 @@ mod_size <- 0
 #--- Load full dataset, then create a new dataset for each individual variable
 map(1:n_folds, 
     ~make_next_datasets(full_data_base=paste0(d.dir, d.f, .x),
-                        out_base=fS_dat, opt_names="", type="cv", 
+                        out_base=fS_dat, opt_names=NULL, type="cv", 
                         mod_size=mod_size))
 
 
