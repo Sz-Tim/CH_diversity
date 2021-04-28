@@ -4,8 +4,8 @@
 # Tim Szewczyk
 #
 # This script runs models the optimal covariate sets through cmdstan: 
-#    code/mods/Y_opt
-#    code/mods/WY_opt
+#    code/mods/Y_LV
+#    code/mods/WY_LV
 # Dataset is data/opt/*__opt_var_set.Rdump
 # Output is stored in out/opt/
 
@@ -13,7 +13,7 @@
 nWarm=2000
 nSamp=100
 
-FILES=data/opt/Y__opt_var_set.Rdump
+FILES=data/opt/LV_Y__opt_var_set.Rdump
 d=($FILES)
 dfull=($(basename -a $FILES))
 
@@ -28,7 +28,7 @@ for j in {1..12}
 do
   outj=$out
   outj+=$j
-  code/mods/Y_opt sample \
+  code/mods/Y_LV sample \
    	  algorithm=hmc \
    	    engine=nuts \
         metric=diag_e \
@@ -41,7 +41,7 @@ do
 done
 
 
-FILES=data/opt/WY__opt_var_set.Rdump
+FILES=data/opt/LV_WY__opt_var_set.Rdump
 d=($FILES)
 dfull=($(basename -a $FILES))
 
@@ -56,7 +56,7 @@ for j in {1..12}
 do
   outj=$out
   outj+=$j
-  code/mods/WY_opt sample \
+  code/mods/WY_LV sample \
    	  algorithm=hmc \
    	    engine=nuts \
         metric=diag_e \

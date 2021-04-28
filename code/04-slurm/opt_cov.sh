@@ -13,7 +13,7 @@
 nWarm=2000
 nSamp=100
 
-FILES=data/opt/Y__opt_var_set.Rdump
+FILES=data/opt/cov_Y__opt_var_set.Rdump
 d=($FILES)
 dfull=($(basename -a $FILES))
 
@@ -41,7 +41,7 @@ do
 done
 
 
-FILES=data/opt/WY__opt_var_set.Rdump
+FILES=data/opt/cov_WY__opt_var_set.Rdump
 d=($FILES)
 dfull=($(basename -a $FILES))
 
