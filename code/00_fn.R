@@ -373,6 +373,9 @@ aggregate_output <- function(d.f, mods, pars_save, out.dir="out") {
         select(Parameter, mean, se_mean, sd, median, n_eff, Rhat)
     }
     
+    # remove big object
+    rm(out.mcmc)
+    
     out.ls <- map(seq_along(c(pars, pars.trans)), 
                   ~full_join(out.50[[.x]], out.80[[.x]], by="Parameter") %>%
                     full_join(., out.90[[.x]], by="Parameter") %>%
@@ -381,6 +384,9 @@ aggregate_output <- function(d.f, mods, pars_save, out.dir="out") {
                     mutate(model=mods[i],
                            par=str_split_fixed(Parameter, "\\.", n=2)[,1])) %>%
       setNames(c(pars, str_sub(pars.trans, 2, -1)))
+    
+    # remove big object
+    rm(out.50); rm(out.80); rm(out.90); rm(out.95); rm(out.mn)
     
     ParNames <- c("intercept", 
                   paste0(colnames(d.ls$X)[-1]),
