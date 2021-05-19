@@ -73,3 +73,44 @@ Local:
 - best_Y.stan: select covariates, predict VD  
 - best_WY.stan: select covariates, predict VD  
 
+
+
+# If computing capacity were infinite:
+- **single runs**:
+  - null  
+  - null + LV  
+  - optimal  
+  - optimal + LV  
+- **variable selection**:
+  - k = 4
+  - chains = 3
+  - cov = 14
+  - covariates:
+    - 56 slurm jobs (7,7,6,6,5,5,4,4,3,3,2,2,1,1)
+    - 56 slurm jobs (7,7,6,6,5,5,4,4,3,3,2,2,1,1)
+  - covariates + LV:
+    - 56 slurm jobs (7,7,6,6,5,5,4,4,3,3,2,2,1,1)
+    - 56 slurm jobs (7,7,6,6,5,5,4,4,3,3,2,2,1,1)
+  - covariates (sum(14:5): 95 x k=4 = 380 runs x 2 models = 760 runs)  
+  - covariates + LV (sum(14:5): 95 x k=4 = 380 runs x 2 models = 760 runs)  
+  
+  
+  rewrite slurm scripts so Y then WY -- add 8h or so to each
+  
+  02-slurm: 
+    1/
+    ...
+    14/
+    02-1_cov.sh
+    ...
+    02-14_cov.sh
+    02-1_LV.sh
+    ...
+    02-14_LV.sh
+    
+    
+climate: R_grwnDD0, R_AP, L_SoilTSt
+human: R_Ag, R_rdLen, R_bldgPer, L_Pasture
+habitat: R_npp, R_Edge, R_lcH, R_Forest, L_CnpyOpn
+    
+    
