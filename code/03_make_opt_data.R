@@ -55,11 +55,6 @@ make_next_datasets(full_data_base=d.f, type="pred",
 
 
 # intercept only null models
-make_next_datasets(full_data_base=d.f, out_base=paste0(opt_dat, "Y_null"), 
-                   opt_names=null_var$Y, type="pred", mod_size=length(null_var$Y))
-make_next_datasets(full_data_base=d.f, out_base=paste0(opt_dat, "WY_null"), 
-                   opt_names=null_var$WY, type="pred", mod_size=length(null_var$WY))
-
 make_next_datasets(full_data_base=d.f, type="pred", 
                    out_base=paste0(opt_dat, "cov_Y_null"),
                    opt_names=null_var$cov_Y, mod_size=length(null_var$cov_Y))
