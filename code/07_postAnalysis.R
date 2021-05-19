@@ -2,31 +2,39 @@
 library(tidyverse); theme_set(theme_bw() + theme(panel.grid=element_blank()))
 source("code/00_fn.R"); source("../1_opfo/code/00_fn.R")
 
-agg.ls <- map(paste0("out/agg_opt_", c("WY", "Y"), ".rds"), readRDS) %>%
-  map(., ~discard(.x, is.null))
-agg <- vector("list", n_distinct(c(names(agg.ls[[1]]), names(agg.ls[[2]])))) %>%
-  setNames(unique(names(agg.ls[[1]]), names(agg.ls[[2]])))
-for(i in names(agg)) {
-  agg[[i]] <- rbind(agg.ls[[1]][[i]], agg.ls[[2]][[i]]) %>%
-    mutate(., model=case_when(model=="Y" ~ "Structured", 
-                              model=="WY" ~ "Joint"))
+# aggregate summarised output for optimal models (WY/Y, cov/LV)
+agg_opt.ls <- dir("out", "agg_[cov,LV]", full.names=T) %>% 
+  map(readRDS) %>% map(., ~discard(.x, is.null))
+agg_opt <- vector("list", n_distinct(unlist(map(agg_opt.ls, names)))) %>%
+  setNames(sort(unique(unlist(map(agg_opt.ls, names)))))
+for(i in names(agg_opt)) {
+  agg_opt[[i]] <- map(agg_opt.ls, ~.[[i]]) %>% 
+    do.call('rbind', .) %>%
+    mutate(dataset=if_else(grepl("WY", model), "Joint", "Structured"),
+           LV=if_else(grepl("cov", model), "None", "Local LV"),
+           model=paste0(dataset, ": ", LV))
 }
-rm(agg.ls)
+rm(agg_opt.ls)
 
-
-agg.ls <- map(paste0("out/agg_LV2_", c("Y"), ".rds"), readRDS) %>%
-  map(., ~discard(.x, is.null))
-agg <- vector("list", n_distinct(c(names(agg.ls[[1]]), names(agg.ls[[1]])))) %>%
-  setNames(unique(names(agg.ls[[1]]), names(agg.ls[[1]])))
-for(i in names(agg)) {
-  agg[[i]] <- rbind(agg.ls[[1]][[i]]) %>%
-    mutate(., model=case_when(model=="Y" ~ "Structured", 
-                              model=="WY" ~ "Joint"))
+# aggregate summarised output for null models (WY/Y, cov/LV)
+agg_null.ls <- dir("out", "agg_null_", full.names=T) %>% 
+  map(readRDS) %>% map(., ~discard(.x, is.null))
+agg_null <- vector("list", n_distinct(unlist(map(agg_null.ls, names)))) %>%
+  setNames(sort(unique(unlist(map(agg_null.ls, names)))))
+for(i in names(agg_null)) {
+  agg_null[[i]] <- map(agg_null.ls, ~.[[i]]) %>% 
+    do.call('rbind', .) %>%
+    mutate(dataset=if_else(grepl("WY", model), "Joint", "Structured"),
+           LV=if_else(grepl("cov", model), "None", "Local LV"),
+           model=paste0(dataset, ": ", LV))
 }
-rm(agg.ls)
+rm(agg_null.ls)
 
-d.ls <- readRDS("data_orig/opt/Y__opt_var_set_ls.rds")
-d.i <- readRDS("data_orig/opt/Y__opt_var_set_i.rds")
+
+
+
+d.ls <- readRDS("data/opt/cov_Y__opt_var_set_ls.rds")
+d.i <- readRDS("data/opt/cov_Y__opt_var_set_i.rds")
 site_i <- read_csv("../1_opfo/data/opfo_siteSummaryProcessed.csv")
 
 ants <- load_ant_data(str_type="soil", clean_spp=T)
@@ -65,7 +73,7 @@ det.base <- ants$all %>% sf::st_set_geometry(NULL) %>%
 ########------------------------------------------------------------------------
 ## SLOPES
 ########------------------------------------------------------------------------
-agg$beta
+agg_opt$beta %>% select(ParName, model, L025, mean, median, L975)
 
 
 
@@ -79,15 +87,27 @@ agg$beta
 
 spp_obs <- which(colSums(d.i$Y)>0)
 
-agg$lam %>% mutate(obs=rep(c(t(d.i$Y)), times=2)) %>%
+agg_opt$lam %>% mutate(obs=rep(c(t(d.i$Y)), times=4)) %>%
   mutate(resid=mean - obs) %>%
   filter(obs > 0) %>%
-  group_by(model, el) %>%
+  group_by(dataset, LV, el) %>%
   summarise(RMSE=sqrt(mean(resid^2))) %>%
-  ggplot(aes(el, RMSE, colour=model)) + geom_point() +
-  scale_colour_manual(values=mod_col)
+  ggplot(aes(el, RMSE)) + stat_smooth() + geom_point(shape=1, alpha=0.5) + 
+  facet_grid(dataset~LV)
 
-agg$lam %>% mutate(obs=rep(c(t(d.i$Y)), times=2)) %>%
+ggplot(agg_opt$LL_I, aes(exp(median), fill=model)) + geom_boxplot()
+ggplot(agg_opt$LL_I, aes(el, exp(median))) + 
+  stat_smooth() + geom_point(shape=1, alpha=0.5) + 
+  facet_grid(dataset~LV)
+
+ggplot(agg_opt$LL_S, aes(exp(median), fill=model)) + geom_boxplot()
+ggplot(agg_opt$LL_S, aes(exp(median), xmin=exp(L025), xmax=exp(L975),
+                         y=sppName, colour=dataset)) + 
+  geom_point(position=position_dodge(width=1)) + 
+  geom_linerange(position=position_dodge(width=1)) + 
+  facet_grid(.~LV)
+
+agg_opt$lam %>% mutate(obs=rep(c(t(d.i$Y)), times=4)) %>%
   mutate(resid=mean - obs) %>%
   group_by(model) %>%
   summarise(RMSE=sqrt(mean(resid^2)),
@@ -95,7 +115,7 @@ agg$lam %>% mutate(obs=rep(c(t(d.i$Y)), times=2)) %>%
             SS_resid=sum(resid^2),
             R2=1 - SS_resid/SS_tot)
 
-agg$pP_L %>% mutate(obs=rep(c(t(d.i$Y)), times=2)) %>%
+agg_opt$pP_L %>% mutate(obs=rep(c(t(d.i$Y)), times=4)) %>%
   mutate(obs=as.numeric(obs>0),
          resid=mean - obs) %>%
   group_by(model) %>%
@@ -104,7 +124,7 @@ agg$pP_L %>% mutate(obs=rep(c(t(d.i$Y)), times=2)) %>%
             SS_resid=sum(resid^2),
             R2=1 - SS_resid/SS_tot)
 
-agg$pP_L %>% mutate(obs=rep(c(t(d.i$Y)), times=2)) %>%
+agg_opt$pP_L %>% mutate(obs=rep(c(t(d.i$Y)), times=4)) %>%
   mutate(obs=as.numeric(obs>0), 
          resid=mean - obs) %>%
   filter(spp %in% spp_obs) %>%
@@ -112,9 +132,10 @@ agg$pP_L %>% mutate(obs=rep(c(t(d.i$Y)), times=2)) %>%
   summarise(RMSE=sqrt(mean(resid^2)),
             SS_tot=sum((obs - mean(obs))^2),
             SS_resid=sum(resid^2),
-            R2=1 - SS_resid/SS_tot) %>% arrange(desc(R2))
+            R2=1 - SS_resid/SS_tot) %>% arrange(desc(R2)) %>%
+  ggplot(aes(model, R2)) + geom_boxplot()
 
-agg$lam %>% mutate(obs=rep(c(t(d.i$Y)), times=2)) %>%
+agg_opt$lam %>% mutate(obs=rep(c(t(d.i$Y)), times=4)) %>%
   mutate(resid=mean - obs) %>%
   filter(spp %in% spp_obs) %>%
   group_by(model, sppName) %>%
@@ -125,24 +146,23 @@ agg$lam %>% mutate(obs=rep(c(t(d.i$Y)), times=2)) %>%
   group_by(sppName) %>% arrange(model) %>% 
   summarise(pctDiff=(last(RMSE)-first(RMSE))/last(RMSE)) %>% ungroup %>% summary()
 
-agg$lam %>% mutate(obs=rep(c(t(d.i$Y)), times=2)) %>%
+agg_opt$lam %>% mutate(obs=rep(c(t(d.i$Y)), times=4)) %>%
   filter(spp %in% spp_obs) %>%
   # filter(obs > 0) %>%
   ggplot(aes(mean, obs, colour=model)) + geom_point(shape=1, alpha=0.5) +
-  stat_smooth(method="lm") +
-  # facet_wrap(~sppName) +
-  scale_colour_manual(values=mod_col)
+  stat_smooth(method="lm") 
+  # facet_wrap(~sppName) 
 
-agg$pP_L %>% mutate(obs=rep(c(t(d.i$Y)), times=2)) %>%
+agg_opt$pP_L %>% mutate(obs=rep(c(t(d.i$Y)), times=4)) %>%
   filter(spp %in% spp_obs) %>%
   ggplot(aes(mean, as.numeric(obs>0), colour=model)) + 
   geom_point(shape=1, alpha=0.5) +
   stat_smooth(method="glm", size=0.5, se=F,
               method.args=list(family="binomial"), fullrange=T) + 
   facet_wrap(~sppName) +
-  scale_colour_manual(values=mod_col) + xlim(0, 1) + ylim(0, 1)
+  xlim(0, 1) + ylim(0, 1)
 
-agg$pP_L %>% mutate(obs=rep(c(t(d.i$Y)), times=2)) %>%
+agg_opt$pP_L %>% mutate(obs=rep(c(t(d.i$Y)), times=4)) %>%
   mutate(resid=median - (obs>0)) %>%
   ggplot(aes(x=obs>0, y=L975, fill=model)) + geom_boxplot() + ylim(0,1)
 
@@ -157,18 +177,19 @@ agg$pP_L %>% mutate(obs=rep(c(t(d.i$Y)), times=2)) %>%
 mod_col <- c("Joint"="#7b3294", "Structured"="#008837")
 
 # REDO WITH RE-FIT FINAL MODELS !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-obs_lam <- agg$lam %>% 
-  mutate(obs=rep(c(t(d.ls$Y)), times=1),
-         null=rep(agg_null$summaries$lam$mean, times=1),
-         LL=LaplacesDemon::dgpois(obs, mean, agg$disp$mean, log=T),
-         LL_null=LaplacesDemon::dgpois(obs, null, agg_null$summaries$disp$mean, log=T))
+obs_lam <- agg_opt$lam %>% 
+  mutate(obs=rep(c(t(d.ls$Y)), times=4),
+         null=rep(filter(agg_null$lam, model=="Structured: None")$mean, times=4),
+         LL=LaplacesDemon::dgpois(obs, mean, agg_opt$disp$mean, log=T),
+         LL_null=LaplacesDemon::dgpois(obs, null, filter(agg_null$disp, model=="Structured: None")$mean, log=T))
 obs_lam %>% group_by(model) %>% 
   summarise(LL=sum(LL), LL_null=sum(LL_null)) %>%
   mutate(R2_mcf=1-(LL/LL_null),
          D2=((-2*LL_null) - (-2*LL))/(-2*LL_null))
 
-1 - (agg_LV$LL$mean/agg_null$summaries$LL$mean)
-1 - (agg_LV2$summaries$LL$mean/agg_null$summaries$LL$mean)
+agg_opt$LL %>% 
+  mutate(R2=1-mean/filter(agg_null$LL, model=="Structured: None")$mean) %>%
+  select(model, R2)
 
 R2_spp <- obs_lam %>% group_by(model, sppName) %>% 
   summarise(LL=sum(LL), LL_null=sum(LL_null), obs=any(obs>0), N_Y=sum(obs)) %>%
@@ -180,16 +201,13 @@ R2_spp <- obs_lam %>% group_by(model, sppName) %>%
 
 ggplot(R2_spp, aes(R2_mcf, fill=model)) + 
   geom_density(alpha=0.75) + 
-  scale_fill_manual("Model", values=mod_col) +
   labs(x=expression('Pseudo-R'^2~'by species'), y="Density")
 
 ggplot(R2_spp, aes(R2_mcf, obs, fill=model)) + 
   ggridges::geom_density_ridges(alpha=0.75) + 
-  scale_fill_manual("Model", values=mod_col) +
   labs(x=expression('Pseudo-R'^2), y="Species observed in Y")
 
-ggplot(R2_spp, aes(Pr_Y - Pr_W, R2_mcf, colour=model)) + geom_point() +
-  scale_colour_manual("Model", values=mod_col) 
+ggplot(R2_spp, aes(Pr_Y - Pr_W, R2_mcf, colour=model)) + geom_point() 
 
 R2_spp %>% filter(R2_mcf < 0)
 R2_spp %>% group_by(model) %>% 
@@ -203,7 +221,6 @@ R2_spp %>% group_by(model) %>%
 
 ggplot(R2_spp, aes(R2_mcf, sppName, colour=model)) + 
   geom_point() +
-  scale_colour_manual("Model", values=mod_col) +
   labs(x="", y=expression('Pseudo-R'^2))
 
 R2_spp %>% arrange(sppName, model) %>% group_by(sppName) %>%
@@ -226,26 +243,36 @@ R2_spp %>% arrange(sppName, model) %>% group_by(sppName) %>%
 
 
 
-agg_LV$LV_Sigma %>% filter(spp1 != spp2) %>% 
-  filter(sppName1 %in% names(det_Y) & sppName2 %in% names(det_Y)) %>%
+
+agg_opt$gamma_Sigma %>% filter(spp1 != spp2) %>% 
+  filter(model=="Joint: Local LV") %>%
+  # filter(sppName1 %in% names(det_Y) & sppName2 %in% names(det_Y)) %>%
+  mutate(sppName1=factor(sppName1, levels=sort(unique(sppName1), decreasing=F)),
+         sppName2=factor(sppName2, levels=sort(unique(sppName2), decreasing=T))) %>%
   ggplot(aes(sppName1, sppName2, fill=mean)) + 
   geom_point(size=3, shape=22, colour="gray") + 
-  scale_fill_gradient2(low=scales::muted("blue"), 
-                       high=scales::muted("red"), limits=c(-1,1)) + 
+  scale_fill_gradient2("Mean\nresidual\ncorrelation", 
+                       low=scales::muted("blue"), 
+                       high=scales::muted("red"), limits=c(-1,1)) +
   theme(axis.text.x=element_text(angle=270, hjust=0, vjust=0.5)) + 
-  facet_grid(genName2~genName1, scales="free", space="free")
+  labs(x="", y="", title="Joint model") +
+  facet_grid(genName2~genName1, scales="free", space="free", switch="y")
 
-agg$LV_Sigma %>% filter(spp1 != spp2) %>%
+agg$gamma_Sigma %>% filter(spp1 != spp2) %>%
   ggplot(aes(genName1, mean, colour=genName2)) + 
   geom_point() + facet_wrap(~genName2, scales="free")
-agg$LV_Sigma %>% filter(spp1 != spp2) %>%
+agg$gamma_Sigma %>% filter(spp1 != spp2) %>%
   ggplot(aes(mean, sppName1, fill=genName1==genName2)) + 
   geom_vline(xintercept=0) +
   ggridges::geom_density_ridges(rel_min_height=0.01, alpha=0.5, size=0.1)
-agg$LV_Sigma %>% filter(genName1 != genName2) %>%
+agg$gamma_Sigma %>% filter(genName1 != genName2) %>%
   ggplot(aes(mean, genName1)) + 
   geom_vline(xintercept=0) +
   ggridges::geom_density_ridges()
+
+
+ggplot(agg$zeta, aes(el, mean, colour=model)) + geom_point(shape=1, size=0.5) +
+  scale_colour_manual(values=mod_col)
   
 
 
@@ -299,20 +326,23 @@ ggplot(chao_Y, aes(el, Estimator)) + geom_point()
 ## BETA DIVERSITY
 ########------------------------------------------------------------------------
 library(betapart)
-lam.site.ls <- agg$lam %>% 
+lam.site.ls <- agg_opt$lam %>% 
   mutate(site=str_pad(str_sub(as.character(id), 1, -5), 2, "left", "0"),
          BDM=arrange(site_i, BDM_id)$BDM[as.numeric(site)]) %>%
-  filter(model=="Joint") %>%
-  select(sppName, site, BDM, id, L025) %>%
-  pivot_wider(names_from="sppName", values_from="L025")
-beta.lam.df <- site.mns %>% 
+  select(model, sppName, site, BDM, id, median) %>%
+  pivot_wider(names_from="sppName", values_from="median")
+beta.lam.df <- bind_rows(site.mns %>% mutate(model="Joint: None"),
+                         site.mns %>% mutate(model="Structured: None"),
+                         site.mns %>% mutate(model="Joint: Local LV"),
+                         site.mns %>% mutate(model="Structured: Local LV")) %>% 
   filter(BDM %in% lam.site.ls$BDM) %>%
   mutate(beta.BRAY.BAL=NA, 
          beta.BRAY.GRA=NA,
          beta.BRAY=NA)
-for(i in 1:n_distinct(beta.lam.df$BDM)) {
-  BDM_i <- unique(beta.lam.df$BDM)[i]
-  beta_i <- beta.multi.abund(filter(lam.site.ls, BDM==BDM_i)[,4:83])
+for(i in 1:nrow(beta.lam.df)) {
+  BDM_i <- beta.lam.df$BDM[i]
+  mod_i <- beta.lam.df$model[i]
+  beta_i <- beta.multi.abund(filter(lam.site.ls, BDM==BDM_i & model==mod_i)[,5:23])
   beta.lam.df$beta.BRAY.BAL[i] <- beta_i$beta.BRAY.BAL
   beta.lam.df$beta.BRAY.GRA[i] <- beta_i$beta.BRAY.GRA
   beta.lam.df$beta.BRAY[i] <- beta_i$beta.BRAY
@@ -320,50 +350,92 @@ for(i in 1:n_distinct(beta.lam.df$BDM)) {
 
 # total
 AICcmodavg::aictab(list(lm(beta.BRAY ~ el, 
-                           data=filter(beta.lam.df, model=="Joint")),
+                           data=filter(beta.lam.df, model=="Joint: None")),
                         lm(beta.BRAY ~ el + I(el^2), 
-                           data=filter(beta.lam.df, model=="Joint"))),
-                   paste0("j.tot.", c("linear", "quadr")), sort=T)
-summary(lm(beta.BRAY ~ el, data=filter(beta.lam.df, model=="Joint")))
+                           data=filter(beta.lam.df, model=="Joint: None"))),
+                   paste0("jN.tot.", c("linear", "quadr")), sort=T)
+summary(lm(beta.BRAY ~ el, data=filter(beta.lam.df, model=="Joint: None")))
 
 AICcmodavg::aictab(list(lm(beta.BRAY ~ el, 
-                           data=filter(beta.lam.df, model!="Joint")),
+                           data=filter(beta.lam.df, model=="Joint: Local LV")),
                         lm(beta.BRAY ~ el + I(el^2), 
-                           data=filter(beta.lam.df, model!="Joint"))),
-                   paste0("s.tot.", c("linear", "quadr")), sort=T)
-summary(lm(beta.BRAY ~ el + I(el^2), data=filter(beta.lam.df, model!="Joint")))
+                           data=filter(beta.lam.df, model=="Joint: Local LV"))),
+                   paste0("jL.tot.", c("linear", "quadr")), sort=T)
+summary(lm(beta.BRAY ~ el, data=filter(beta.lam.df, model!="Joint: Local LV")))
+
+AICcmodavg::aictab(list(lm(beta.BRAY ~ el, 
+                           data=filter(beta.lam.df, model=="Structured: None")),
+                        lm(beta.BRAY ~ el + I(el^2), 
+                           data=filter(beta.lam.df, model=="Structured: None"))),
+                   paste0("sN.tot.", c("linear", "quadr")), sort=T)
+summary(lm(beta.BRAY ~ el + I(el^2), data=filter(beta.lam.df, model=="Structured: None")))
+
+AICcmodavg::aictab(list(lm(beta.BRAY ~ el, 
+                           data=filter(beta.lam.df, model=="Structured: Local LV")),
+                        lm(beta.BRAY ~ el + I(el^2), 
+                           data=filter(beta.lam.df, model=="Structured: Local LV"))),
+                   paste0("sL.tot.", c("linear", "quadr")), sort=T)
+summary(lm(beta.BRAY ~ el, data=filter(beta.lam.df, model!="Structured: Local LV")))
 
 
 # balanced variation
 AICcmodavg::aictab(list(lm(beta.BRAY.BAL ~ el, 
-                           data=filter(beta.lam.df, model=="Joint")),
+                           data=filter(beta.lam.df, model=="Joint: None")),
                         lm(beta.BRAY.BAL ~ el + I(el^2), 
-                           data=filter(beta.lam.df, model=="Joint"))),
-                   paste0("j.bal.", c("linear", "quadr")), sort=T)
-summary(lm(beta.BRAY.BAL ~ el + I(el^2), data=filter(beta.lam.df, model=="Joint")))
+                           data=filter(beta.lam.df, model=="Joint: None"))),
+                   paste0("jN.bal.", c("linear", "quadr")), sort=T)
+summary(lm(beta.BRAY.BAL ~ el + I(el^2), data=filter(beta.lam.df, model=="Joint: None")))
 
 AICcmodavg::aictab(list(lm(beta.BRAY.BAL ~ el, 
-                           data=filter(beta.lam.df, model!="Joint")),
+                           data=filter(beta.lam.df, model=="Joint: Local LV")),
                         lm(beta.BRAY.BAL ~ el + I(el^2), 
-                           data=filter(beta.lam.df, model!="Joint"))),
-                   paste0("s.bal.", c("linear", "quadr")), sort=T)
-summary(lm(beta.BRAY.BAL ~ el + I(el^2), data=filter(beta.lam.df, model!="Joint")))
+                           data=filter(beta.lam.df, model=="Joint: Local LV"))),
+                   paste0("jL.bal.", c("linear", "quadr")), sort=T)
+summary(lm(beta.BRAY.BAL ~ el + I(el^2), data=filter(beta.lam.df, model!="Joint: Local LV")))
+
+AICcmodavg::aictab(list(lm(beta.BRAY.BAL ~ el, 
+                           data=filter(beta.lam.df, model=="Structured: None")),
+                        lm(beta.BRAY.BAL ~ el + I(el^2), 
+                           data=filter(beta.lam.df, model=="Structured: None"))),
+                   paste0("sN.bal.", c("linear", "quadr")), sort=T)
+summary(lm(beta.BRAY.BAL ~ el, data=filter(beta.lam.df, model=="Structured: None")))
+
+AICcmodavg::aictab(list(lm(beta.BRAY.BAL ~ el, 
+                           data=filter(beta.lam.df, model=="Structured: Local LV")),
+                        lm(beta.BRAY.BAL ~ el + I(el^2), 
+                           data=filter(beta.lam.df, model=="Structured: Local LV"))),
+                   paste0("sL.bal.", c("linear", "quadr")), sort=T)
+summary(lm(beta.BRAY.BAL ~ el, data=filter(beta.lam.df, model!="Structured: Local LV")))
 
 
 # abundance gradient
 AICcmodavg::aictab(list(lm(beta.BRAY.GRA ~ el, 
-                           data=filter(beta.lam.df, model=="Joint")),
+                           data=filter(beta.lam.df, model=="Joint: None")),
                         lm(beta.BRAY.GRA ~ el + I(el^2), 
-                           data=filter(beta.lam.df, model=="Joint"))),
-                   paste0("j.gra.", c("linear", "quadr")), sort=T)
-summary(lm(beta.BRAY.GRA ~ el, data=filter(beta.lam.df, model=="Joint")))
+                           data=filter(beta.lam.df, model=="Joint: None"))),
+                   paste0("jN.gra.", c("linear", "quadr")), sort=T)
+summary(lm(beta.BRAY.GRA ~ el + I(el^2), data=filter(beta.lam.df, model=="Joint: None")))
 
 AICcmodavg::aictab(list(lm(beta.BRAY.GRA ~ el, 
-                           data=filter(beta.lam.df, model!="Joint")),
+                           data=filter(beta.lam.df, model=="Joint: Local LV")),
                         lm(beta.BRAY.GRA ~ el + I(el^2), 
-                           data=filter(beta.lam.df, model!="Joint"))),
-                   paste0("s.gra.", c("linear", "quadr")), sort=T)
-summary(lm(beta.BRAY.GRA ~ el + I(el^2), data=filter(beta.lam.df, model!="Joint")))
+                           data=filter(beta.lam.df, model=="Joint: Local LV"))),
+                   paste0("jL.gra.", c("linear", "quadr")), sort=T)
+summary(lm(beta.BRAY.GRA ~ el + I(el^2), data=filter(beta.lam.df, model!="Joint: Local LV")))
+
+AICcmodavg::aictab(list(lm(beta.BRAY.GRA ~ el, 
+                           data=filter(beta.lam.df, model=="Structured: None")),
+                        lm(beta.BRAY.GRA ~ el + I(el^2), 
+                           data=filter(beta.lam.df, model=="Structured: None"))),
+                   paste0("sN.gra.", c("linear", "quadr")), sort=T)
+summary(lm(beta.BRAY.GRA ~ el, data=filter(beta.lam.df, model=="Structured: None")))
+
+AICcmodavg::aictab(list(lm(beta.BRAY.GRA ~ el, 
+                           data=filter(beta.lam.df, model=="Structured: Local LV")),
+                        lm(beta.BRAY.GRA ~ el + I(el^2), 
+                           data=filter(beta.lam.df, model=="Structured: Local LV"))),
+                   paste0("sL.gra.", c("linear", "quadr")), sort=T)
+summary(lm(beta.BRAY.GRA ~ el, data=filter(beta.lam.df, model!="Structured: Local LV")))
 
 
 

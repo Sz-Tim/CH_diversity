@@ -15,7 +15,8 @@ theme_set(theme_bw() + theme(panel.grid=element_blank()))
 source("code/00_fn.R"); source("../1_opfo/code/00_fn.R")
 
 ms_dir <- "ms/1_Ecography/1/"
-mod_col <- c("Joint"="#7b3294", "Structured"="#008837")
+mod_col <- c("Joint: Local LV"="#762a83", "Structured: Local LV"="#1b7837",
+             "Joint: None"="#9970ab", "Structured: None"="#5aae61")
 
 
 # auxilliary datasets
@@ -50,18 +51,36 @@ tax_i <- read_csv("data/tax_i.csv")
 
 
 # model inputs and posteriors
-d.ls <- map(paste0("data/opt/", c("WY", "Y"), "__opt_var_set_ls.rds"), readRDS)
-d.i <- map(paste0("data/opt/", c("WY", "Y"), "__opt_var_set_i.rds"), readRDS)
-agg.ls <- map(paste0("out/agg_opt_", c("WY", "Y"), ".rds"), readRDS) %>%
-  map(., ~discard(.x, is.null))
-agg <- vector("list", n_distinct(c(names(agg.ls[[1]]), names(agg.ls[[2]])))) %>%
-  setNames(unique(names(agg.ls[[1]]), names(agg.ls[[2]])))
-for(i in names(agg)) {
-  agg[[i]] <- rbind(agg.ls[[1]][[i]], agg.ls[[2]][[i]]) %>%
-    mutate(., model=case_when(model=="Y" ~ "Structured", 
-                              model=="WY" ~ "Joint"))
+d.ls <- map(paste0("data/opt/LV_", c("WY", "Y"), "__opt_var_set_ls.rds"), readRDS)
+d.i <- map(paste0("data/opt/LV_", c("WY", "Y"), "__opt_var_set_i.rds"), readRDS)
+# aggregate summarised output for optimal models (WY/Y, cov/LV)
+agg_opt.ls <- c(dir("out", "agg_[cov,LV].*_Y", full.names=T),
+                dir("out/opt_noCnpy", "agg_[cov,LV].*_WY", full.names=T)) %>% 
+  map(readRDS) %>% map(., ~discard(.x, is.null))
+agg_opt <- vector("list", n_distinct(unlist(map(agg_opt.ls, names)))) %>%
+  setNames(sort(unique(unlist(map(agg_opt.ls, names)))))
+for(i in names(agg_opt)) {
+  agg_opt[[i]] <- map(agg_opt.ls, ~.[[i]]) %>% 
+    do.call('rbind', .) %>%
+    mutate(dataset=if_else(grepl("WY", model), "Joint", "Structured"),
+           LV=if_else(grepl("cov", model), "None", "Local LV"),
+           model=paste0(dataset, ": ", LV))
 }
-rm(agg.ls)
+rm(agg_opt.ls)
+
+# aggregate summarised output for null models (WY/Y, cov/LV)
+agg_null.ls <- dir("out", "agg_null_", full.names=T) %>% 
+  map(readRDS) %>% map(., ~discard(.x, is.null))
+agg_null <- vector("list", n_distinct(unlist(map(agg_null.ls, names)))) %>%
+  setNames(sort(unique(unlist(map(agg_null.ls, names)))))
+for(i in names(agg_null)) {
+  agg_null[[i]] <- map(agg_null.ls, ~.[[i]]) %>% 
+    do.call('rbind', .) %>%
+    mutate(dataset=if_else(grepl("WY", model), "Joint", "Structured"),
+           LV=if_else(grepl("cov", model), "None", "Local LV"),
+           model=paste0(dataset, ": ", LV))
+}
+rm(agg_null.ls)
 
 
 # summaries
@@ -148,7 +167,7 @@ ggsave(paste0(ms_dir, "figs/map_inset.png"), p, height=3, width=5, units="in")
 
 el.pred <- data.frame(el=seq(300, 3000, by=10))
 S.loess <- bind_rows(
-  agg$S_R %>%
+  agg_opt$S_R %>%
     group_by(model, id, el) %>% group_by(model) %>% nest() %>%
     mutate(loess_lo=map(data, ~predict(loess(L025 ~ el, data=.x), el.pred)),
            loess_md=map(data, ~predict(loess(median ~ el, data=.x), el.pred)),
@@ -157,7 +176,7 @@ S.loess <- bind_rows(
     select(-data) %>%
     mutate(el=el.pred$el,
            Scale="Regional"), 
-  agg$S_L %>% group_by(model) %>% nest() %>%
+  agg_opt$S_L %>% group_by(model) %>% nest() %>%
     mutate(loess_lo=map(data, ~predict(loess(L025 ~ el, data=.x), el.pred)),
            loess_md=map(data, ~predict(loess(median ~ el, data=.x), el.pred)),
            loess_hi=map(data, ~predict(loess(L975 ~ el, data=.x), el.pred))) %>%
@@ -167,7 +186,7 @@ S.loess <- bind_rows(
            loess_lo=if_else(loess_lo < 0, 0, loess_lo)) 
 ) %>% mutate(Scale=factor(Scale, levels=c("Regional", "Local")))
 H.loess <- bind_rows(
-  agg$H %>%
+  agg_opt$H %>%
     group_by(model, id, el) %>% group_by(model) %>% nest() %>%
     mutate(loess_lo=map(data, ~predict(loess(L025 ~ el, data=.x), el.pred)),
            loess_md=map(data, ~predict(loess(median ~ el, data=.x), el.pred)),
@@ -176,7 +195,7 @@ H.loess <- bind_rows(
     select(-data) %>%
     mutate(el=el.pred$el,
            Scale="Regional"), 
-  agg$H_L %>% group_by(model) %>% nest() %>%
+  agg_opt$H_L %>% group_by(model) %>% nest() %>%
     mutate(loess_lo=map(data, ~predict(loess(L025 ~ el, data=.x), el.pred)),
            loess_md=map(data, ~predict(loess(median ~ el, data=.x), el.pred)),
            loess_hi=map(data, ~predict(loess(L975 ~ el, data=.x), el.pred))) %>%
@@ -185,7 +204,7 @@ H.loess <- bind_rows(
            Scale="Local") 
 ) %>% mutate(Scale=factor(Scale, levels=c("Regional", "Local")))
 lam.loess <- bind_rows(
-  agg$tot_LAM %>%
+  agg_opt$tot_LAM %>%
     group_by(model, id, el) %>% group_by(model) %>% nest() %>%
     mutate(loess_lo=map(data, ~predict(loess(L025/100 ~ el, data=.x), el.pred)),
            loess_md=map(data, ~predict(loess(median/100 ~ el, data=.x), el.pred)),
@@ -194,7 +213,7 @@ lam.loess <- bind_rows(
     select(-data) %>%
     mutate(el=el.pred$el,
            Scale="Regional"), 
-  agg$tot_lam %>% group_by(model) %>% nest() %>%
+  agg_opt$tot_lam %>% group_by(model) %>% nest() %>%
     mutate(loess_lo=map(data, ~predict(loess(L025 ~ el, data=.x), el.pred)),
            loess_md=map(data, ~predict(loess(median ~ el, data=.x), el.pred)),
            loess_hi=map(data, ~predict(loess(L975 ~ el, data=.x), el.pred))) %>%
@@ -259,7 +278,8 @@ parName.df <- tibble(par=c("intercept",
                            "R_rdLen", 
                            "L_SoilTSt", 
                            "L_Pasture", "L_Crop", 
-                           "L_CnpyOpn", "L_CnpyMxd"),
+                           "L_CnpyOpn", "L_CnpyMxd",
+                           "L_VegTot"),
                      full=c("Intercept", 
                             "Growing deg. days",
                             "Growing deg. days (sq)", 
@@ -268,13 +288,14 @@ parName.df <- tibble(par=c("intercept",
                             "Road length", 
                             "Soil temperature", 
                             "Pasture", "Crop", 
-                            "Open canopy", "Mixed canopy"))
-b_post <- agg$b %>% filter(ParName != "intercept") %>%
+                            "Open canopy", "Mixed canopy",
+                            "Local veg."))
+b_post <- agg_opt$b %>% filter(ParName != "intercept" & LV=="Local LV") %>%
   mutate(Scale=factor(str_sub(ParName, 1L, 1L), levels=c("R", "L"), 
                       labels=c("Regional", "Local")),
          Par=parName.df$full[match(ParName, parName.df$par)],
          Par=factor(Par, levels=rev(unique(parName.df$full))))
-beta_post <- agg$beta %>% filter(ParName != "intercept") %>%
+beta_post <- agg_opt$beta %>% filter(ParName != "intercept" & LV=="Local LV") %>%
   mutate(Scale=factor(str_sub(ParName, 1L, 1L), levels=c("R", "L"), 
                       labels=c("Regional", "Local")),
          Par=parName.df$full[match(ParName, parName.df$par)],
@@ -283,17 +304,17 @@ beta_post <- agg$beta %>% filter(ParName != "intercept") %>%
 p.A <- ggplot(b_post, aes(x=mean, y=Par, fill=model, colour=model)) +
   ggridges::geom_density_ridges(colour="gray30", alpha=0.75, scale=0.7, 
                                 size=0.25, rel_min_height=0.001) +
-  geom_point(data=filter(beta_post, model=="Joint"), shape=1, 
+  geom_point(data=filter(beta_post, model=="Joint: Local LV"), shape=1, 
              position=position_nudge(y=-0.075)) + 
-  geom_linerange(data=filter(beta_post, model=="Joint"), aes(xmin=L10, xmax=L90), 
+  geom_linerange(data=filter(beta_post, model=="Joint: Local LV"), aes(xmin=L10, xmax=L90), 
                  size=0.75, position=position_nudge(y=-0.075)) + 
-  geom_linerange(data=filter(beta_post, model=="Joint"), aes(xmin=L025, xmax=L975), 
+  geom_linerange(data=filter(beta_post, model=="Joint: Local LV"), aes(xmin=L025, xmax=L975), 
                  size=0.3, position=position_nudge(y=-0.075)) + 
-  geom_point(data=filter(beta_post, model!="Joint"), shape=1, 
+  geom_point(data=filter(beta_post, model!="Joint: Local LV"), shape=1, 
              position=position_nudge(y=-0.2)) + 
-  geom_linerange(data=filter(beta_post, model!="Joint"), aes(xmin=L10, xmax=L90), 
+  geom_linerange(data=filter(beta_post, model!="Joint: Local LV"), aes(xmin=L10, xmax=L90), 
                  size=0.75, position=position_nudge(y=-0.2)) + 
-  geom_linerange(data=filter(beta_post, model!="Joint"), aes(xmin=L025, xmax=L975), 
+  geom_linerange(data=filter(beta_post, model!="Joint: Local LV"), aes(xmin=L025, xmax=L975), 
                  size=0.3, position=position_nudge(y=-0.2)) + 
   geom_vline(xintercept=0, linetype=3, colour="gray30", size=0.5) +
   scale_colour_manual("Model", values=mod_col) + 
@@ -328,7 +349,7 @@ p.A <- ggplot(b_post, aes(x=mean, y=Par, fill=model, colour=model)) +
 #                        common.legend=T, legend="bottom") 
 # ggsave(paste0(ms_dir, "figs/slope_means+HDI.png"), p, width=10, height=5, units="in")
 
-hdi_width.df <- agg$b %>% 
+hdi_width.df <- agg_opt$b %>% 
   mutate(Scale=str_sub(ParName, 1L, 1L),
          Scale=factor(if_else(Scale=="i", "R", Scale),
                       levels=c("R", "L"), labels=c("Regional", "Local")), 
@@ -339,26 +360,29 @@ hdi_width.df <- agg$b %>%
          HDI_w=L975-L025) %>%
   select(Scale, Par, sppName, SppInY, model, HDI_w) %>%
   pivot_wider(names_from="model", values_from="HDI_w") %>%
-  mutate(HDI_diff=Joint-Structured) %>%
-  filter(!is.na(HDI_diff))
+  mutate(HDI_diff_None=`Joint: None`-`Structured: None`,
+         HDI_diff_LV=`Joint: Local LV`-`Structured: Local LV`) %>%
+  filter(!is.na(HDI_diff_None) & !is.na(HDI_diff_LV))
 hdi_width.sum <- hdi_width.df %>%
   group_by(Scale, Par, SppInY) %>%
-  summarise(mn=mean(HDI_diff),
-            se=sd(HDI_diff)/sqrt(n())) 
+  summarise(mn_None=mean(HDI_diff_None),
+            se_None=sd(HDI_diff_None)/sqrt(n()),
+            mn_LV=mean(HDI_diff_LV),
+            se_LV=sd(HDI_diff_LV)/sqrt(n())) 
 
 p.B <- ggplot(hdi_width.df, aes(y=Par, fill=SppInY, colour=SppInY)) + 
-  ggridges::geom_density_ridges(aes(x=HDI_diff),
+  ggridges::geom_density_ridges(aes(x=HDI_diff_None),
                                 colour="gray30", alpha=0.75, scale=0.7, 
                                 size=0.25, rel_min_height=0.001) + 
   geom_point(data=filter(hdi_width.sum, SppInY=="Species in Y"), 
-             aes(x=mn), shape=1, position=position_nudge(y=-0.075)) + 
+             aes(x=mn_None), shape=1, position=position_nudge(y=-0.075)) + 
   geom_linerange(data=filter(hdi_width.sum, SppInY=="Species in Y"), 
-                 aes(xmin=mn-2*se, xmax=mn+2*se), 
+                 aes(xmin=mn_None-2*se_None, xmax=mn_None+2*se_None), 
                  size=0.5, position=position_nudge(y=-0.075)) + 
   geom_point(data=filter(hdi_width.sum, SppInY!="Species in Y"), 
-             aes(x=mn), shape=1, position=position_nudge(y=-0.2)) + 
+             aes(x=mn_None), shape=1, position=position_nudge(y=-0.2)) + 
   geom_linerange(data=filter(hdi_width.sum, SppInY!="Species in Y"), 
-                 aes(xmin=mn-2*se, xmax=mn+2*se), 
+                 aes(xmin=mn_None-2*se_None, xmax=mn_None+2*se_None), 
                  size=0.5, position=position_nudge(y=-0.2)) + 
   geom_vline(xintercept=0, colour="gray30", size=0.1) +
   labs(x="Change in 95% HPDI width\n(Joint - Structured)", y="") +
@@ -383,13 +407,15 @@ ggsave(paste0(ms_dir, "figs/slope_means+HDI.png"), p, width=10, height=5, units=
 ########------------------------------------------------------------------------
 
 library(betapart)
-lam.site.ls <- agg$lam %>% 
+lam.site.ls <- agg_opt$lam %>% 
   mutate(site=str_pad(str_sub(as.character(id), 1, -5), 2, "left", "0"),
          BDM=arrange(site_i, BDM_id)$BDM[as.numeric(site)]) %>%
   select(model, sppName, site, BDM, id, median) %>%
   pivot_wider(names_from="sppName", values_from="median")
-beta.lam.df <- bind_rows(site.mns %>% mutate(model="Joint"),
-                         site.mns %>% mutate(model="Structured")) %>% 
+beta.lam.df <- bind_rows(site.mns %>% mutate(model="Joint: None"),
+                         site.mns %>% mutate(model="Structured: None"),
+                         site.mns %>% mutate(model="Joint: Local LV"),
+                         site.mns %>% mutate(model="Structured: Local LV")) %>% 
   filter(BDM %in% lam.site.ls$BDM) %>%
   mutate(beta.BRAY.BAL=NA, 
          beta.BRAY.GRA=NA,
@@ -397,7 +423,7 @@ beta.lam.df <- bind_rows(site.mns %>% mutate(model="Joint"),
 for(i in 1:nrow(beta.lam.df)) {
   BDM_i <- beta.lam.df$BDM[i]
   mod_i <- beta.lam.df$model[i]
-  beta_i <- beta.multi.abund(filter(lam.site.ls, BDM==BDM_i & model==mod_i)[,5:84])
+  beta_i <- beta.multi.abund(filter(lam.site.ls, BDM==BDM_i & model==mod_i)[,5:23])
   beta.lam.df$beta.BRAY.BAL[i] <- beta_i$beta.BRAY.BAL
   beta.lam.df$beta.BRAY.GRA[i] <- beta_i$beta.BRAY.GRA
   beta.lam.df$beta.BRAY[i] <- beta_i$beta.BRAY
@@ -409,31 +435,32 @@ beta.df <- beta.lam.df %>%
                          levels=paste0("beta.BRAY", c("", ".BAL", ".GRA")), 
                          labels=c("Overall", "Balanced\nvariation",
                                   "Abundance\ngradient"))) 
-p <- ggplot(beta.df, aes(el, Beta, colour=model, fill=model,
-                         linetype=BetaPart, shape=BetaPart)) + 
+p <- ggplot(filter(beta.df, grepl("LV", model)), 
+            aes(el, Beta, colour=model, fill=model,
+                linetype=BetaPart, shape=BetaPart)) + 
   geom_point(size=0.9) +
   stat_smooth(data=filter(beta.df, BetaPart=="Overall" &
-                            model=="Joint"), 
-              alpha=0.25, size=0.5, se=F, method="lm", formula=y~x) + 
-  stat_smooth(data=filter(beta.df, BetaPart == "Balanced\nvariation" &
-                            model=="Joint"), 
+                            model=="Joint: Local LV"), 
               alpha=0.25, size=0.5, se=F, method="lm", formula=y~x+I(x^2)) + 
-  stat_smooth(data=filter(beta.df, BetaPart == "Abundance\ngradient" &
-                            model=="Joint"), 
+  stat_smooth(data=filter(beta.df, BetaPart == "Balanced\nvariation" &
+                            model=="Joint: Local LV"), 
               alpha=0.25, size=0.5, se=F, method="lm", formula=y~x) + 
+  stat_smooth(data=filter(beta.df, BetaPart == "Abundance\ngradient" &
+                            model=="Joint: Local LV"), 
+              alpha=0.25, size=0.5, se=F, method="lm", formula=y~x+I(x^2)) + 
   stat_smooth(data=filter(beta.df, BetaPart=="Overall" &
-                            model=="Structured"), 
+                            model=="Structured: Local LV"), 
               alpha=0.25, size=0.5, se=F, method="lm", formula=y~x+I(x^2)) + 
   stat_smooth(data=filter(beta.df, BetaPart == "Balanced\nvariation" &
-                            model=="Structured"), 
-              alpha=0.25, size=0.5, se=F, method="lm", formula=y~x+I(x^2)) + 
+                            model=="Structured: Local LV"), 
+              alpha=0.25, size=0.5, se=F, method="lm", formula=y~x) + 
   stat_smooth(data=filter(beta.df, BetaPart == "Abundance\ngradient" &
-                            model=="Structured"), 
-              alpha=0.25, size=0.5, se=F, method="lm", formula=y~x+I(x^2)) + 
+                            model=="Structured: Local LV"), 
+              alpha=0.25, size=0.5, se=F, method="lm", formula=y~x) + 
   scale_colour_manual("Model", values=mod_col) + 
   scale_fill_manual("Model", values=mod_col) + 
   scale_linetype_manual(expression(beta~partition), values=c(1,5,3)) +
-  scale_shape_manual(expression(beta~partition), values=c(1,4,0)) +
+  scale_shape_manual(expression(beta~partition), values=c(19,4,0)) +
   labs(x="Elevation (m)", y=expression('Within-site'~beta~diversity)) + 
   ylim(0,1) + ms_fonts + 
   guides(linetype=guide_legend(override.aes=list(colour="gray30"))) +
@@ -460,13 +487,13 @@ tax_dist <- tax_i %>% select(contains("Full")) %>% as.data.frame
 rownames(tax_dist) <- paste(tax_dist$FullGen, tax_dist$FullSpp, sep="_")
 
 
-lam.site.ls <- agg$lam %>% 
+lam.site.ls <- agg_opt$lam %>% 
   mutate(site=str_pad(str_sub(as.character(id), 1, -5), 2, "left", "0"),
          BDM=arrange(site_i, BDM_id)$BDM[as.numeric(site)]) %>%
-  filter(model=="Joint") %>%
+  filter(model=="Joint: Local LV") %>%
   select(sppName, site, BDM, id, median) %>%
   pivot_wider(names_from="sppName", values_from="median")
-lam.plot.mx <- as.matrix(lam.site.ls[,4:83])
+lam.plot.mx <- as.matrix(lam.site.ls[,4:82])
 
 env.plot <- tibble(el=as.factor((d.i[[1]]$V[,2] %/% 100) * 100),
                    el_cont=d.i[[1]]$V[,2],
@@ -478,7 +505,7 @@ lam.dpcoa <- dpcoa(as.data.frame(lam.plot.mx),
 p.A1 <- s.class(lam.dpcoa$li, env.plot$el, 
                psub=list(text="a.", position="topleft"),
                col=terrain.colors(n_distinct(env.plot$el)))
-p.A2 <- plotEig(lam.dpcoa$eig[1:30], lam.dpcoa$nf, pbackground=list(box=TRUE), 
+p.A2 <- plotEig(lam.dpcoa$eig[1:10], lam.dpcoa$nf, pbackground=list(box=TRUE), 
                 psub=list(text="Eigenvalues", cex=1), plot=FALSE)
 p.A <- insert(p.A2, p.A1, posi=c(0.02, 0.02), ratio=0.25)
 p.B <- s.class(lam.dpcoa$li, env.plot$region, 
@@ -523,7 +550,7 @@ Z <- cbind(
 
 
 library(vegan)
-env.pca <- rda(Z[,-1])
+env.pca <- rda(Z[,-c(1,3)])
 bp <- biplot(env.pca, type=c("text", "points"), col=c(NA, "red"))
 points(bp$sites, col=viridis::viridis_pal()(n_distinct(env.plot$el))[env.plot$el])
 ordihull(env.pca, group=env.plot$region, lwd=2,
@@ -537,7 +564,7 @@ ordihull(env.pca, group=env.plot$region, lwd=2,
 ## Taxonomic bias
 ########------------------------------------------------------------------------
 
-p <- agg$D %>%
+p <- agg_opt$D %>%
   mutate(genFull=tax_i$FullGen[match(sppName, tax_i$species)],
          sppName=str_replace(str_remove(sppName, "-GR"), "_", "."),
          sig=case_when(sign(L10-1)==sign(L90-1) & sign(L025-1)!=sign(L975-1) ~ "sig80",
@@ -548,11 +575,11 @@ p <- agg$D %>%
   geom_point() + 
   geom_linerange(size=0.5) + 
   geom_linerange(aes(xmin=L10, xmax=L90), size=1) + 
-  facet_grid(genFull~., scales="free_y", space="free_y") +
+  facet_grid(genFull~LV, scales="free_y", space="free_y") +
   scale_colour_manual(values=c("gray", "#fc9272", "#99000d"), guide=F) +
   ms_fonts  + theme(axis.text.y=element_text(hjust=1, vjust=0.5),
-                    strip.background=element_blank(),
-                    strip.text=element_blank(), 
+                    strip.background.y=element_blank(),
+                    strip.text.y=element_blank(), 
                     panel.spacing=unit(0.5, "mm")) + 
   labs(y="", x="Proportional Bias")
 ggsave(paste0(ms_dir, "figs/D_opt.png"), p, width=4, height=13)
@@ -576,7 +603,7 @@ ant.assemblages <- bind_rows(as_tibble(d.ls[[1]]$Y) %>%
                              as_tibble(d.ls[[1]]$W) %>%
                                mutate(el=d.i[[1]]$X[1:d.ls[[1]]$K, "el"],
                                       Dataset="Cit. Sci.")) %>%
-  pivot_longer(1:80, names_to="Species", values_to="nDet") %>%
+  pivot_longer(1:79, names_to="Species", values_to="nDet") %>%
   uncount(nDet) %>%
   mutate(sppName=str_replace(str_remove(Species, "-GR"), "_", "."),
          Genus=tax_i$FullGen[match(Species, tax_i$species)],
@@ -603,21 +630,25 @@ p <- ant.assemblages %>%
   labs(title="Observed elevational ranges", x="Elevation (m)")
 ggsave(paste0(ms_dir, "figs/obs_rng.png"), p, width=5, height=13)
 
-LAM.zone <- agg$LAM %>% 
-  mutate(sppName=str_replace(str_remove(sppName, "-GR"), "_", "."),
+LAM.zone <- agg_opt$LAM %>% 
+  mutate(SpInY=c("Species not in Y", 
+                 "Species in Y")[(sppName %in% names(det_Y))+1],
+         sppName=str_replace(str_remove(sppName, "-GR"), "_", "."),
          zone=if_else(el<1000, "Plateau", "Montane")) %>%
   group_by(sppName, zone, model) %>%
-  summarise(tot=sum(median)) %>%
+  summarise(tot=sum(median), SpInY=first(SpInY)) %>%
   group_by(sppName, model) %>%
   mutate(prop=tot/sum(tot)) %>%
   ungroup %>%
   arrange(model, zone, desc(prop))
 LAM.zone$sppOrd <- factor(LAM.zone$sppName, levels=unique(LAM.zone$sppName))
-lam.zone <- agg$lam %>% 
-  mutate(sppName=str_replace(str_remove(sppName, "-GR"), "_", "."),
+lam.zone <- agg_opt$lam %>% 
+  mutate(SpInY=c("Species not in Y", 
+                 "Species in Y")[(sppName %in% names(det_Y))+1],
+         sppName=str_replace(str_remove(sppName, "-GR"), "_", "."),
          zone=if_else(el<1000, "Plateau", "Montane")) %>%
   group_by(sppName, zone, model) %>%
-  summarise(tot=sum(median)) %>%
+  summarise(tot=sum(median), SpInY=first(SpInY)) %>%
   group_by(sppName, model) %>%
   mutate(prop=tot/sum(tot)) %>%
   ungroup %>%
@@ -631,9 +662,10 @@ p.A <- ggplot(LAM.zone, aes(x=prop, y=sppOrd, fill=zone)) +
   geom_vline(xintercept=c(0.1, 0.9), col="gray20", size=0.25) +
   geom_vline(xintercept=c(0.2, 0.80), col="gray20", size=0.35) +
   scale_fill_manual("", values=c("cadetblue", col_region[3])) + 
+  scale_alpha_manual("Species in structured samples", values=c(0.9, 1)) +
   scale_x_continuous(breaks=seq(0,1,0.25), 
                      labels=c("0", "0.25", "0.5", "0.75", "1")) +
-  facet_wrap(~model) +
+  facet_grid(SpInY~model, scales="free_y", space="free_y") +
   labs(x=expression("Regional: Proportion of total"~Lambda), y="") +
   ms_fonts + theme(legend.position="bottom")
 p.B <- ggplot(lam.zone, aes(x=prop, y=sppOrd, fill=zone)) + 
@@ -643,9 +675,10 @@ p.B <- ggplot(lam.zone, aes(x=prop, y=sppOrd, fill=zone)) +
   geom_vline(xintercept=c(0.1, 0.9), col="gray20", size=0.25) +
   geom_vline(xintercept=c(0.2, 0.80), col="gray20", size=0.35) +
   scale_fill_manual("", values=c("cadetblue", col_region[3])) + 
+  scale_alpha_manual("Species in structured samples", values=c(0.9, 1)) +
   scale_x_continuous(breaks=seq(0,1,0.25), 
                      labels=c("0", "0.25", "0.5", "0.75", "1")) +
-  facet_wrap(~model) +
+  facet_grid(SpInY~model, scales="free_y", space="free_y") +
   labs(x=expression("Local: Proportion of total"~lambda), y="") +
   ms_fonts + theme(legend.position="bottom")
 
@@ -663,7 +696,7 @@ ggsave(paste0(ms_dir, "figs/lambda_zones.png"), p, width=10, height=13, units="i
 ## Species responses
 ########------------------------------------------------------------------------
 
-p <- agg$b %>% filter(ParName != "intercept") %>%
+p <- agg_opt$b %>% filter(ParName != "intercept") %>%
   mutate(Scale=factor(str_sub(ParName, 1L, 1L), levels=c("R", "L"), 
                       labels=c("Regional", "Local")),
          Par=parName.df$full[match(ParName, parName.df$par)],
@@ -691,7 +724,7 @@ p <- agg$b %>% filter(ParName != "intercept") %>%
         axis.text.x=element_text(size=8))
 ggsave(paste0(ms_dir, "figs/b_opt_byParam.png"), p, width=13, height=15)
 
-bar_95 <- agg$b %>% filter(cov != "1") %>% 
+bar_95 <- agg_opt$b %>% filter(cov != "1") %>% 
   mutate(Scale=factor(str_sub(ParName, 1L, 1L), levels=c("R", "L"), 
                       labels=c("Regional", "Local")),
          Par=parName.df$full[match(ParName, parName.df$par)],
@@ -717,7 +750,7 @@ p.A <- bar_95 %>%
                      labels=c("0", "0.25", "0.5", "0.75", "1")) +
   labs(y="", x="Proportion of species (95% HPDI)") + 
   ms_fonts
-p.B <- agg$b %>% filter(cov != "1") %>% 
+p.B <- agg_opt$b %>% filter(cov != "1") %>% 
   mutate(Scale=factor(str_sub(ParName, 1L, 1L), levels=c("R", "L"), 
                       labels=c("Regional", "Local")),
          Par=parName.df$full[match(ParName, parName.df$par)],
@@ -757,29 +790,130 @@ ggsave(paste0(ms_dir, "figs/b_opt_bar.png"), p, width=12, height=5, units="in")
 
 library(viridis)
 X_all <- rbind(d.i[[1]]$X, d.i[[1]]$X_) %>% as.data.frame
-S.site <- agg$S_R %>% filter(id<1e5) %>% 
+S.site <- agg_opt$S_R %>% filter(id<1e5) %>% 
   group_by(id, model) %>% 
   summarise(S_lo=sum(L05),
             S_md=sum(median),
             S_mn=sum(mean),
             S_hi=sum(L95)) %>%
-  mutate(model=case_when(model=="Joint" ~ "Joint",
-                         model=="Structured" ~ "Str")) %>%
+  mutate(model=case_when(model=="Joint: None" ~ "J_N",
+                         model=="Structured: None" ~ "S_N",
+                         model=="Joint: Local LV" ~ "J_LV",
+                         model=="Structured: Local LV" ~ "S_LV")) %>%
   pivot_wider(names_from="model", values_from=3:6)
+H.site <- agg_opt$H %>% filter(id<1e5) %>% 
+  group_by(id, model) %>% 
+  summarise(H_lo=sum(L05),
+            H_md=sum(median),
+            H_mn=sum(mean),
+            H_hi=sum(L95)) %>%
+  mutate(model=case_when(model=="Joint: None" ~ "J_N",
+                         model=="Structured: None" ~ "S_N",
+                         model=="Joint: Local LV" ~ "J_LV",
+                         model=="Structured: Local LV" ~ "S_LV")) %>%
+  pivot_wider(names_from="model", values_from=3:6)
+L.site <- agg_opt$lLAM %>% filter(id<1e5) %>% 
+  group_by(id, model) %>% 
+  summarise(L_lo=sum(L05),
+            L_md=sum(median),
+            L_mn=sum(mean),
+            L_hi=sum(L95)) %>%
+  mutate(model=case_when(model=="Joint: None" ~ "J_N",
+                         model=="Structured: None" ~ "S_N",
+                         model=="Joint: Local LV" ~ "J_LV",
+                         model=="Structured: Local LV" ~ "S_LV")) %>%
+  pivot_wider(names_from="model", values_from=3:6)
+
 out.sf <- d.i[[1]]$grd_W.sf %>% 
-  left_join(., S.site) 
+  left_join(., S.site) %>%
+  left_join(., H.site) %>%
+  left_join(., L.site)
 
-ggplot(out.sf, aes(fill=S_md_Joint)) + 
+# Richness
+ggplot(out.sf, aes(fill=S_mn_J_N)) + 
   geom_sf(colour="black", size=0.1) + 
-  scale_fill_viridis(expression(S[Joint]), limits=c(41, 79))
-
-ggplot(out.sf, aes(fill=S_md_Str)) + 
+  scale_fill_viridis(expression(S[JointN]), limits=c(0, 80))
+ggplot(out.sf, aes(fill=S_mn_J_LV)) + 
   geom_sf(colour="black", size=0.1) + 
-  scale_fill_viridis(expression(S[Str]), limits=c(41, 79))
+  scale_fill_viridis(expression(S[JointLV]), limits=c(0, 80))
 
-ggplot(out.sf, aes(fill=S_mn_Joint - S_mn_Str)) + 
+ggplot(out.sf, aes(fill=S_mn_S_N)) + 
+  geom_sf(colour="black", size=0.1) + 
+  scale_fill_viridis(expression(S[StrN]), limits=c(0, 80))
+ggplot(out.sf, aes(fill=S_mn_S_LV)) + 
+  geom_sf(colour="black", size=0.1) + 
+  scale_fill_viridis(expression(S[StrLV]), limits=c(0, 80))
+
+ggplot(out.sf, aes(fill=S_mn_J_N - S_mn_S_N)) + 
   geom_sf(colour="black", size=0.1) + 
   scale_fill_gradient2()
+ggplot(out.sf, aes(fill=S_mn_J_LV - S_mn_S_LV)) + 
+  geom_sf(colour="black", size=0.1) + 
+  scale_fill_gradient2()
+ggplot(out.sf, aes(fill=S_mn_J_N - S_mn_J_LV)) + 
+  geom_sf(colour="black", size=0.1) + 
+  scale_fill_gradient2()
+ggplot(out.sf, aes(fill=S_mn_S_N - S_mn_S_LV)) + 
+  geom_sf(colour="black", size=0.1) + 
+  scale_fill_gradient2()
+
+
+# Diversity
+ggplot(out.sf, aes(fill=H_mn_J_N)) + 
+  geom_sf(colour="black", size=0.1) + 
+  scale_fill_viridis(expression(H[JointN]), limits=c(0, 2.5))
+ggplot(out.sf, aes(fill=H_mn_J_LV)) + 
+  geom_sf(colour="black", size=0.1) + 
+  scale_fill_viridis(expression(H[JointLV]), limits=c(0, 2.5))
+
+ggplot(out.sf, aes(fill=H_mn_S_N)) + 
+  geom_sf(colour="black", size=0.1) + 
+  scale_fill_viridis(expression(H[StrN]), limits=c(0, 2.5))
+ggplot(out.sf, aes(fill=H_mn_S_LV)) + 
+  geom_sf(colour="black", size=0.1) + 
+  scale_fill_viridis(expression(H[StrLV]), limits=c(0, 2.5))
+
+ggplot(out.sf, aes(fill=H_mn_J_N - H_mn_S_N)) + 
+  geom_sf(colour="black", size=0.1) + 
+  scale_fill_gradient2()
+ggplot(out.sf, aes(fill=H_mn_J_LV - H_mn_S_LV)) + 
+  geom_sf(colour="black", size=0.1) + 
+  scale_fill_gradient2()
+ggplot(out.sf, aes(fill=H_mn_J_N - H_mn_J_LV)) + 
+  geom_sf(colour="black", size=0.1) + 
+  scale_fill_gradient2()
+ggplot(out.sf, aes(fill=H_mn_S_N - H_mn_S_LV)) + 
+  geom_sf(colour="black", size=0.1) + 
+  scale_fill_gradient2()
+
+# LAMBDA
+ggplot(out.sf, aes(fill=L_mn_J_N)) + 
+  geom_sf(colour="black", size=0.1) + 
+  scale_fill_viridis(expression(L[JointN]), limits=c(0, 508))
+ggplot(out.sf, aes(fill=L_mn_J_LV)) + 
+  geom_sf(colour="black", size=0.1) + 
+  scale_fill_viridis(expression(L[JointLV]), limits=c(0, 508))
+
+ggplot(out.sf, aes(fill=L_mn_S_N)) + 
+  geom_sf(colour="black", size=0.1) + 
+  scale_fill_viridis(expression(L[StrN]), limits=c(0, 508))
+ggplot(out.sf, aes(fill=L_mn_S_LV)) + 
+  geom_sf(colour="black", size=0.1) + 
+  scale_fill_viridis(expression(L[StrLV]), limits=c(0, 508))
+
+ggplot(out.sf, aes(fill=L_mn_J_N - L_mn_S_N)) + 
+  geom_sf(colour="black", size=0.1) + 
+  scale_fill_gradient2()
+ggplot(out.sf, aes(fill=L_mn_J_LV - L_mn_S_LV)) + 
+  geom_sf(colour="black", size=0.1) + 
+  scale_fill_gradient2()
+ggplot(out.sf, aes(fill=L_mn_J_N - L_mn_J_LV)) + 
+  geom_sf(colour="black", size=0.1) + 
+  scale_fill_gradient2()
+ggplot(out.sf, aes(fill=L_mn_S_N - L_mn_S_LV)) + 
+  geom_sf(colour="black", size=0.1) + 
+  scale_fill_gradient2()
+
 
 
 map_theme <- theme(legend.position=c(0.35, 0.075), 
@@ -791,10 +925,13 @@ map_theme <- theme(legend.position=c(0.35, 0.075),
                    axis.ticks=element_blank(), 
                    axis.title=element_blank(), 
                    panel.border=element_rect(size=0.2, colour="grey30", fill=NA)) 
+abb.LU <- tibble(full=c("Joint: None", "Joint: Local LV",
+                        "Structured: None", "Structured: Local LV"),
+                 abb=c("J-N", "J-LV", "S-N", "S-LV"))
 
-for(m in 1:2) {
-  m.full <- unique(agg$lLAM$model)[m]
-  m.abb <- ifelse(m.full=="Joint", "WY", "Y")
+for(m in 1:4) {
+  m.full <- unique(agg_opt$lLAM$model)[m]
+  m.abb <- abb.LU$abb[abb.LU$full==m.full]
   
   gen.S <- vector("list", n_distinct(tax_i$FullGen))
   sf.S <- vector("list", n_distinct(tax_i$FullSF))
@@ -803,8 +940,8 @@ for(m in 1:2) {
     gen.i <- unique(tax_i$FullGen)[i]
     gen.sppNum <- which(tax_i$FullGen == gen.i)
     obs.i <- filter(ants$all, SPECIESID %in% tax_i$species[gen.sppNum])
-    if(m.abb=="Y") obs.i <- filter(obs.i, source=="s")
-    S.i <- filter(agg$pP_R, spp %in% gen.sppNum & model==m.full) %>% 
+    if(grepl("S", m.abb)) obs.i <- filter(obs.i, source=="s")
+    S.i <- filter(agg_opt$pP_R, spp %in% gen.sppNum & model==m.full) %>% 
       group_by(id) %>%
       summarise(mean=sum(L025>0.95))
     
@@ -826,8 +963,8 @@ for(m in 1:2) {
     sf.i <- unique(tax_i$FullSF)[i]
     sf.sppNum <- which(tax_i$FullSF == sf.i)
     obs.i <- filter(ants$all, SPECIESID %in% tax_i$species[sf.sppNum])
-    if(m.abb=="Y") obs.i <- filter(obs.i, source=="s")
-    S.i <- filter(agg$pP_R, spp %in% sf.sppNum & model==m.full) %>% 
+    if(grepl("S", m.abb)) obs.i <- filter(obs.i, source=="s")
+    S.i <- filter(agg_opt$pP_R, spp %in% sf.sppNum & model==m.full) %>% 
       group_by(id) %>%
       summarise(mean=sum(L025>0.95))
     

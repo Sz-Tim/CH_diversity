@@ -9,42 +9,30 @@ library(viridis)
 source("code/00_fn.R")
 
 
-### Full models ----------------------------------------------------------------
-Y_opt <- "Y_4__k-2_L_SoilTSt"
-# WY_opt <- "WY_5__k-2_L_Pasture"
-WY_opt <- "WY_7__k-2_R_AP"
-agg_vs <- aggregate_output(d.f=paste0("data/fwdSearch/", c(Y_opt, WY_opt)),
-                           mods=c(Y_opt, WY_opt), 
-                           out.dir="out/fwdSearch",
-                           pars_save=c("lLAMBDA", "llambda",
-                                       "beta", "b", "sigma_b", 
-                                       "disp_lam", "D", "log_lik"))
-
-saveRDS(agg_vs$summaries, "out/agg_vs_k-2.rds")
-saveRDS(agg_vs$full, "out/agg_vs_k-2_full.rds")
-
-
-
-
 
 ### Null models ----------------------------------------------------------------
 
-agg_null <- aggregate_output(d.f="data/opt/Y_null__opt_var_set",
-                             mods="Y_null__",
+LV <- c("cov", "LV")[2]
+mod <- c("Y", "WY")[2]
+
+agg_null <- aggregate_output(d.f=paste0("data/opt/", LV, "_", mod, "_null__opt_var_set"),
+                             mods=paste0(LV, "_", mod, "_null__"),
                              out.dir="out/null/",
                              pars_save=c("lLAMBDA", "lLAMBDA_", "llambda",
-                                         "tot_lLAM", "tot_lLAM_", "tot_llam", 
-                                         "tot_LAM", "tot_LAM_", "tot_lam", 
-                                         "prPres", "prPres_", "prPresL", 
-                                         "ShannonH", "ShannonH_", "ShannonH_L",
-                                         "Rich", "Rich_", "RichL",
-                                         "pred_Y", "pred_Y_", "pred_YL",
+                                         paste0("tot_", c("lLAM", "lLAM_", "llam")),
+                                         paste0("tot_", c("LAM", "LAM_", "lam")),
+                                         paste0("prPres", c("", "_", "L")),
+                                         paste0("ShannonH", c("", "_", "_L")),
+                                         paste0("Rich", c("", "_", "L")),
+                                         paste0("pred_Y", c("", "_", "L")),
+                                         paste0("log_lik", c("", "_S", "_I")),
                                          "beta", "B", "b", "sigma_b", "Sigma_B",
-                                         "disp_lam", "D", 
-                                         "log_lik", "log_lik_S", "log_lik_I"))
+                                         "disp_lam", "D", "zeta",
+                                         paste0("gamma", c("", "_sig2", "_Sigma"))))
 
-saveRDS(agg_null$summaries, "out/agg_null_Y.rds")
-saveRDS(agg_null$full, "out/agg_null_full_Y.rds")
+saveRDS(agg_null$summaries, paste0("out/agg_null_", LV, "_", mod, ".rds"))
+saveRDS(agg_null$full, paste0("out/full_null_", LV, "_", mod, ".rds"))
+
 
 
 
@@ -52,24 +40,26 @@ saveRDS(agg_null$full, "out/agg_null_full_Y.rds")
 
 ### Best models ----------------------------------------------------------------
 
-agg_opt <- aggregate_output(d.f="data_orig/opt/WY__opt_var_set",
-                            mods="WY",
-                            out.dir="out/LV",
-                            pars_save=c("lLAMBDA", "lLAMBDA_", "llambda",
-                                        "tot_lLAM", "tot_lLAM_", "tot_llam", 
-                                        "tot_LAM", "tot_LAM_", "tot_lam", 
-                                        "prPres", "prPres_", "prPresL", 
-                                        "ShannonH", "ShannonH_", "ShannonH_L",
-                                        "Rich", "Rich_", "RichL",
-                                        "pred_Y", "pred_Y_", "pred_YL",
-                                        "beta", "B", "b", "sigma_b", "Sigma_B",
-                                        "disp_lam", "D", 
-                                        "log_lik", "log_lik_S", "log_lik_I",
-                                        "zeta", "gamma", 
-                                        "gamma_sig2", "gamma_Sigma"))
+LV <- c("cov", "LV")[2]
+mod <- c("Y", "WY")[2]
 
-saveRDS(agg_opt$summaries, "out/agg_opt_Y.rds")
-saveRDS(agg_opt$full, "out/agg_opt_full_Y.rds")
+agg_opt <- aggregate_output(d.f=paste0("data/opt/", LV, "_", mod, "__opt_var_set"),
+                            mods=paste0(LV, "_", mod, "__"),
+                            out.dir="out/opt/",
+                            pars_save=c("lLAMBDA", "lLAMBDA_", "llambda",
+                                        paste0("tot_", c("lLAM", "lLAM_", "llam")),
+                                        paste0("tot_", c("LAM", "LAM_", "lam")),
+                                        paste0("prPres", c("", "_", "L")),
+                                        paste0("ShannonH", c("", "_", "_L")),
+                                        paste0("Rich", c("", "_", "L")),
+                                        paste0("pred_Y", c("", "_", "L")),
+                                        paste0("log_lik", c("", "_S", "_I")),
+                                        "beta", "B", "b", "sigma_b", "Sigma_B",
+                                        "disp_lam", "D", "zeta",
+                                        paste0("gamma", c("", "_sig2", "_Sigma"))))
+
+saveRDS(agg_opt$summaries, paste0("out/opt/agg_", LV, "_", mod, ".rds"))
+saveRDS(agg_opt$full, paste0("out/opt/full_", LV, "_", mod, ".rds"))
 
 
 
