@@ -7,7 +7,7 @@
 
 ##--- set up
 # cv: cross-validation; vs = single test/train; pred = predict all of VD
-set_type <- c("cv", "vs", "pred")[1]  
+set_type <- c("cv", "vs", "pred")[3]  
 library(tidyverse); library(sf); library(googlesheets)
 gis.dir <- "../2_gis/data/VD_21781/"
 ant.dir <- "../1_opfo/data/"
@@ -75,13 +75,14 @@ grd_W@data$layer <- 1:raster::ncell(grd_W)
 grd_W.sf <- st_as_sf(grd_W) %>% st_transform(st_crs(VD)) %>% rename(id=layer) %>%
   mutate(inbd=c(st_intersects(., VD, sparse=F)))
 # Y: 44 x 1km2 sampling sites
-site.sf <- agg_str_site_data() %>% arrange(BDM)
+site.sf <- agg_str_site_data(gis.dir=gis.dir) %>% arrange(BDM)
 
 
 
 
 ##--- W
-ants <- load_ant_data(str_type="all", clean_spp=T)
+ants <- load_ant_data(str_type="all", clean_spp=T,
+                      DNA_dir="../1_opfo/data/DNA_ID_clean")
 grid.W <- bind_rows(ants$pub, 
                     ants$str %>% filter(TypeOfSample != "soil") %>%
                       select(TubeNo, SPECIESID, SampleDate)) %>% 
