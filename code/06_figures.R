@@ -15,8 +15,8 @@ theme_set(theme_bw() + theme(panel.grid=element_blank()))
 source("code/00_fn.R"); source("../1_opfo/code/00_fn.R")
 
 ms_dir <- "ms/1_Ecography/1/"
-mod_col <- c("Joint: Local LV"="#762a83", "Structured: Local LV"="#1b7837",
-             "Joint: None"="#9970ab", "Structured: None"="#5aae61")
+mod_col <- c("Joint[LV]"="#762a83", "Structured[LV]"="#1b7837",
+             "Joint"="#9970ab", "Structured"="#5aae61")
 
 
 # auxilliary datasets
@@ -39,7 +39,8 @@ world <- st_read("../2_gis/data/world/World_Countries__Generalized_.shp") %>%
 site.sf <- st_read("../2_gis/data/VD_21781/site_env_sf.shp")
 names(site.sf) <- c(read_csv("../2_gis/data/VD_21781/site_env_sf_names.csv")$full,
                     "geometry")
-ants_raw <- load_ant_data(str_type="all", clean_spp=T)
+ants_raw <- load_ant_data(str_type="all", clean_spp=T, 
+                          DNA_dir="../1_opfo/data/DNA_ID_clean")
 ants <- list(pub=bind_rows(ants_raw$pub, 
                       ants_raw$str %>% filter(TypeOfSample != "soil") %>%
                         select(TubeNo, SPECIESID, SampleDate)), 
@@ -51,11 +52,14 @@ tax_i <- read_csv("data/tax_i.csv")
 
 
 # model inputs and posteriors
-d.ls <- map(paste0("data/opt/LV_", c("WY", "Y"), "__opt_var_set_ls.rds"), readRDS)
-d.i <- map(paste0("data/opt/LV_", c("WY", "Y"), "__opt_var_set_i.rds"), readRDS)
+d.ls <- map(paste0("data/opt_noCnpy_rdExc/LV_", c("WY", "Y"), 
+                   "__opt_var_set_ls.rds"), readRDS)
+d.i <- map(paste0("data/opt_noCnpy_rdExc/LV_", c("WY", "Y"), 
+                  "__opt_var_set_i.rds"), readRDS)
 # aggregate summarised output for optimal models (WY/Y, cov/LV)
-agg_opt.ls <- c(dir("out", "agg_[cov,LV].*_Y", full.names=T),
-                dir("out/opt_noCnpy", "agg_[cov,LV].*_WY", full.names=T)) %>% 
+agg_opt.ls <- c(dir("out/", "agg_[cov,LV].*_Y", full.names=T),
+                dir("out/opt_noCnpy_rdExc", 
+                    "agg_[cov,LV].*_WY", full.names=T)) %>% 
   map(readRDS) %>% map(., ~discard(.x, is.null))
 agg_opt <- vector("list", n_distinct(unlist(map(agg_opt.ls, names)))) %>%
   setNames(sort(unique(unlist(map(agg_opt.ls, names)))))
@@ -63,13 +67,13 @@ for(i in names(agg_opt)) {
   agg_opt[[i]] <- map(agg_opt.ls, ~.[[i]]) %>% 
     do.call('rbind', .) %>%
     mutate(dataset=if_else(grepl("WY", model), "Joint", "Structured"),
-           LV=if_else(grepl("cov", model), "None", "Local LV"),
-           model=paste0(dataset, ": ", LV))
+           LV=if_else(grepl("cov", model), "", "[LV]"),
+           model=paste0(dataset, LV))
 }
 rm(agg_opt.ls)
 
 # aggregate summarised output for null models (WY/Y, cov/LV)
-agg_null.ls <- dir("out", "agg_null_", full.names=T) %>% 
+agg_null.ls <- dir("out/", "agg_null_", full.names=T) %>% 
   map(readRDS) %>% map(., ~discard(.x, is.null))
 agg_null <- vector("list", n_distinct(unlist(map(agg_null.ls, names)))) %>%
   setNames(sort(unique(unlist(map(agg_null.ls, names)))))
@@ -77,8 +81,8 @@ for(i in names(agg_null)) {
   agg_null[[i]] <- map(agg_null.ls, ~.[[i]]) %>% 
     do.call('rbind', .) %>%
     mutate(dataset=if_else(grepl("WY", model), "Joint", "Structured"),
-           LV=if_else(grepl("cov", model), "None", "Local LV"),
-           model=paste0(dataset, ": ", LV))
+           LV=if_else(grepl("cov", model), "", "[LV]"),
+           model=paste0(dataset, LV))
 }
 rm(agg_null.ls)
 
@@ -117,7 +121,7 @@ ms_fonts <- theme(panel.grid=element_blank(),
                   axis.title=element_text(size=12),
                   legend.text=element_text(size=10),
                   legend.title=element_text(size=12),
-                  strip.text=element_text(size=12),
+                  strip.text=element_text(size=11),
                   title=element_text(size=13))
 
 
@@ -132,7 +136,7 @@ ms_fonts <- theme(panel.grid=element_blank(),
 ## VD sampling map
 ########------------------------------------------------------------------------
 
-png(paste0(ms_dir, "figs/map_VD.png"), 
+png(paste0(ms_dir, "figs_noCnpy_rdExc/map_VD.png"), 
     height=7, width=7, res=400, units="in")
 par(mar=c(0.5, 0.5, 0, 0), fig=c(0, 1, 0, 1))
 raster::plot(dem, legend=F, axes=F, box=F, 
@@ -155,7 +159,8 @@ p <- ggplot(world) + geom_sf() + xlim(-3e5, 1.5e6) + ylim(-4e5, 6e5) +
   geom_sf(data=st_union(VD_raw), fill="#fdd49e", colour="black", size=0.5) +
   theme(axis.line=element_blank(), axis.ticks=element_blank(), 
         axis.text=element_blank(), panel.border=element_rect(size=2))
-ggsave(paste0(ms_dir, "figs/map_inset.png"), p, height=3, width=5, units="in")
+ggsave(paste0(ms_dir, "figs_noCnpy_rdExc/map_inset.png"), 
+       p, height=3, width=5, units="in")
 
 
 
@@ -222,46 +227,74 @@ lam.loess <- bind_rows(
            Scale="Local") 
 ) %>% mutate(Scale=factor(Scale, levels=c("Regional", "Local")))
 
-S.p <- ggplot(S.loess, aes(el)) + 
+S.p <- ggplot(S.loess %>% filter(grepl("LV", model)), aes(el)) + 
   geom_hline(yintercept=0, size=0.25, colour="gray30") +
   geom_ribbon(aes(ymin=loess_lo, ymax=loess_hi, fill=model), 
               alpha=0.5, colour=NA) +
   geom_line(aes(y=loess_md, colour=model)) + 
-  scale_colour_manual("Model", values=mod_col) + 
-  scale_fill_manual("Model", values=mod_col) + 
+  scale_colour_manual("Model", values=mod_col, 
+                      # labels=c(expression(italic(Joint)),
+                      # expression(italic(Structured)))) + 
+                      labels=c(expression(italic(Joint[LV])),
+                               expression(italic(Structured[LV])))) +
+  scale_fill_manual("Model", values=mod_col, 
+                    # labels=c(expression(italic(Joint)),
+                    #          expression(italic(Structured)))) + 
+                    labels=c(expression(italic(Joint[LV])),
+                             expression(italic(Structured[LV])))) +
   xlim(350, 3000) + 
   facet_grid(Scale~., scales="free_y") + 
   labs(x="Elevation (m)", y="Richness") + 
   ms_fonts + theme(panel.spacing=unit(3, "mm"),
-                   axis.title.y=element_text(margin=margin(r=6)))
-H.p <- ggplot(H.loess, aes(el)) + 
+                   axis.title.y=element_text(margin=margin(r=6)), 
+                   legend.text.align=0)
+H.p <- ggplot(H.loess %>% filter(grepl("LV", model)), aes(el)) + 
   geom_ribbon(aes(ymin=loess_lo, ymax=loess_hi, fill=model), 
               alpha=0.5, colour=NA) +
   geom_line(aes(y=loess_md, colour=model)) + 
-  scale_colour_manual("Model", values=mod_col) + 
-  scale_fill_manual("Model", values=mod_col) + 
+  scale_colour_manual("Model", values=mod_col, 
+                      # labels=c(expression(italic(Joint)),
+                      # expression(italic(Structured)))) + 
+                      labels=c(expression(italic(Joint[LV])),
+                               expression(italic(Structured[LV])))) +
+  scale_fill_manual("Model", values=mod_col, 
+                    # labels=c(expression(italic(Joint)),
+                    #          expression(italic(Structured)))) + 
+                    labels=c(expression(italic(Joint[LV])),
+                             expression(italic(Structured[LV])))) +
   xlim(350, 3000) + 
   facet_grid(Scale~., scales="free_y") + 
-  labs(x="Elevation (m)", y="Diversity") + 
+  labs(x="Elevation (m)", y="Shannon H") + 
   ms_fonts + theme(panel.spacing=unit(3, "mm"),
-                   axis.title.y=element_text(margin=margin(l=12, r=6)))
-lam.p <- ggplot(lam.loess, aes(el)) + 
+                   axis.title.y=element_text(margin=margin(l=12, r=6)), 
+                   legend.text.align=0)
+lam.p <- ggplot(lam.loess %>% filter(grepl("LV", model)), aes(el)) + 
   geom_hline(yintercept=0, size=0.25, colour="gray30") +
   geom_ribbon(aes(ymin=loess_lo, ymax=loess_hi, fill=model), 
               alpha=0.5, colour=NA) +
   geom_line(aes(y=loess_md, colour=model)) + 
-  scale_colour_manual("Model", values=mod_col) + 
-  scale_fill_manual("Model", values=mod_col) + 
+  scale_colour_manual("Model", values=mod_col, 
+                      # labels=c(expression(italic(Joint)),
+                               # expression(italic(Structured)))) + 
+                      labels=c(expression(italic(Joint[LV])),
+                               expression(italic(Structured[LV])))) +
+  scale_fill_manual("Model", values=mod_col, 
+                    # labels=c(expression(italic(Joint)),
+                    #          expression(italic(Structured)))) + 
+                    labels=c(expression(italic(Joint[LV])),
+                             expression(italic(Structured[LV])))) +
   xlim(350, 3000) + scale_y_continuous(labels=scales::comma, limits=c(0, NA)) + 
   facet_grid(Scale~., scales="free_y") + 
   labs(x="Elevation (m)", y="Colony intensity") + 
   ms_fonts + theme(panel.spacing=unit(3, "mm"), 
-                   axis.title.y=element_text(margin=margin(l=12, r=6)))
+                   axis.title.y=element_text(margin=margin(l=12, r=6)), 
+                   legend.text.align=0)
 
 p <- ggpubr::ggarrange(S.p, H.p, lam.p, nrow=1, widths=c(.9, .9, 1),
                        labels=c("a.", "b.", "c."), label.x=0.02,
                        common.legend=T, legend="bottom") 
-ggsave(paste0(ms_dir, "figs/el_patterns.png"), p, width=10, height=5, units="in")
+ggsave(paste0(ms_dir, "figs_noCnpy_rdExc/el_patterns_LV.png"),
+       p, width=10, height=5, units="in")
 
 
 
@@ -290,12 +323,12 @@ parName.df <- tibble(par=c("intercept",
                             "Pasture", "Crop", 
                             "Open canopy", "Mixed canopy",
                             "Local veg."))
-b_post <- agg_opt$b %>% filter(ParName != "intercept" & LV=="Local LV") %>%
+b_post <- agg_opt$b %>% filter(ParName != "intercept" & LV=="[LV]") %>%
   mutate(Scale=factor(str_sub(ParName, 1L, 1L), levels=c("R", "L"), 
                       labels=c("Regional", "Local")),
          Par=parName.df$full[match(ParName, parName.df$par)],
          Par=factor(Par, levels=rev(unique(parName.df$full))))
-beta_post <- agg_opt$beta %>% filter(ParName != "intercept" & LV=="Local LV") %>%
+beta_post <- agg_opt$beta %>% filter(ParName != "intercept" & LV=="[LV]") %>%
   mutate(Scale=factor(str_sub(ParName, 1L, 1L), levels=c("R", "L"), 
                       labels=c("Regional", "Local")),
          Par=parName.df$full[match(ParName, parName.df$par)],
@@ -304,23 +337,31 @@ beta_post <- agg_opt$beta %>% filter(ParName != "intercept" & LV=="Local LV") %>
 p.A <- ggplot(b_post, aes(x=mean, y=Par, fill=model, colour=model)) +
   ggridges::geom_density_ridges(colour="gray30", alpha=0.75, scale=0.7, 
                                 size=0.25, rel_min_height=0.001) +
-  geom_point(data=filter(beta_post, model=="Joint: Local LV"), shape=1, 
+  geom_point(data=filter(beta_post, grepl("Joint", model)), shape=1, 
              position=position_nudge(y=-0.075)) + 
-  geom_linerange(data=filter(beta_post, model=="Joint: Local LV"), aes(xmin=L10, xmax=L90), 
+  geom_linerange(data=filter(beta_post, grepl("Joint", model)), 
+                 aes(xmin=L10, xmax=L90), 
                  size=0.75, position=position_nudge(y=-0.075)) + 
-  geom_linerange(data=filter(beta_post, model=="Joint: Local LV"), aes(xmin=L025, xmax=L975), 
+  geom_linerange(data=filter(beta_post, grepl("Joint", model)), 
+                 aes(xmin=L025, xmax=L975), 
                  size=0.3, position=position_nudge(y=-0.075)) + 
-  geom_point(data=filter(beta_post, model!="Joint: Local LV"), shape=1, 
+  geom_point(data=filter(beta_post, grepl("Structured", model)), shape=1, 
              position=position_nudge(y=-0.2)) + 
-  geom_linerange(data=filter(beta_post, model!="Joint: Local LV"), aes(xmin=L10, xmax=L90), 
+  geom_linerange(data=filter(beta_post, grepl("Structured", model)), 
+                 aes(xmin=L10, xmax=L90), 
                  size=0.75, position=position_nudge(y=-0.2)) + 
-  geom_linerange(data=filter(beta_post, model!="Joint: Local LV"), aes(xmin=L025, xmax=L975), 
+  geom_linerange(data=filter(beta_post, grepl("Structured", model)), 
+                 aes(xmin=L025, xmax=L975), 
                  size=0.3, position=position_nudge(y=-0.2)) + 
   geom_vline(xintercept=0, linetype=3, colour="gray30", size=0.5) +
-  scale_colour_manual("Model", values=mod_col) + 
-  scale_fill_manual("Model", values=mod_col) + 
+  scale_colour_manual("Model", values=mod_col, 
+                      labels=c(expression(italic(Joint[LV])),
+                               expression(italic(Structured[LV])))) + 
+  scale_fill_manual("Model", values=mod_col, 
+                    labels=c(expression(italic(Joint[LV])),
+                             expression(italic(Structured[LV])))) + 
   facet_grid(Scale~., scales="free_y", space="free_y") +
-  labs(x="Posterior slope", y="") +
+  labs(x=expression("Posterior slopes"), y="") +
   ms_fonts + 
   theme(panel.grid.major.y=element_line(size=0.1, colour="gray30"),
         legend.position="bottom")
@@ -347,7 +388,7 @@ p.A <- ggplot(b_post, aes(x=mean, y=Par, fill=model, colour=model)) +
 # p <- ggpubr::ggarrange(p.A, p.B, nrow=1, labels=c("a.", "b."), 
 #                        widths=c(0.7, 1), label.x=c(0.05, 0.07),
 #                        common.legend=T, legend="bottom") 
-# ggsave(paste0(ms_dir, "figs/slope_means+HDI.png"), p, width=10, height=5, units="in")
+# ggsave(paste0(ms_dir, "figs_noCnpy_rdExc/slope_means+HDI.png"), p, width=10, height=5, units="in")
 
 hdi_width.df <- agg_opt$b %>% 
   mutate(Scale=str_sub(ParName, 1L, 1L),
@@ -360,8 +401,8 @@ hdi_width.df <- agg_opt$b %>%
          HDI_w=L975-L025) %>%
   select(Scale, Par, sppName, SppInY, model, HDI_w) %>%
   pivot_wider(names_from="model", values_from="HDI_w") %>%
-  mutate(HDI_diff_None=`Joint: None`-`Structured: None`,
-         HDI_diff_LV=`Joint: Local LV`-`Structured: Local LV`) %>%
+  mutate(HDI_diff_None=`Joint`-`Structured`,
+         HDI_diff_LV=`Joint[LV]`-`Structured[LV]`) %>%
   filter(!is.na(HDI_diff_None) & !is.na(HDI_diff_LV))
 hdi_width.sum <- hdi_width.df %>%
   group_by(Scale, Par, SppInY) %>%
@@ -371,21 +412,22 @@ hdi_width.sum <- hdi_width.df %>%
             se_LV=sd(HDI_diff_LV)/sqrt(n())) 
 
 p.B <- ggplot(hdi_width.df, aes(y=Par, fill=SppInY, colour=SppInY)) + 
-  ggridges::geom_density_ridges(aes(x=HDI_diff_None),
+  ggridges::geom_density_ridges(aes(x=HDI_diff_LV),
                                 colour="gray30", alpha=0.75, scale=0.7, 
                                 size=0.25, rel_min_height=0.001) + 
   geom_point(data=filter(hdi_width.sum, SppInY=="Species in Y"), 
-             aes(x=mn_None), shape=1, position=position_nudge(y=-0.075)) + 
+             aes(x=mn_LV), shape=1, position=position_nudge(y=-0.075)) + 
   geom_linerange(data=filter(hdi_width.sum, SppInY=="Species in Y"), 
-                 aes(xmin=mn_None-2*se_None, xmax=mn_None+2*se_None), 
+                 aes(xmin=mn_LV-2*se_LV, xmax=mn_LV+2*se_LV), 
                  size=0.5, position=position_nudge(y=-0.075)) + 
   geom_point(data=filter(hdi_width.sum, SppInY!="Species in Y"), 
-             aes(x=mn_None), shape=1, position=position_nudge(y=-0.2)) + 
+             aes(x=mn_LV), shape=1, position=position_nudge(y=-0.2)) + 
   geom_linerange(data=filter(hdi_width.sum, SppInY!="Species in Y"), 
-                 aes(xmin=mn_None-2*se_None, xmax=mn_None+2*se_None), 
+                 aes(xmin=mn_LV-2*se_LV, xmax=mn_LV+2*se_LV), 
                  size=0.5, position=position_nudge(y=-0.2)) + 
   geom_vline(xintercept=0, colour="gray30", size=0.1) +
-  labs(x="Change in 95% HPDI width\n(Joint - Structured)", y="") +
+  labs(x=expression(atop("Change in 95% HPDI width",
+                         (italic(Joint[LV])-italic(Structured[LV])))), y="") +
   facet_grid(Scale~., scales="free_y", space="free_y") +
   ms_fonts + 
   scale_fill_brewer("", type="qual", palette=3, direction=-1) + 
@@ -396,7 +438,8 @@ p.B <- ggplot(hdi_width.df, aes(y=Par, fill=SppInY, colour=SppInY)) +
 p <- ggpubr::ggarrange(p.A, p.B, nrow=1, labels=c("a.", "b."), 
                        label.x=c(0.05, 0.07),
                        common.legend=F, legend="bottom") 
-ggsave(paste0(ms_dir, "figs/slope_means+HDI.png"), p, width=10, height=5, units="in")
+ggsave(paste0(ms_dir, "figs_noCnpy_rdExc/slope_means+HDI_LV.png"), 
+       p, width=10, height=5, units="in")
 
 
 
@@ -412,10 +455,10 @@ lam.site.ls <- agg_opt$lam %>%
          BDM=arrange(site_i, BDM_id)$BDM[as.numeric(site)]) %>%
   select(model, sppName, site, BDM, id, median) %>%
   pivot_wider(names_from="sppName", values_from="median")
-beta.lam.df <- bind_rows(site.mns %>% mutate(model="Joint: None"),
-                         site.mns %>% mutate(model="Structured: None"),
-                         site.mns %>% mutate(model="Joint: Local LV"),
-                         site.mns %>% mutate(model="Structured: Local LV")) %>% 
+beta.lam.df <- bind_rows(site.mns %>% mutate(model="Joint"),
+                         site.mns %>% mutate(model="Structured"),
+                         site.mns %>% mutate(model="Joint[LV]"),
+                         site.mns %>% mutate(model="Structured[LV]")) %>% 
   filter(BDM %in% lam.site.ls$BDM) %>%
   mutate(beta.BRAY.BAL=NA, 
          beta.BRAY.GRA=NA,
@@ -434,38 +477,51 @@ beta.df <- beta.lam.df %>%
   mutate(BetaPart=factor(BetaPart, 
                          levels=paste0("beta.BRAY", c("", ".BAL", ".GRA")), 
                          labels=c("Overall", "Balanced\nvariation",
-                                  "Abundance\ngradient"))) 
-p <- ggplot(filter(beta.df, grepl("LV", model)), 
+                                  "Abundance\ngradient"))) %>%
+  filter(grepl("LV", model))
+p <- ggplot(beta.df, 
             aes(el, Beta, colour=model, fill=model,
                 linetype=BetaPart, shape=BetaPart)) + 
   geom_point(size=0.9) +
+  # Joint + LV total: quadratic
   stat_smooth(data=filter(beta.df, BetaPart=="Overall" &
-                            model=="Joint: Local LV"), 
+                            grepl("Joint", model)), 
               alpha=0.25, size=0.5, se=F, method="lm", formula=y~x+I(x^2)) + 
+  # Joint + LV BalVar: quadratic
   stat_smooth(data=filter(beta.df, BetaPart == "Balanced\nvariation" &
-                            model=="Joint: Local LV"), 
-              alpha=0.25, size=0.5, se=F, method="lm", formula=y~x) + 
-  stat_smooth(data=filter(beta.df, BetaPart == "Abundance\ngradient" &
-                            model=="Joint: Local LV"), 
+                            grepl("Joint", model)), 
               alpha=0.25, size=0.5, se=F, method="lm", formula=y~x+I(x^2)) + 
+  # Joint + LV AbGrad: quadratic
+  stat_smooth(data=filter(beta.df, BetaPart == "Abundance\ngradient" &
+                            grepl("Joint", model)), 
+              alpha=0.25, size=0.5, se=F, method="lm", formula=y~x+I(x^2)) + 
+  # Structured + LV total: quadratic
   stat_smooth(data=filter(beta.df, BetaPart=="Overall" &
-                            model=="Structured: Local LV"), 
+                            grepl("Structured", model)), 
               alpha=0.25, size=0.5, se=F, method="lm", formula=y~x+I(x^2)) + 
+  # Structured + LV BalVar: linear
   stat_smooth(data=filter(beta.df, BetaPart == "Balanced\nvariation" &
-                            model=="Structured: Local LV"), 
+                            grepl("Structured", model)), 
               alpha=0.25, size=0.5, se=F, method="lm", formula=y~x) + 
+  # Structured + LV AbGrad: linear
   stat_smooth(data=filter(beta.df, BetaPart == "Abundance\ngradient" &
-                            model=="Structured: Local LV"), 
+                            grepl("Structured", model)), 
               alpha=0.25, size=0.5, se=F, method="lm", formula=y~x) + 
-  scale_colour_manual("Model", values=mod_col) + 
-  scale_fill_manual("Model", values=mod_col) + 
+  scale_colour_manual("Model", values=mod_col, 
+                      labels=c(expression(italic(Joint[LV])),
+                               expression(italic(Structured[LV])))) + 
+  scale_fill_manual("Model", values=mod_col, 
+                    labels=c(expression(italic(Joint[LV])),
+                             expression(italic(Structured[LV])))) + 
   scale_linetype_manual(expression(beta~partition), values=c(1,5,3)) +
   scale_shape_manual(expression(beta~partition), values=c(19,4,0)) +
   labs(x="Elevation (m)", y=expression('Within-site'~beta~diversity)) + 
   ylim(0,1) + ms_fonts + 
   guides(linetype=guide_legend(override.aes=list(colour="gray30"))) +
-  theme(legend.key.height=unit(9, "mm"))
-ggsave(paste0(ms_dir, "figs/beta_diversity.png"), p, width=5, height=3.5)
+  theme(legend.key.height=unit(9, "mm"),
+        legend.text.align=0)
+ggsave(paste0(ms_dir, "figs_noCnpy_rdExc/beta_diversity_LV.png"), 
+       p, width=5, height=3.25)
 
 
 
@@ -490,28 +546,33 @@ rownames(tax_dist) <- paste(tax_dist$FullGen, tax_dist$FullSpp, sep="_")
 lam.site.ls <- agg_opt$lam %>% 
   mutate(site=str_pad(str_sub(as.character(id), 1, -5), 2, "left", "0"),
          BDM=arrange(site_i, BDM_id)$BDM[as.numeric(site)]) %>%
-  filter(model=="Joint: Local LV") %>%
-  select(sppName, site, BDM, id, median) %>%
+  filter(model=="Joint[LV]") %>%
+  select(sppName, site, BDM, id, el, median) %>%
   pivot_wider(names_from="sppName", values_from="median")
-lam.plot.mx <- as.matrix(lam.site.ls[,4:82])
+lam.plot.mx <- as.matrix(lam.site.ls[,5:83])
 
-env.plot <- tibble(el=as.factor((d.i[[1]]$V[,2] %/% 100) * 100),
-                   el_cont=d.i[[1]]$V[,2],
+env.plot <- tibble(el_cont=lam.site.ls$el,
+                   el=as.factor((el_cont %/% 100) * 100),
                    region=site_i$region[match(lam.site.ls$BDM, site_i$BDM)]) %>%
   mutate(region=factor(ifelse(region=="Low", "Plateau", region)))
+# env.plot <- tibble(el=as.factor((d.i[[1]]$V[,2] %/% 100) * 100),
+#                    el_cont=d.i[[1]]$V[,2],
+#                    region=site_i$region[match(lam.site.ls$BDM, site_i$BDM)]) %>%
+#   mutate(region=factor(ifelse(region=="Low", "Plateau", region)))
 
 lam.dpcoa <- dpcoa(as.data.frame(lam.plot.mx), 
                    vegan::taxa2dist(tax_dist, varstep=T), scannf=F, nf=4)
 p.A1 <- s.class(lam.dpcoa$li, env.plot$el, 
                psub=list(text="a.", position="topleft"),
                col=terrain.colors(n_distinct(env.plot$el)))
-p.A2 <- plotEig(lam.dpcoa$eig[1:10], lam.dpcoa$nf, pbackground=list(box=TRUE), 
+p.A2 <- plotEig(lam.dpcoa$eig[1:15], lam.dpcoa$nf, pbackground=list(box=TRUE), 
                 psub=list(text="Eigenvalues", cex=1), plot=FALSE)
-p.A <- insert(p.A2, p.A1, posi=c(0.02, 0.02), ratio=0.25)
+p.A <- insert(p.A2, p.A1, posi=c(0.02, 0.02), ratio=0.2)
 p.B <- s.class(lam.dpcoa$li, env.plot$region, 
                psub=list(text="b.", position="topleft"), col=col_region)
 
-png(paste0(ms_dir, "figs/DPCoA.png"), height=4, width=8, res=400, units="in")
+png(paste0(ms_dir, "figs_noCnpy_rdExc/DPCoA_J_LV.png"), 
+    height=4, width=8, res=400, units="in")
 ADEgS(list(p.A, p.B), layout=c(1,2))
 dev.off()
 
@@ -540,7 +601,8 @@ p <- ggplot(genProp.df, aes(elCat, fill=genus_1pct)) +
   ms_fonts + 
   labs(x="", y="Proportion of samples")
 
-ggsave(paste0(ms_dir, "figs/genus_assemblages.png"), p, width=5, height=5)
+ggsave(paste0(ms_dir, "figs_noCnpy_rdExc/genus_assemblages.png"), 
+       p, width=5, height=5)
 
 # matrix[I,R+L] Z = append_col(X[(K+1):(K+J),][IJ,], V);
 Z <- cbind(
@@ -564,7 +626,7 @@ ordihull(env.pca, group=env.plot$region, lwd=2,
 ## Taxonomic bias
 ########------------------------------------------------------------------------
 
-p <- agg_opt$D %>%
+p <- agg_opt$D %>% filter(grepl("LV", model)) %>%
   mutate(genFull=tax_i$FullGen[match(sppName, tax_i$species)],
          sppName=str_replace(str_remove(sppName, "-GR"), "_", "."),
          sig=case_when(sign(L10-1)==sign(L90-1) & sign(L025-1)!=sign(L975-1) ~ "sig80",
@@ -575,14 +637,14 @@ p <- agg_opt$D %>%
   geom_point() + 
   geom_linerange(size=0.5) + 
   geom_linerange(aes(xmin=L10, xmax=L90), size=1) + 
-  facet_grid(genFull~LV, scales="free_y", space="free_y") +
+  facet_grid(genFull~model, scales="free_y", space="free_y", labeller=label_parsed) +
   scale_colour_manual(values=c("gray", "#fc9272", "#99000d"), guide=F) +
   ms_fonts  + theme(axis.text.y=element_text(hjust=1, vjust=0.5),
                     strip.background.y=element_blank(),
                     strip.text.y=element_blank(), 
                     panel.spacing=unit(0.5, "mm")) + 
   labs(y="", x="Proportional Bias")
-ggsave(paste0(ms_dir, "figs/D_opt.png"), p, width=4, height=13)
+ggsave(paste0(ms_dir, "figs_noCnpy_rdExc/D_LV.png"), p, width=3, height=13)
 
 
 
@@ -627,8 +689,8 @@ p <- ant.assemblages %>%
   scale_colour_manual("", values=c(col_region[3], "seagreen3", "blue3")) +
   theme(legend.position=c(0.8, 0.1)) +
   ms_fonts +
-  labs(title="Observed elevational ranges", x="Elevation (m)")
-ggsave(paste0(ms_dir, "figs/obs_rng.png"), p, width=5, height=13)
+  labs(title="Observed elevational ranges", x="Elevation (m)", y="")
+ggsave(paste0(ms_dir, "figs_noCnpy_rdExc/obs_rng.png"), p, width=5, height=13)
 
 LAM.zone <- agg_opt$LAM %>% 
   mutate(SpInY=c("Species not in Y", 
@@ -661,31 +723,38 @@ p.A <- ggplot(LAM.zone, aes(x=prop, y=sppOrd, fill=zone)) +
   geom_vline(xintercept=c(0.05, 0.95), col="gray20", size=0.15) +
   geom_vline(xintercept=c(0.1, 0.9), col="gray20", size=0.25) +
   geom_vline(xintercept=c(0.2, 0.80), col="gray20", size=0.35) +
-  scale_fill_manual("", values=c("cadetblue", col_region[3])) + 
+  scale_fill_manual("Elevational Zone", values=c("cadetblue", col_region[3])) + 
   scale_alpha_manual("Species in structured samples", values=c(0.9, 1)) +
-  scale_x_continuous(breaks=seq(0,1,0.25), 
-                     labels=c("0", "0.25", "0.5", "0.75", "1")) +
-  facet_grid(SpInY~model, scales="free_y", space="free_y") +
+  scale_x_continuous(breaks=seq(0,1,0.5), 
+                     labels=c("0", "0.5", "1")) +
+  facet_grid(SpInY~model, scales="free_y", space="free_y", 
+             labeller=labeller(model=label_parsed)) +
   labs(x=expression("Regional: Proportion of total"~Lambda), y="") +
-  ms_fonts + theme(legend.position="bottom")
+  ms_fonts + theme(legend.position="bottom",
+                   strip.text.x=element_text(size=10),
+                   axis.text=element_text(size=9))
 p.B <- ggplot(lam.zone, aes(x=prop, y=sppOrd, fill=zone)) + 
   geom_bar(stat="identity", position="fill") + 
   geom_vline(xintercept=c(0, 1), col="gray", size=0.2) +
   geom_vline(xintercept=c(0.05, 0.95), col="gray20", size=0.15) +
   geom_vline(xintercept=c(0.1, 0.9), col="gray20", size=0.25) +
   geom_vline(xintercept=c(0.2, 0.80), col="gray20", size=0.35) +
-  scale_fill_manual("", values=c("cadetblue", col_region[3])) + 
+  scale_fill_manual("Elevational Zone", values=c("cadetblue", col_region[3])) + 
   scale_alpha_manual("Species in structured samples", values=c(0.9, 1)) +
-  scale_x_continuous(breaks=seq(0,1,0.25), 
-                     labels=c("0", "0.25", "0.5", "0.75", "1")) +
-  facet_grid(SpInY~model, scales="free_y", space="free_y") +
+  scale_x_continuous(breaks=seq(0,1,0.5), 
+                     labels=c("0", "0.5", "1")) +
+  facet_grid(SpInY~model, scales="free_y", space="free_y", 
+             labeller=labeller(model=label_parsed)) +
   labs(x=expression("Local: Proportion of total"~lambda), y="") +
-  ms_fonts + theme(legend.position="bottom")
+  ms_fonts + theme(legend.position="bottom",
+                   strip.text.x=element_text(size=10),
+                   axis.text=element_text(size=9))
 
 p <- ggpubr::ggarrange(p.A, p.B, nrow=1, labels=c("a.", "b."), 
                        label.x=c(0.08, 0.08),
                        common.legend=T, legend="bottom") 
-ggsave(paste0(ms_dir, "figs/lambda_zones.png"), p, width=10, height=13, units="in")
+ggsave(paste0(ms_dir, "figs_noCnpy_rdExc/lambda_zones.png"), 
+       p, width=10, height=13, units="in")
 
 
 
@@ -697,6 +766,7 @@ ggsave(paste0(ms_dir, "figs/lambda_zones.png"), p, width=10, height=13, units="i
 ########------------------------------------------------------------------------
 
 p <- agg_opt$b %>% filter(ParName != "intercept") %>%
+  filter(grepl("LV", model)) %>%
   mutate(Scale=factor(str_sub(ParName, 1L, 1L), levels=c("R", "L"), 
                       labels=c("Regional", "Local")),
          Par=parName.df$full[match(ParName, parName.df$par)],
@@ -712,7 +782,10 @@ p <- agg_opt$b %>% filter(ParName != "intercept") %>%
                  position=position_dodge(width=0.5), size=0.6) + 
   geom_linerange(aes(ymin=L025, ymax=L975),
                  position=position_dodge(width=0.5), size=0.2) + 
-  coord_flip() + scale_colour_manual("Model:", values=mod_col) + 
+  coord_flip() + 
+  scale_colour_manual("Model", values=mod_col, 
+                      labels=c(expression(italic(Joint[LV])),
+                               expression(italic(Structured[LV])))) + 
   facet_grid(genName~Par, space="free_y", scales="free",
              labeller=label_wrap_gen(width=10)) +
   labs(y="Species-level responses (b)", x="") + 
@@ -722,7 +795,8 @@ p <- agg_opt$b %>% filter(ParName != "intercept") %>%
         panel.spacing.y=unit(0.05, 'cm'), 
         legend.position="bottom",
         axis.text.x=element_text(size=8))
-ggsave(paste0(ms_dir, "figs/b_opt_byParam.png"), p, width=13, height=15)
+ggsave(paste0(ms_dir, "figs_noCnpy_rdExc/b_opt_byParam_LV.png"), 
+       p, width=12, height=15)
 
 bar_95 <- agg_opt$b %>% filter(cov != "1") %>% 
   mutate(Scale=factor(str_sub(ParName, 1L, 1L), levels=c("R", "L"), 
@@ -744,12 +818,13 @@ bar_95 <- agg_opt$b %>% filter(cov != "1") %>%
 p.A <- bar_95 %>%
   ggplot(aes(nSpp/80, Par, fill=effect)) + 
   geom_bar(stat="identity", colour="gray30", size=0.25) +
-  facet_grid(Scale~model, scales="free", space="free_y") + 
+  facet_grid(Scale~model, scales="free", space="free_y",
+             labeller=label_parsed) + 
   scale_fill_manual("Response", values=c("gray90", "blue", "red")) + 
-  scale_x_continuous(breaks=seq(0,1,0.25), 
-                     labels=c("0", "0.25", "0.5", "0.75", "1")) +
+  scale_x_continuous(breaks=seq(0,1,0.5), 
+                     labels=c("0", "0.5", "1")) +
   labs(y="", x="Proportion of species (95% HPDI)") + 
-  ms_fonts
+  ms_fonts + theme(strip.text.x=element_text(size=10))
 p.B <- agg_opt$b %>% filter(cov != "1") %>% 
   mutate(Scale=factor(str_sub(ParName, 1L, 1L), levels=c("R", "L"), 
                       labels=c("Regional", "Local")),
@@ -768,16 +843,18 @@ p.B <- agg_opt$b %>% filter(cov != "1") %>%
   mutate(Par=factor(Par, levels=levels(bar_95$Par))) %>%
   ggplot(aes(nSpp/80, Par, fill=effect)) + 
   geom_bar(stat="identity", colour="gray30", size=0.25) +
-  facet_grid(Scale~model, scales="free", space="free_y") + 
+  facet_grid(Scale~model, scales="free", space="free_y",
+             labeller=label_parsed) + 
   scale_fill_manual("Response", values=c("gray90", "blue", "red")) + 
-  scale_x_continuous(breaks=seq(0,1,0.25), 
-                     labels=c("0", "0.25", "0.5", "0.75", "1")) +
+  scale_x_continuous(breaks=seq(0,1,0.5), 
+                     labels=c("0", "0.5", "1")) +
   labs(y="", x="Proportion of species (80% HPDI)") + 
-  ms_fonts
+  ms_fonts + theme(strip.text.x=element_text(size=10))
 p <- ggpubr::ggarrange(p.A, p.B, nrow=1, labels=c("a.", "b."), 
                        label.x=c(0.08, 0.08),
                        common.legend=T, legend="bottom") 
-ggsave(paste0(ms_dir, "figs/b_opt_bar.png"), p, width=12, height=5, units="in")
+ggsave(paste0(ms_dir, "figs_noCnpy_rdExc/b_opt_bar.png"), 
+       p, width=12, height=5, units="in")
 
 
 
@@ -796,10 +873,10 @@ S.site <- agg_opt$S_R %>% filter(id<1e5) %>%
             S_md=sum(median),
             S_mn=sum(mean),
             S_hi=sum(L95)) %>%
-  mutate(model=case_when(model=="Joint: None" ~ "J_N",
-                         model=="Structured: None" ~ "S_N",
-                         model=="Joint: Local LV" ~ "J_LV",
-                         model=="Structured: Local LV" ~ "S_LV")) %>%
+  mutate(model=case_when(model=="Joint" ~ "J_N",
+                         model=="Structured" ~ "S_N",
+                         model=="Joint[LV]" ~ "J_LV",
+                         model=="Structured[LV]" ~ "S_LV")) %>%
   pivot_wider(names_from="model", values_from=3:6)
 H.site <- agg_opt$H %>% filter(id<1e5) %>% 
   group_by(id, model) %>% 
@@ -807,10 +884,10 @@ H.site <- agg_opt$H %>% filter(id<1e5) %>%
             H_md=sum(median),
             H_mn=sum(mean),
             H_hi=sum(L95)) %>%
-  mutate(model=case_when(model=="Joint: None" ~ "J_N",
-                         model=="Structured: None" ~ "S_N",
-                         model=="Joint: Local LV" ~ "J_LV",
-                         model=="Structured: Local LV" ~ "S_LV")) %>%
+  mutate(model=case_when(model=="Joint" ~ "J_N",
+                         model=="Structured" ~ "S_N",
+                         model=="Joint[LV]" ~ "J_LV",
+                         model=="Structured[LV]" ~ "S_LV")) %>%
   pivot_wider(names_from="model", values_from=3:6)
 L.site <- agg_opt$lLAM %>% filter(id<1e5) %>% 
   group_by(id, model) %>% 
@@ -818,13 +895,13 @@ L.site <- agg_opt$lLAM %>% filter(id<1e5) %>%
             L_md=sum(median),
             L_mn=sum(mean),
             L_hi=sum(L95)) %>%
-  mutate(model=case_when(model=="Joint: None" ~ "J_N",
-                         model=="Structured: None" ~ "S_N",
-                         model=="Joint: Local LV" ~ "J_LV",
-                         model=="Structured: Local LV" ~ "S_LV")) %>%
+  mutate(model=case_when(model=="Joint" ~ "J_N",
+                         model=="Structured" ~ "S_N",
+                         model=="Joint[LV]" ~ "J_LV",
+                         model=="Structured[LV]" ~ "S_LV")) %>%
   pivot_wider(names_from="model", values_from=3:6)
 
-out.sf <- d.i[[1]]$grd_W.sf %>% 
+out.sf <- d.i[[1]]$grd_W.sf %>% st_set_crs(21781) %>%
   left_join(., S.site) %>%
   left_join(., H.site) %>%
   left_join(., L.site)
@@ -861,17 +938,17 @@ ggplot(out.sf, aes(fill=S_mn_S_N - S_mn_S_LV)) +
 # Diversity
 ggplot(out.sf, aes(fill=H_mn_J_N)) + 
   geom_sf(colour="black", size=0.1) + 
-  scale_fill_viridis(expression(H[JointN]), limits=c(0, 2.5))
+  scale_fill_viridis(expression(H[JointN]), limits=c(0, 2.9))
 ggplot(out.sf, aes(fill=H_mn_J_LV)) + 
   geom_sf(colour="black", size=0.1) + 
-  scale_fill_viridis(expression(H[JointLV]), limits=c(0, 2.5))
+  scale_fill_viridis(expression(H[JointLV]), limits=c(0, 2.9))
 
 ggplot(out.sf, aes(fill=H_mn_S_N)) + 
   geom_sf(colour="black", size=0.1) + 
-  scale_fill_viridis(expression(H[StrN]), limits=c(0, 2.5))
+  scale_fill_viridis(expression(H[StrN]), limits=c(0, 2.9))
 ggplot(out.sf, aes(fill=H_mn_S_LV)) + 
   geom_sf(colour="black", size=0.1) + 
-  scale_fill_viridis(expression(H[StrLV]), limits=c(0, 2.5))
+  scale_fill_viridis(expression(H[StrLV]), limits=c(0, 2.9))
 
 ggplot(out.sf, aes(fill=H_mn_J_N - H_mn_S_N)) + 
   geom_sf(colour="black", size=0.1) + 
@@ -889,17 +966,17 @@ ggplot(out.sf, aes(fill=H_mn_S_N - H_mn_S_LV)) +
 # LAMBDA
 ggplot(out.sf, aes(fill=L_mn_J_N)) + 
   geom_sf(colour="black", size=0.1) + 
-  scale_fill_viridis(expression(L[JointN]), limits=c(0, 508))
+  scale_fill_viridis(expression(Lambda[JointN]), limits=c(0, 508))
 ggplot(out.sf, aes(fill=L_mn_J_LV)) + 
   geom_sf(colour="black", size=0.1) + 
-  scale_fill_viridis(expression(L[JointLV]), limits=c(0, 508))
+  scale_fill_viridis(expression(Lambda[JointLV]), limits=c(0, 508))
 
 ggplot(out.sf, aes(fill=L_mn_S_N)) + 
   geom_sf(colour="black", size=0.1) + 
-  scale_fill_viridis(expression(L[StrN]), limits=c(0, 508))
+  scale_fill_viridis(expression(Lambda[StrN]), limits=c(0, 508))
 ggplot(out.sf, aes(fill=L_mn_S_LV)) + 
   geom_sf(colour="black", size=0.1) + 
-  scale_fill_viridis(expression(L[StrLV]), limits=c(0, 508))
+  scale_fill_viridis(expression(Lambda[StrLV]), limits=c(0, 508))
 
 ggplot(out.sf, aes(fill=L_mn_J_N - L_mn_S_N)) + 
   geom_sf(colour="black", size=0.1) + 
@@ -925,9 +1002,9 @@ map_theme <- theme(legend.position=c(0.35, 0.075),
                    axis.ticks=element_blank(), 
                    axis.title=element_blank(), 
                    panel.border=element_rect(size=0.2, colour="grey30", fill=NA)) 
-abb.LU <- tibble(full=c("Joint: None", "Joint: Local LV",
-                        "Structured: None", "Structured: Local LV"),
-                 abb=c("J-N", "J-LV", "S-N", "S-LV"))
+abb.LU <- tibble(full=c("Joint", "Joint[LV]",
+                        "Structured", "Structured[LV]"),
+                 abb=c("J", "J+LV", "S", "S+LV"))
 
 for(m in 1:4) {
   m.full <- unique(agg_opt$lLAM$model)[m]
@@ -949,11 +1026,13 @@ for(m in 1:4) {
       mutate(S_gen=S.i$mean[match(id, S.i$id)]) %>%
       filter(!is.na(S_gen)) %>%
       ggplot() + geom_sf(aes(fill=S_gen), colour="black", size=0.02) + 
-      annotate("text", label=paste0(m.full, "\n", gen.i), size=3, 
+      annotate("text", label=paste("italic(", m.full, ")"), size=3, parse=T,
                x=495000, y=200000, hjust=0, vjust=0.5) + 
+      annotate("text", label=paste("italic(", gen.i, ")"), size=3, parse=T,
+               x=495000, y=195000, hjust=0, vjust=0.5) + 
       scale_fill_viridis("Pred.\nRich.", limits=c(0, length(gen.sppNum))) + 
       map_theme
-    ggsave(paste0(ms_dir, "figs/maps/gen/", gen.i, "_S_", m.abb, ".png"), 
+    ggsave(paste0(ms_dir, "figs_noCnpy_rdExc/maps/gen/", gen.i, "_S_", m.abb, ".png"), 
            gen.S[[i]] + 
              geom_sf(data=obs.i, colour="deepskyblue1", alpha=0.8, shape=1, size=0.1), 
            width=4, height=4, units="in", dpi=300)
@@ -972,11 +1051,13 @@ for(m in 1:4) {
       mutate(S_sf=S.i$mean[match(id, S.i$id)]) %>%
       filter(!is.na(S_sf)) %>%
       ggplot() + geom_sf(aes(fill=S_sf), colour="black", size=0.02) + 
-      annotate("text", label=paste0(m.full, "\n", sf.i), size=3, 
+      annotate("text", label=paste("italic(", m.full, ")"), size=3, parse=T,
                x=495000, y=200000, hjust=0, vjust=0.5) + 
+      annotate("text", label=sf.i, size=3, parse=T,
+               x=495000, y=195000, hjust=0, vjust=0.5) + 
       scale_fill_viridis("Pred.\nRich.", limits=c(0, length(sf.sppNum))) + 
       map_theme
-    ggsave(paste0(ms_dir, "figs/maps/sf/", sf.i, "_S_", m.abb, ".png"), 
+    ggsave(paste0(ms_dir, "figs_noCnpy_rdExc/maps/sf/", sf.i, "_S_", m.abb, ".png"), 
            sf.S[[i]] + 
              geom_sf(data=obs.i, colour="deepskyblue1", alpha=0.8, shape=1, size=0.1), 
            width=4, height=4, units="in", dpi=300)
@@ -984,13 +1065,19 @@ for(m in 1:4) {
   
   gen_2spp <- which(table(tax_i$genus)>1)
   ggpubr::ggarrange(plotlist=gen.S[gen_2spp], ncol=3, nrow=3) %>%
-    ggsave(paste0(ms_dir, "figs/maps/gen_S_", m.abb, ".png"), ., 
+    ggsave(paste0(ms_dir, "figs_noCnpy_rdExc/maps/gen_S_", m.abb, ".png"), ., 
            width=9, height=9, units="in", dpi=300)
   ggpubr::ggarrange(plotlist=sf.S, ncol=2, nrow=2) %>%
-    ggsave(paste0(ms_dir, "figs/maps/sf_S_", m.abb, ".png"), ., 
+    ggsave(paste0(ms_dir, "figs_noCnpy_rdExc/maps/sf_S_", m.abb, ".png"), ., 
            width=6, height=6, units="in", dpi=300)
   
 }
+
+
+
+
+
+
 
 
 
