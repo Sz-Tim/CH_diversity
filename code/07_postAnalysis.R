@@ -18,7 +18,7 @@ for(i in names(agg_opt)) {
   agg_opt[[i]] <- map(agg_opt.ls, ~.[[i]]) %>% 
     do.call('rbind', .) %>%
     mutate(dataset=if_else(grepl("WY", model), "Joint", "Structured"),
-           LV=if_else(grepl("cov", model), "", " + LV"),
+           LV=if_else(grepl("cov", model), "", "[LV]"),
            model=paste0(dataset, LV))
 }
 rm(agg_opt.ls)
@@ -32,7 +32,7 @@ for(i in names(agg_null)) {
   agg_null[[i]] <- map(agg_null.ls, ~.[[i]]) %>% 
     do.call('rbind', .) %>%
     mutate(dataset=if_else(grepl("WY", model), "Joint", "Structured"),
-           LV=if_else(grepl("cov", model), "", " + LV"),
+           LV=if_else(grepl("cov", model), "", "[LV]"),
            model=paste0(dataset, LV))
 }
 rm(agg_null.ls)
@@ -40,8 +40,10 @@ rm(agg_null.ls)
 
 
 site_i <- read_csv("../1_opfo/data/opfo_siteSummaryProcessed.csv")
+plot_i <- read_csv("../1_opfo/data/opfo_envDataProcessed.csv") %>% 
+  arrange(BDM, Plot_id) %>% filter(Plot_id != "020201") 
 
-ants <- load_ant_data(str_type="soil", clean_spp=T, 
+ants <- load_ant_data(str_type="all", clean_spp=T, 
                       DNA_dir="../1_opfo/data/DNA_ID_clean")
 tax_i <- read_csv("data/tax_i.csv") %>% 
   mutate(across(contains("Full"), as.factor))
@@ -55,6 +57,7 @@ site.mns <- ants$str %>% filter(TypeOfSample=="soil") %>%
   group_by(BDM) %>% 
   summarise(mnTubes=sum(nTubes)/25, seTubes=sd(nTubes)/5,
             mnS=sum(S)/25, seS=sd(S)/5,
+            nTubes=sum(nTubes), 
             el=mean(mnt25))
 
 det.base <- ants$all %>% sf::st_set_geometry(NULL) %>%
@@ -69,12 +72,158 @@ det.base <- ants$all %>% sf::st_set_geometry(NULL) %>%
 ## DATA SUMMARIES
 ########------------------------------------------------------------------------
 
-n_distinct(ants$all$SPECIESID)
-n_distinct(ants$pub$SPECIESID)
-n_distinct(ants$str$SPECIESID)
+# Number of species
+cat("Total species:", n_distinct(ants$all$SPECIESID))
+cat("Public inventory:", n_distinct(ants$pub$SPECIESID))
+cat("Structured abundance:", n_distinct(ants$str$SPECIESID))
 
-sum(!unique(ants$pub$SPECIESID) %in% unique(ants$str$SPECIESID))
-sum(!unique(ants$str$SPECIESID) %in% unique(ants$pub$SPECIESID))
+# Number of samples
+nrow(ants$pub)
+sum(ants$str$TypeOfSample %in% c("tree", "transect"))
+sum(ants$str$TypeOfSample=="soil")
+sum(d.i[[1]]$grd_W.sf$W_obs>0)
+sum(d.i[[1]]$grd_W.sf$W_obs>0)/sum(d.i[[1]]$grd_W.sf$inbd)
+
+site.mns %>% summary()
+
+
+
+
+
+
+
+
+########------------------------------------------------------------------------
+## PERFORMANCE
+########------------------------------------------------------------------------
+
+mod_col <- c("Joint[LV]"="#762a83", "Structured[LV]"="#1b7837",
+             "Joint"="#9970ab", "Structured"="#5aae61")
+
+# Cross-validation
+fS_out <- "out/fwd_ll/"
+loo.f <- dir(fS_out, "loo.*csv")
+loo.df <- suppressMessages({
+  tibble(mod=str_split_fixed(loo.f, "_", 4)[,3], 
+         LV=str_split_fixed(loo.f, "_", 4)[,2],
+         nCov=as.numeric(str_sub(str_split_fixed(loo.f, "_", 4)[,4], 1, -7)), 
+         elpd=map_dbl(loo.f, ~read_csv(paste0(fS_out, .x))$elpd_loo[1]),
+         elpd_se=map_dbl(loo.f, ~read_csv(paste0(fS_out, .x))$se_elpd_loo[1]),
+         looic=map_dbl(loo.f, ~read_csv(paste0(fS_out, .x))$looic[1]),
+         looic_se=map_dbl(loo.f, ~read_csv(paste0(fS_out, .x))$se_looic[1]),
+         v_full=map_chr(loo.f, ~read_csv(paste0(fS_out, .x))$X1[1])) %>%
+    mutate(v_scale=str_sub(str_split_fixed(v_full, "__", 2)[,2], 1, 1),
+           v_name=str_sub(str_split_fixed(v_full, "__", 2)[,2], 3, -1),
+           model=case_when(mod=="WY" ~ "Joint",
+                           mod=="Y" ~ "Structured")) %>%
+    group_by(model, LV) %>% arrange(model, LV, looic) %>%
+    mutate(elpd_diff=elpd-first(elpd),
+           looic_diff=looic-first(looic))
+})
+
+loo.df %>% arrange(desc(mod), desc(LV), nCov) %>% 
+  ungroup %>%
+  mutate(LL0=first(elpd), 
+         D=(LL0 - elpd)/LL0,
+         R2_mcf=1-(elpd/LL0)) %>%
+  filter(elpd_diff==0) %>% 
+  select(mod, LV, D)
+
+agg_opt$LL %>% 
+  mutate(R2_mn=1-median/filter(agg_null$LL, model=="Structured")$median,
+         R2_025=1-L025/filter(agg_null$LL, model=="Structured")$L025,
+         R2_975=1-L975/filter(agg_null$LL, model=="Structured")$L975) %>%
+  select(model, contains("R2")) %>%
+  ggplot(aes(model, R2_mn, ymin=R2_025, ymax=R2_975)) + 
+  geom_pointrange() + ylim(0, 0.25)
+
+agg_opt$LL_S %>% group_by(sppName, model) %>%
+  left_join(., agg_null$LL_S %>% select(L025, median, L975, sppName, model), 
+            by=c("sppName", "model"), suffix=c("", "_null")) %>%
+  mutate(R2_mn=1-median/median_null,
+         R2_025=1-L025/L025_null,
+         R2_975=1-L975/L975_null) %>%
+  select(model, sppName, contains("R2")) %>%
+  mutate(Improve=R2_mn > 0) %>%
+  group_by(model) %>%
+  summarise(mnR2=mean(R2_mn), pImprove=mean(Improve))
+  # group_by(model) %>% summarise(mn=mean(R2_mn))
+  ggplot(aes(Improve, fill=model)) + geom_bar(position="dodge")
+# ggplot(aes(R2_mn, fill=model)) + geom_density(alpha=0.5)
+# ggplot(aes(sppName, colour=model, R2_mn, ymin=R2_025, ymax=R2_975)) + 
+# geom_pointrange() + ylim(-1, 1) 
+
+agg_opt$LL_I %>% group_by(el, id, model) %>%
+  left_join(., agg_null$LL_I %>% select(L025, median, L975, el, id, model), 
+            by=c("el", "id", "model"), suffix=c("", "_null")) %>%
+  mutate(R2_mn=1-median/median_null,
+         R2_025=1-L025/L025_null,
+         R2_975=1-L975/L975_null) %>%
+  select(model, el, id, contains("R2")) %>%
+  mutate(Improve=R2_mn > 0) %>%
+  group_by(model) %>%
+  summarise(mnR2=mean(R2_mn), pImprove=mean(Improve))
+  # ggplot(aes(Improve, fill=model)) + geom_bar(position="dodge")
+  # ggplot(aes(R2_mn, fill=model)) + geom_density(alpha=0.5)
+  # ggplot(aes(el, as.numeric(Improve), colour=model)) + stat_smooth(se=T)
+  ggplot(aes(el, colour=model, fill=model, R2_mn, ymin=R2_025, ymax=R2_975)) +
+  scale_colour_manual(values=mod_col) +
+  scale_fill_manual(values=mod_col) + 
+  stat_smooth()
+
+
+
+# 
+# R2_spp <- obs_lam %>% group_by(model, sppName) %>% 
+#   summarise(LL=sum(LL), LL_null=sum(LL_null), obs=any(obs>0), N_Y=sum(obs)) %>%
+#   mutate(Pr_Y=N_Y/sum(N_Y),
+#          N_W=colSums(d.ls$W), 
+#          Pr_W=N_W/sum(N_W), 
+#          R2_mcf=1-(LL/LL_null),
+#          D2=((-2*LL_null) - (-2*LL))/(-2*LL_null))
+# 
+# ggplot(R2_spp, aes(R2_mcf, fill=model)) + 
+#   geom_density(alpha=0.75) + 
+#   labs(x=expression('Pseudo-R'^2~'by species'), y="Density")
+# 
+# ggplot(R2_spp, aes(R2_mcf, obs, fill=model)) + 
+#   ggridges::geom_density_ridges(alpha=0.75) + 
+#   labs(x=expression('Pseudo-R'^2), y="Species observed in Y")
+# 
+# ggplot(R2_spp, aes(Pr_Y - Pr_W, R2_mcf, colour=model)) + geom_point() 
+# 
+# R2_spp %>% filter(R2_mcf < 0)
+# R2_spp %>% group_by(model) %>% 
+#   summarise(PrImprove=sum(R2_mcf>0)/n(),
+#             mn=mean(R2_mcf),
+#             se=sd(R2_mcf)/sqrt(n()))
+# # Mean pseudo-R2 among species:
+# #  - Structured: 0.16 ± 0.01
+# #  - Joint: 0.24 ± 0.02
+# 
+# 
+# ggplot(R2_spp, aes(R2_mcf, sppName, colour=model)) + 
+#   geom_point() +
+#   labs(x="", y=expression('Pseudo-R'^2))
+# 
+# R2_spp %>% arrange(sppName, model) %>% group_by(sppName) %>%
+#   summarise(diff=first(R2_mcf)-last(R2_mcf), 
+#             obs=first(obs)) %>%
+#   ggplot(aes(diff, fill=obs)) + 
+#   geom_density(alpha=0.7) +
+#   geom_vline(xintercept=0)
+# 
+# (R2_spp %>% arrange(sppName, model) %>% group_by(sppName) %>%
+#     summarise(diff=first(R2_mcf)-last(R2_mcf), 
+#               obs=as.factor(first(obs))) %>%
+#     group_by(obs) %>%
+#     summarise(t=list(t.test(diff))))$t
+# 
+# 
+
+
+
+
 
 
 
@@ -177,112 +326,6 @@ agg_opt$pP_L %>% mutate(obs=rep(c(t(d.i[[1]]$Y)), times=4)) %>%
   ggplot(aes(x=obs>0, y=L975, fill=model)) + geom_boxplot() + ylim(0,1)
 
 
-
-
-
-########------------------------------------------------------------------------
-## PSEUDO-R2
-########------------------------------------------------------------------------
-
-mod_col <- c("Joint + LV"="#762a83", "Structured + LV"="#1b7837",
-             "Joint"="#9970ab", "Structured"="#5aae61")
-
-
-# REDO WITH RE-FIT FINAL MODELS !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-# obs_lam <- agg_opt$lam %>% 
-#   mutate(obs=rep(c(t(d.ls[[1]]$Y)), times=4),
-#          null=rep(filter(agg_null$lam, model=="Structured")$mean, times=4),
-#          LL=LaplacesDemon::dgpois(obs, mean, agg_opt$disp$mean, log=T),
-#          LL_null=LaplacesDemon::dgpois(obs, null, filter(agg_null$disp, model=="Structured")$mean, log=T))
-# obs_lam %>% group_by(model) %>% 
-#   summarise(LL=sum(LL), LL_null=sum(LL_null)) %>%
-#   mutate(R2_mcf=1-(LL/LL_null),
-#          D2=((-2*LL_null) - (-2*LL))/(-2*LL_null))
-
-agg_opt$LL %>% 
-  mutate(R2_mn=1-mean/filter(agg_null$LL, model=="Structured")$mean,
-         R2_025=1-L025/filter(agg_null$LL, model=="Structured")$me,
-         R2_975=1-L975/filter(agg_null$LL, model=="Structured")$L975) %>%
-  select(model, contains("R2")) %>%
-  ggplot(aes(model, R2_mn, ymin=R2_025, ymax=R2_975)) + 
-  geom_pointrange() + ylim(0, 0.25)
-
-agg_opt$LL_S %>% group_by(sppName, model) %>%
-  left_join(., agg_null$LL_S %>% select(L025, mean, L975, sppName, model), 
-            by=c("sppName", "model"), suffix=c("", "_null")) %>%
-  mutate(R2_mn=1-mean/mean_null,
-         R2_025=1-L025/L025_null,
-         R2_975=1-L975/L975_null) %>%
-  select(model, sppName, contains("R2")) %>%
-  mutate(Improve=R2_mn > 0) %>%
-  # group_by(model) %>% summarise(mn=mean(R2_mn))
-  ggplot(aes(Improve, fill=model)) + geom_bar(position="dodge")
-  # ggplot(aes(R2_mn, fill=model)) + geom_density(alpha=0.5)
-  # ggplot(aes(sppName, colour=model, R2_mn, ymin=R2_025, ymax=R2_975)) + 
-  # geom_pointrange() + ylim(-1, 1) 
-
-agg_opt$LL_I %>% group_by(el, id, model) %>%
-  left_join(., agg_null$LL_I %>% select(L025, mean, L975, el, id, model), 
-            by=c("el", "id", "model"), suffix=c("", "_null")) %>%
-  mutate(R2_mn=1-mean/mean_null,
-         R2_025=1-L025/L025_null,
-         R2_975=1-L975/L975_null) %>%
-  select(model, el, id, contains("R2")) %>%
-  mutate(Improve=R2_mn > 0) %>%
-  # ggplot(aes(Improve, fill=model)) + geom_bar(position="dodge")
-# ggplot(aes(R2_mn, fill=model)) + geom_density(alpha=0.5)
-ggplot(aes(el, colour=model, R2_mn, ymin=R2_025, ymax=R2_975)) +
-  geom_point(shape=1) + ylim(-1, 1) + stat_smooth(se=F)
-
-
-
-# 
-# R2_spp <- obs_lam %>% group_by(model, sppName) %>% 
-#   summarise(LL=sum(LL), LL_null=sum(LL_null), obs=any(obs>0), N_Y=sum(obs)) %>%
-#   mutate(Pr_Y=N_Y/sum(N_Y),
-#          N_W=colSums(d.ls$W), 
-#          Pr_W=N_W/sum(N_W), 
-#          R2_mcf=1-(LL/LL_null),
-#          D2=((-2*LL_null) - (-2*LL))/(-2*LL_null))
-# 
-# ggplot(R2_spp, aes(R2_mcf, fill=model)) + 
-#   geom_density(alpha=0.75) + 
-#   labs(x=expression('Pseudo-R'^2~'by species'), y="Density")
-# 
-# ggplot(R2_spp, aes(R2_mcf, obs, fill=model)) + 
-#   ggridges::geom_density_ridges(alpha=0.75) + 
-#   labs(x=expression('Pseudo-R'^2), y="Species observed in Y")
-# 
-# ggplot(R2_spp, aes(Pr_Y - Pr_W, R2_mcf, colour=model)) + geom_point() 
-# 
-# R2_spp %>% filter(R2_mcf < 0)
-# R2_spp %>% group_by(model) %>% 
-#   summarise(PrImprove=sum(R2_mcf>0)/n(),
-#             mn=mean(R2_mcf),
-#             se=sd(R2_mcf)/sqrt(n()))
-# # Mean pseudo-R2 among species:
-# #  - Structured: 0.16 ± 0.01
-# #  - Joint: 0.24 ± 0.02
-# 
-# 
-# ggplot(R2_spp, aes(R2_mcf, sppName, colour=model)) + 
-#   geom_point() +
-#   labs(x="", y=expression('Pseudo-R'^2))
-# 
-# R2_spp %>% arrange(sppName, model) %>% group_by(sppName) %>%
-#   summarise(diff=first(R2_mcf)-last(R2_mcf), 
-#             obs=first(obs)) %>%
-#   ggplot(aes(diff, fill=obs)) + 
-#   geom_density(alpha=0.7) +
-#   geom_vline(xintercept=0)
-# 
-# (R2_spp %>% arrange(sppName, model) %>% group_by(sppName) %>%
-#     summarise(diff=first(R2_mcf)-last(R2_mcf), 
-#               obs=as.factor(first(obs))) %>%
-#     group_by(obs) %>%
-#     summarise(t=list(t.test(diff))))$t
-# 
-# 
 
 
 
