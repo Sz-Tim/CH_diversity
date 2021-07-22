@@ -757,7 +757,19 @@ loo.df <- suppressMessages({
   mutate(elpd_diff=elpd-first(elpd),
          looic_diff=looic-first(looic))
 })
-  
+
+loo.df %>% arrange(desc(mod), desc(LV), nCov) %>% 
+  ungroup %>%
+  mutate(LL0=first(elpd), 
+         R2_mcf=1-(elpd/LL0)) %>%
+  filter(nCov < 10) %>%
+  ggplot(aes(x=nCov, y=R2_mcf, colour=model, linetype=LV, shape=LV)) +
+  geom_point(size=3) + geom_line() + 
+  scale_colour_manual("", values=mod_col) + 
+  labs(x="Number of covariates", y="Pseudo-R2") + 
+  # geom_errorbar(aes(ymin=looic-looic_se, ymax=looic+looic_se), width=0.1) +
+  geom_text(aes(label=v_name), colour=1, hjust=0, vjust=1, size=3, nudge_x=0.05) +
+  scale_shape_manual(values=c(16, 1)) + theme_bw()
 
 ggplot(loo.df, aes(x=nCov, y=looic, colour=model, linetype=LV, shape=LV)) + 
   geom_point(size=3) + geom_line() + 
