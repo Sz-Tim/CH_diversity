@@ -136,7 +136,7 @@ ms_fonts <- theme(panel.grid=element_blank(),
 ## VD sampling map
 ########------------------------------------------------------------------------
 
-png(paste0(ms_dir, "figs_noCnpy_rdExc/map_VD.png"), 
+png(paste0(ms_dir, "figs/map_VD.png"), 
     height=7, width=7, res=400, units="in")
 par(mar=c(0.5, 0.5, 0, 0), fig=c(0, 1, 0, 1))
 raster::plot(dem, legend=F, axes=F, box=F, 
@@ -159,7 +159,7 @@ p <- ggplot(world) + geom_sf() + xlim(-3e5, 1.5e6) + ylim(-4e5, 6e5) +
   geom_sf(data=st_union(VD_raw), fill="#fdd49e", colour="black", size=0.5) +
   theme(axis.line=element_blank(), axis.ticks=element_blank(), 
         axis.text=element_blank(), panel.border=element_rect(size=2))
-ggsave(paste0(ms_dir, "figs_noCnpy_rdExc/map_inset.png"), 
+ggsave(paste0(ms_dir, "figs/map_inset.png"), 
        p, height=3, width=5, units="in")
 
 
@@ -293,7 +293,7 @@ lam.p <- ggplot(lam.loess %>% filter(grepl("LV", model)), aes(el)) +
 p <- ggpubr::ggarrange(S.p, H.p, lam.p, nrow=1, widths=c(.9, .9, 1),
                        labels=c("a.", "b.", "c."), label.x=0.02,
                        common.legend=T, legend="bottom") 
-ggsave(paste0(ms_dir, "figs_noCnpy_rdExc/el_patterns_LV.png"),
+ggsave(paste0(ms_dir, "figs/el_patterns_LV.png"),
        p, width=10, height=5, units="in")
 
 
@@ -388,7 +388,7 @@ p.A <- ggplot(b_post, aes(x=mean, y=Par, fill=model, colour=model)) +
 # p <- ggpubr::ggarrange(p.A, p.B, nrow=1, labels=c("a.", "b."), 
 #                        widths=c(0.7, 1), label.x=c(0.05, 0.07),
 #                        common.legend=T, legend="bottom") 
-# ggsave(paste0(ms_dir, "figs_noCnpy_rdExc/slope_means+HDI.png"), p, width=10, height=5, units="in")
+# ggsave(paste0(ms_dir, "figs/slope_means+HDI.png"), p, width=10, height=5, units="in")
 
 hdi_width.df <- agg_opt$b %>% 
   mutate(Scale=str_sub(ParName, 1L, 1L),
@@ -438,7 +438,7 @@ p.B <- ggplot(hdi_width.df, aes(y=Par, fill=SppInY, colour=SppInY)) +
 p <- ggpubr::ggarrange(p.A, p.B, nrow=1, labels=c("a.", "b."), 
                        label.x=c(0.05, 0.07),
                        common.legend=F, legend="bottom") 
-ggsave(paste0(ms_dir, "figs_noCnpy_rdExc/slope_means+HDI_LV.png"), 
+ggsave(paste0(ms_dir, "figs/slope_means+HDI_LV.png"), 
        p, width=10, height=5, units="in")
 
 
@@ -520,7 +520,7 @@ p <- ggplot(beta.df,
   guides(linetype=guide_legend(override.aes=list(colour="gray30"))) +
   theme(legend.key.height=unit(9, "mm"),
         legend.text.align=0)
-ggsave(paste0(ms_dir, "figs_noCnpy_rdExc/beta_diversity_LV.png"), 
+ggsave(paste0(ms_dir, "figs/beta_diversity_LV.png"), 
        p, width=5, height=3.25)
 
 
@@ -571,7 +571,7 @@ p.A <- insert(p.A2, p.A1, posi=c(0.02, 0.02), ratio=0.2)
 p.B <- s.class(lam.dpcoa$li, env.plot$region, 
                psub=list(text="b.", position="topleft"), col=col_region)
 
-png(paste0(ms_dir, "figs_noCnpy_rdExc/DPCoA_J_LV.png"), 
+png(paste0(ms_dir, "figs/DPCoA_J_LV.png"), 
     height=4, width=8, res=400, units="in")
 ADEgS(list(p.A, p.B), layout=c(1,2))
 dev.off()
@@ -601,7 +601,7 @@ p <- ggplot(genProp.df, aes(elCat, fill=genus_1pct)) +
   ms_fonts + 
   labs(x="", y="Proportion of samples")
 
-ggsave(paste0(ms_dir, "figs_noCnpy_rdExc/genus_assemblages.png"), 
+ggsave(paste0(ms_dir, "figs/genus_assemblages.png"), 
        p, width=5, height=5)
 
 # matrix[I,R+L] Z = append_col(X[(K+1):(K+J),][IJ,], V);
@@ -626,7 +626,7 @@ ordihull(env.pca, group=env.plot$region, lwd=2,
 ## Taxonomic bias
 ########------------------------------------------------------------------------
 
-p <- agg_opt$D %>% filter(grepl("LV", model)) %>%
+p <- agg_opt$D %>%# filter(grepl("LV", model)) %>%
   mutate(genFull=tax_i$FullGen[match(sppName, tax_i$species)],
          sppName=str_replace(str_remove(sppName, "-GR"), "_", "."),
          sig=case_when(sign(L10-1)==sign(L90-1) & sign(L025-1)!=sign(L975-1) ~ "sig80",
@@ -644,7 +644,7 @@ p <- agg_opt$D %>% filter(grepl("LV", model)) %>%
                     strip.text.y=element_blank(), 
                     panel.spacing=unit(0.5, "mm")) + 
   labs(y="", x="Proportional Bias")
-ggsave(paste0(ms_dir, "figs_noCnpy_rdExc/D_LV.png"), p, width=3, height=13)
+ggsave(paste0(ms_dir, "figs/D.png"), p, width=4, height=13)
 
 
 
@@ -690,7 +690,7 @@ p <- ant.assemblages %>%
   theme(legend.position=c(0.8, 0.1)) +
   ms_fonts +
   labs(title="Observed elevational ranges", x="Elevation (m)", y="")
-ggsave(paste0(ms_dir, "figs_noCnpy_rdExc/obs_rng.png"), p, width=5, height=13)
+ggsave(paste0(ms_dir, "figs/obs_rng.png"), p, width=5, height=13)
 
 LAM.zone <- agg_opt$LAM %>% 
   mutate(SpInY=c("Species not in Y", 
@@ -753,7 +753,7 @@ p.B <- ggplot(lam.zone, aes(x=prop, y=sppOrd, fill=zone)) +
 p <- ggpubr::ggarrange(p.A, p.B, nrow=1, labels=c("a.", "b."), 
                        label.x=c(0.08, 0.08),
                        common.legend=T, legend="bottom") 
-ggsave(paste0(ms_dir, "figs_noCnpy_rdExc/lambda_zones.png"), 
+ggsave(paste0(ms_dir, "figs/lambda_zones.png"), 
        p, width=10, height=13, units="in")
 
 
@@ -795,7 +795,7 @@ p <- agg_opt$b %>% filter(ParName != "intercept") %>%
         panel.spacing.y=unit(0.05, 'cm'), 
         legend.position="bottom",
         axis.text.x=element_text(size=8))
-ggsave(paste0(ms_dir, "figs_noCnpy_rdExc/b_opt_byParam_LV.png"), 
+ggsave(paste0(ms_dir, "figs/b_opt_byParam_LV.png"), 
        p, width=12, height=15)
 
 bar_95 <- agg_opt$b %>% filter(cov != "1") %>% 
@@ -853,7 +853,7 @@ p.B <- agg_opt$b %>% filter(cov != "1") %>%
 p <- ggpubr::ggarrange(p.A, p.B, nrow=1, labels=c("a.", "b."), 
                        label.x=c(0.08, 0.08),
                        common.legend=T, legend="bottom") 
-ggsave(paste0(ms_dir, "figs_noCnpy_rdExc/b_opt_bar.png"), 
+ggsave(paste0(ms_dir, "figs/b_opt_bar.png"), 
        p, width=12, height=5, units="in")
 
 
@@ -1032,7 +1032,7 @@ for(m in 1:4) {
                x=495000, y=195000, hjust=0, vjust=0.5) + 
       scale_fill_viridis("Pred.\nRich.", limits=c(0, length(gen.sppNum))) + 
       map_theme
-    ggsave(paste0(ms_dir, "figs_noCnpy_rdExc/maps/gen/", gen.i, "_S_", m.abb, ".png"), 
+    ggsave(paste0(ms_dir, "figs/maps/gen/", gen.i, "_S_", m.abb, ".png"), 
            gen.S[[i]] + 
              geom_sf(data=obs.i, colour="deepskyblue1", alpha=0.8, shape=1, size=0.1), 
            width=4, height=4, units="in", dpi=300)
@@ -1057,7 +1057,7 @@ for(m in 1:4) {
                x=495000, y=195000, hjust=0, vjust=0.5) + 
       scale_fill_viridis("Pred.\nRich.", limits=c(0, length(sf.sppNum))) + 
       map_theme
-    ggsave(paste0(ms_dir, "figs_noCnpy_rdExc/maps/sf/", sf.i, "_S_", m.abb, ".png"), 
+    ggsave(paste0(ms_dir, "figs/maps/sf/", sf.i, "_S_", m.abb, ".png"), 
            sf.S[[i]] + 
              geom_sf(data=obs.i, colour="deepskyblue1", alpha=0.8, shape=1, size=0.1), 
            width=4, height=4, units="in", dpi=300)
@@ -1065,10 +1065,10 @@ for(m in 1:4) {
   
   gen_2spp <- which(table(tax_i$genus)>1)
   ggpubr::ggarrange(plotlist=gen.S[gen_2spp], ncol=3, nrow=3) %>%
-    ggsave(paste0(ms_dir, "figs_noCnpy_rdExc/maps/gen_S_", m.abb, ".png"), ., 
+    ggsave(paste0(ms_dir, "figs/maps/gen_S_", m.abb, ".png"), ., 
            width=9, height=9, units="in", dpi=300)
   ggpubr::ggarrange(plotlist=sf.S, ncol=2, nrow=2) %>%
-    ggsave(paste0(ms_dir, "figs_noCnpy_rdExc/maps/sf_S_", m.abb, ".png"), ., 
+    ggsave(paste0(ms_dir, "figs/maps/sf_S_", m.abb, ".png"), ., 
            width=6, height=6, units="in", dpi=300)
   
 }
