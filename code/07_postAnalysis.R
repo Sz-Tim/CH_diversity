@@ -2,8 +2,15 @@
 library(tidyverse); theme_set(theme_bw() + theme(panel.grid=element_blank()))
 source("code/00_fn.R"); source("../1_opfo/code/00_fn.R")
 
+# model inputs and posteriors
+d.ls <- map(paste0("data/opt_noCnpy_rdExc/LV_", c("WY", "Y"), 
+                   "__opt_var_set_ls.rds"), readRDS)
+d.i <- map(paste0("data/opt_noCnpy_rdExc/LV_", c("WY", "Y"), 
+                  "__opt_var_set_i.rds"), readRDS)
 # aggregate summarised output for optimal models (WY/Y, cov/LV)
-agg_opt.ls <- dir("out", "agg_[cov,LV]", full.names=T) %>% 
+agg_opt.ls <- c(dir("out/", "agg_[cov,LV].*_Y", full.names=T),
+                dir("out/opt_noCnpy_rdExc", 
+                    "agg_[cov,LV].*_WY", full.names=T)) %>% 
   map(readRDS) %>% map(., ~discard(.x, is.null))
 agg_opt <- vector("list", n_distinct(unlist(map(agg_opt.ls, names)))) %>%
   setNames(sort(unique(unlist(map(agg_opt.ls, names)))))
@@ -11,13 +18,13 @@ for(i in names(agg_opt)) {
   agg_opt[[i]] <- map(agg_opt.ls, ~.[[i]]) %>% 
     do.call('rbind', .) %>%
     mutate(dataset=if_else(grepl("WY", model), "Joint", "Structured"),
-           LV=if_else(grepl("cov", model), "None", "Local LV"),
-           model=paste0(dataset, ": ", LV))
+           LV=if_else(grepl("cov", model), "", " + LV"),
+           model=paste0(dataset, LV))
 }
 rm(agg_opt.ls)
 
 # aggregate summarised output for null models (WY/Y, cov/LV)
-agg_null.ls <- dir("out", "agg_null_", full.names=T) %>% 
+agg_null.ls <- dir("out/", "agg_null_", full.names=T) %>% 
   map(readRDS) %>% map(., ~discard(.x, is.null))
 agg_null <- vector("list", n_distinct(unlist(map(agg_null.ls, names)))) %>%
   setNames(sort(unique(unlist(map(agg_null.ls, names)))))
@@ -25,19 +32,17 @@ for(i in names(agg_null)) {
   agg_null[[i]] <- map(agg_null.ls, ~.[[i]]) %>% 
     do.call('rbind', .) %>%
     mutate(dataset=if_else(grepl("WY", model), "Joint", "Structured"),
-           LV=if_else(grepl("cov", model), "None", "Local LV"),
-           model=paste0(dataset, ": ", LV))
+           LV=if_else(grepl("cov", model), "", " + LV"),
+           model=paste0(dataset, LV))
 }
 rm(agg_null.ls)
 
 
 
-
-d.ls <- readRDS("data/opt/cov_Y__opt_var_set_ls.rds")
-d.i <- readRDS("data/opt/cov_Y__opt_var_set_i.rds")
 site_i <- read_csv("../1_opfo/data/opfo_siteSummaryProcessed.csv")
 
-ants <- load_ant_data(str_type="soil", clean_spp=T)
+ants <- load_ant_data(str_type="soil", clean_spp=T, 
+                      DNA_dir="../1_opfo/data/DNA_ID_clean")
 tax_i <- read_csv("data/tax_i.csv") %>% 
   mutate(across(contains("Full"), as.factor))
   
