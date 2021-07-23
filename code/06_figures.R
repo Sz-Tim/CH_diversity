@@ -828,6 +828,55 @@ ggsave(paste0(ms_dir, "figs/b_opt_bar.png"),
 
 
 
+
+########------------------------------------------------------------------------
+## Likelihood and D2
+########------------------------------------------------------------------------
+
+# D2 by site
+el.pred <- data.frame(el=seq(300, 3000, by=10))
+ll_i.loess <- agg_opt$LL_I %>% group_by(el, id, model) %>%
+  left_join(., agg_null$LL_I %>% filter(model=="Structured[No LV]") %>%
+              select(L025, median, L975, el, id), 
+            by=c("el", "id"), suffix=c("", "_null")) %>%
+  mutate(R2_mn=1-median/median_null,
+         R2_025=1-L025/median_null,
+         R2_975=1-L975/median_null) %>%
+  select(model, el, id, contains("R2")) %>%
+  group_by(model) %>% nest() %>%
+  mutate(loess_lo=map(data, ~predict(loess(R2_025 ~ el, data=.x), el.pred)),
+         loess_md=map(data, ~predict(loess(R2_mn ~ el, data=.x), el.pred)),
+         loess_hi=map(data, ~predict(loess(R2_975 ~ el, data=.x), el.pred))) %>%
+  unnest(cols=c(loess_lo, loess_md, loess_hi)) %>%
+  select(-data) %>%
+  mutate(el=el.pred$el)
+
+ll_i.p <- agg_opt$LL_I %>% group_by(el, id, model) %>%
+  left_join(., agg_null$LL_I %>% filter(model=="Structured[No LV]") %>%
+              select(L025, median, L975, el, id), 
+            by=c("el", "id"), suffix=c("", "_null")) %>%
+  mutate(R2_mn=1-median/median_null) %>%
+  ggplot(aes(el, R2_mn, colour=model, fill=model)) + 
+  geom_hline(yintercept=0, size=0.25, colour="gray30") +
+  geom_point(shape=1, alpha=0.5) + 
+  stat_smooth() + 
+  scale_colour_manual("Model", values=mod_col) +
+  scale_fill_manual("Model", values=mod_col) + 
+  labs(x="Elevation (m)", y=expression(italic(D[i]^2))) + 
+  ms_fonts + theme(legend.text=element_text(face="italic"))
+ggsave(paste0(ms_dir, "figs/D2_I.png"), 
+       ll_i.p, width=6.5, height=5, units="in")
+
+
+
+
+
+
+
+
+
+
+
 ########------------------------------------------------------------------------
 ## Subtaxon richness maps
 ########------------------------------------------------------------------------

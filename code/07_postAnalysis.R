@@ -34,8 +34,7 @@ for(i in names(agg_null)) {
     do.call('rbind', .) %>%
     mutate(dataset=if_else(grepl("WY", model), "Joint", "Structured"),
            LV=if_else(grepl("cov", model), "[No LV]", ""),
-           model=paste0(dataset, LV)) %>%
-    filter(LV=="")
+           model=paste0(dataset, LV)) 
 }
 rm(agg_null.ls)
 
@@ -132,47 +131,29 @@ loo.df %>% arrange(desc(mod), desc(LV), nCov) %>%
   select(mod, LV, D)
 
 agg_opt$LL %>% 
-  mutate(R2_mn=1-median/filter(agg_null$LL, model=="Structured")$median,
-         R2_025=1-L025/filter(agg_null$LL, model=="Structured")$L025,
-         R2_975=1-L975/filter(agg_null$LL, model=="Structured")$L975) %>%
-  select(model, contains("R2")) %>%
-  ggplot(aes(model, R2_mn, ymin=R2_025, ymax=R2_975)) + 
-  geom_pointrange() + ylim(0, 0.25)
+  mutate(R2_mn=1-median/filter(agg_null$LL, model=="Structured[No LV]")$median) %>%
+  select(model, contains("R2"))
 
 agg_opt$LL_S %>% group_by(sppName, model) %>%
-  left_join(., agg_null$LL_S %>% select(L025, median, L975, sppName, model), 
-            by=c("sppName", "model"), suffix=c("", "_null")) %>%
-  mutate(R2_mn=1-median/median_null,
-         R2_025=1-L025/L025_null,
-         R2_975=1-L975/L975_null) %>%
+  left_join(., agg_null$LL_S %>% filter(model=="Structured[No LV]") %>%
+              select(L025, median, mean, L975, sppName, model), 
+            by="sppName", suffix=c("", "_null")) %>%
+  mutate(R2_mn=1-median/median_null) %>%
   select(model, sppName, contains("R2")) %>%
   mutate(Improve=R2_mn > 0) %>%
   group_by(model) %>%
-  summarise(mnR2=mean(R2_mn), pImprove=mean(Improve))
-  # group_by(model) %>% summarise(mn=mean(R2_mn))
-  ggplot(aes(Improve, fill=model)) + geom_bar(position="dodge")
-# ggplot(aes(R2_mn, fill=model)) + geom_density(alpha=0.5)
-# ggplot(aes(sppName, colour=model, R2_mn, ymin=R2_025, ymax=R2_975)) + 
-# geom_pointrange() + ylim(-1, 1) 
+  summarise(across(contains("R2"), median), pImprove=mean(Improve))
 
 agg_opt$LL_I %>% group_by(el, id, model) %>%
-  left_join(., agg_null$LL_I %>% select(L025, median, L975, el, id, model), 
-            by=c("el", "id", "model"), suffix=c("", "_null")) %>%
-  mutate(R2_mn=1-median/median_null,
-         R2_025=1-L025/L025_null,
-         R2_975=1-L975/L975_null) %>%
+  left_join(., agg_null$LL_I %>% filter(model=="Structured[No LV]") %>%
+              select(L025, median, mean, L975, el, id, model), 
+            by=c("el", "id"), suffix=c("", "_null")) %>%
+  mutate(R2_mn=1-median/median_null) %>%
   select(model, el, id, contains("R2")) %>%
   mutate(Improve=R2_mn > 0) %>%
   group_by(model) %>%
-  summarise(mnR2=mean(R2_mn), pImprove=mean(Improve))
-  # ggplot(aes(Improve, fill=model)) + geom_bar(position="dodge")
-  # ggplot(aes(R2_mn, fill=model)) + geom_density(alpha=0.5)
-  # ggplot(aes(el, as.numeric(Improve), colour=model)) + stat_smooth(se=T)
-  ggplot(aes(el, colour=model, fill=model, R2_mn, ymin=R2_025, ymax=R2_975)) +
-  scale_colour_manual(values=mod_col) +
-  scale_fill_manual(values=mod_col) + 
-  stat_smooth()
-
+  summarise(mnR2=median(R2_mn), pImprove=mean(Improve))
+  
 
 
 # 
