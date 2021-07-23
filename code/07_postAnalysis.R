@@ -18,8 +18,9 @@ for(i in names(agg_opt)) {
   agg_opt[[i]] <- map(agg_opt.ls, ~.[[i]]) %>% 
     do.call('rbind', .) %>%
     mutate(dataset=if_else(grepl("WY", model), "Joint", "Structured"),
-           LV=if_else(grepl("cov", model), "", "[LV]"),
-           model=paste0(dataset, LV))
+           LV=if_else(grepl("cov", model), "[No LV]", ""),
+           model=paste0(dataset, LV)) %>%
+    filter(LV=="")
 }
 rm(agg_opt.ls)
 
@@ -32,8 +33,9 @@ for(i in names(agg_null)) {
   agg_null[[i]] <- map(agg_null.ls, ~.[[i]]) %>% 
     do.call('rbind', .) %>%
     mutate(dataset=if_else(grepl("WY", model), "Joint", "Structured"),
-           LV=if_else(grepl("cov", model), "", "[LV]"),
-           model=paste0(dataset, LV))
+           LV=if_else(grepl("cov", model), "[No LV]", ""),
+           model=paste0(dataset, LV)) %>%
+    filter(LV=="")
 }
 rm(agg_null.ls)
 
@@ -423,9 +425,7 @@ lam.site.ls <- agg_opt$lam %>%
   select(model, sppName, site, BDM, id, median) %>%
   pivot_wider(names_from="sppName", values_from="median")
 beta.lam.df <- bind_rows(site.mns %>% mutate(model="Joint"),
-                         site.mns %>% mutate(model="Structured"),
-                         site.mns %>% mutate(model="Joint[LV]"),
-                         site.mns %>% mutate(model="Structured[LV]")) %>% 
+                         site.mns %>% mutate(model="Structured")) %>% 
   filter(BDM %in% lam.site.ls$BDM) %>%
   mutate(beta.BRAY.BAL=NA, 
          beta.BRAY.GRA=NA,
@@ -445,32 +445,16 @@ AICcmodavg::aictab(list(lm(beta.BRAY ~ el,
                         lm(beta.BRAY ~ el + I(el^2), 
                            data=filter(beta.lam.df, model=="Joint"))),
                    paste0("jN.tot.", c("linear", "quadr")), sort=T)
-summary(lm(beta.BRAY ~ el + I(el^2), 
+summary(lm(beta.BRAY ~ el, 
            data=filter(beta.lam.df, model=="Joint")))
-
-AICcmodavg::aictab(list(lm(beta.BRAY ~ el, 
-                           data=filter(beta.lam.df, model=="Joint[LV]")),
-                        lm(beta.BRAY ~ el + I(el^2), 
-                           data=filter(beta.lam.df, model=="Joint[LV]"))),
-                   paste0("jL.tot.", c("linear", "quadr")), sort=T)
-summary(lm(beta.BRAY ~ el + I(el^2), 
-           data=filter(beta.lam.df, model=="Joint[LV]")))
 
 AICcmodavg::aictab(list(lm(beta.BRAY ~ el, 
                            data=filter(beta.lam.df, model=="Structured")),
                         lm(beta.BRAY ~ el + I(el^2), 
                            data=filter(beta.lam.df, model=="Structured"))),
                    paste0("sN.tot.", c("linear", "quadr")), sort=T)
-summary(lm(beta.BRAY ~ el + I(el^2), 
+summary(lm(beta.BRAY ~ el, 
            data=filter(beta.lam.df, model=="Structured")))
-
-AICcmodavg::aictab(list(lm(beta.BRAY ~ el, 
-                           data=filter(beta.lam.df, model=="Structured[LV]")),
-                        lm(beta.BRAY ~ el + I(el^2), 
-                           data=filter(beta.lam.df, model=="Structured[LV]"))),
-                   paste0("sL.tot.", c("linear", "quadr")), sort=T)
-summary(lm(beta.BRAY ~ el + I(el^2), 
-           data=filter(beta.lam.df, model=="Structured[LV]")))
 
 
 # balanced variation
@@ -483,28 +467,12 @@ summary(lm(beta.BRAY.BAL ~ el + I(el^2),
            data=filter(beta.lam.df, model=="Joint")))
 
 AICcmodavg::aictab(list(lm(beta.BRAY.BAL ~ el, 
-                           data=filter(beta.lam.df, model=="Joint[LV]")),
-                        lm(beta.BRAY.BAL ~ el + I(el^2), 
-                           data=filter(beta.lam.df, model=="Joint[LV]"))),
-                   paste0("jL.bal.", c("linear", "quadr")), sort=T)
-summary(lm(beta.BRAY.BAL ~ el + I(el^2), 
-           data=filter(beta.lam.df, model=="Joint[LV]")))
-
-AICcmodavg::aictab(list(lm(beta.BRAY.BAL ~ el, 
                            data=filter(beta.lam.df, model=="Structured")),
                         lm(beta.BRAY.BAL ~ el + I(el^2), 
                            data=filter(beta.lam.df, model=="Structured"))),
                    paste0("sN.bal.", c("linear", "quadr")), sort=T)
 summary(lm(beta.BRAY.BAL ~ el, 
            data=filter(beta.lam.df, model=="Structured")))
-
-AICcmodavg::aictab(list(lm(beta.BRAY.BAL ~ el, 
-                           data=filter(beta.lam.df, model=="Structured[LV]")),
-                        lm(beta.BRAY.BAL ~ el + I(el^2), 
-                           data=filter(beta.lam.df, model=="Structured[LV]"))),
-                   paste0("sL.bal.", c("linear", "quadr")), sort=T)
-summary(lm(beta.BRAY.BAL ~ el,
-           data=filter(beta.lam.df, model=="Structured[LV]")))
 
 
 # abundance gradient
@@ -517,28 +485,12 @@ summary(lm(beta.BRAY.GRA ~ el + I(el^2),
            data=filter(beta.lam.df, model=="Joint")))
 
 AICcmodavg::aictab(list(lm(beta.BRAY.GRA ~ el, 
-                           data=filter(beta.lam.df, model=="Joint[LV]")),
-                        lm(beta.BRAY.GRA ~ el + I(el^2), 
-                           data=filter(beta.lam.df, model=="Joint[LV]"))),
-                   paste0("jL.gra.", c("linear", "quadr")), sort=T)
-summary(lm(beta.BRAY.GRA ~ el + I(el^2),
-           data=filter(beta.lam.df, model=="Joint[LV]")))
-
-AICcmodavg::aictab(list(lm(beta.BRAY.GRA ~ el, 
                            data=filter(beta.lam.df, model=="Structured")),
                         lm(beta.BRAY.GRA ~ el + I(el^2), 
                            data=filter(beta.lam.df, model=="Structured"))),
                    paste0("sN.gra.", c("linear", "quadr")), sort=T)
 summary(lm(beta.BRAY.GRA ~ el, 
            data=filter(beta.lam.df, model=="Structured")))
-
-AICcmodavg::aictab(list(lm(beta.BRAY.GRA ~ el, 
-                           data=filter(beta.lam.df, model=="Structured[LV]")),
-                        lm(beta.BRAY.GRA ~ el + I(el^2), 
-                           data=filter(beta.lam.df, model=="Structured[LV]"))),
-                   paste0("sL.gra.", c("linear", "quadr")), sort=T)
-summary(lm(beta.BRAY.GRA ~ el, 
-           data=filter(beta.lam.df, model=="Structured[LV]")))
 
 
 

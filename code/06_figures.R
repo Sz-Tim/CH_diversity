@@ -455,10 +455,10 @@ p <- ggplot(beta.df,
             aes(el, Beta, colour=model, fill=model,
                 linetype=BetaPart, shape=BetaPart)) + 
   geom_point(size=0.9) +
-  # Joint + LV total: quadratic
+  # Joint + LV total: linear
   stat_smooth(data=filter(beta.df, BetaPart=="Overall" &
                             grepl("Joint", model)), 
-              alpha=0.25, size=0.5, se=F, method="lm", formula=y~x+I(x^2)) + 
+              alpha=0.25, size=0.5, se=F, method="lm", formula=y~x) + 
   # Joint + LV BalVar: quadratic
   stat_smooth(data=filter(beta.df, BetaPart == "Balanced\nvariation" &
                             grepl("Joint", model)), 
@@ -467,10 +467,10 @@ p <- ggplot(beta.df,
   stat_smooth(data=filter(beta.df, BetaPart == "Abundance\ngradient" &
                             grepl("Joint", model)), 
               alpha=0.25, size=0.5, se=F, method="lm", formula=y~x+I(x^2)) + 
-  # Structured + LV total: quadratic
+  # Structured + LV total: linear
   stat_smooth(data=filter(beta.df, BetaPart=="Overall" &
                             grepl("Structured", model)), 
-              alpha=0.25, size=0.5, se=F, method="lm", formula=y~x+I(x^2)) + 
+              alpha=0.25, size=0.5, se=F, method="lm", formula=y~x) + 
   # Structured + LV BalVar: linear
   stat_smooth(data=filter(beta.df, BetaPart == "Balanced\nvariation" &
                             grepl("Structured", model)), 
