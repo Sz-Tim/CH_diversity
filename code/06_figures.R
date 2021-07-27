@@ -17,6 +17,7 @@ source("code/00_fn.R"); source("../1_opfo/code/00_fn.R")
 ms_dir <- "ms/1_Ecography/1/"
 mod_col <- c("Joint"="#762a83", "Structured"="#1b7837",
              "Joint[No LV]"="#9970ab", "Structured[No LV]"="#5aae61")
+col_region <- c(Alps="#56B4E9", Jura="#E69F00", Plateau="#666666")
 
 
 # auxilliary datasets
@@ -507,7 +508,6 @@ adegpar(psub.cex=1.5,
         plines=list(lwd=0.25),
         pellipse=list(alpha=0.4, axes=list(draw=FALSE)))
 
-col_region <- c(Alps="#56B4E9", Jura="#E69F00", Plateau="#666666")
 
 tax_dist <- tax_i %>% select(contains("Full")) %>% as.data.frame
 rownames(tax_dist) <- paste(tax_dist$FullGen, tax_dist$FullSpp, sep="_")
