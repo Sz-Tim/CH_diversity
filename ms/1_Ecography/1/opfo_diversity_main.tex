@@ -283,19 +283,44 @@ Thanks to everyone: main people with Opération Fourmis, expert taxonomists, cit
 
 
 \newpage
-\section{Appendixes}
-\textbf{Appendix 1. Supplementary methods.}
-\begin{enumerate}
-    \item Further description of the sampling?
-    \item Figure of grid with number of samples?
-    \item Table of covariate information
-    \item Table of land cover types and canopy classification
-    \item Table of parameters?
-    \item Further description of the model?
-    \item Prior distributions
-    \item Model code
-\end{enumerate}
+\section{Appendix Descriptions}
 
+\subsection{Appendix 1. Supplementary methods.}
+
+\textbf{Table S1.} Covariate information
+
+\textbf{Table S2.} Land cover types and canopy classification
+
+\textbf{Table S3.} Prior distributions
+
+\textbf{Code S1.} Stan code for full model
+
+
+
+\subsection{Appendix 2. Supplementary results.}
+
+\textbf{Table S4.} Species list with observed elevational range and counts
+
+\textbf{Table S5.} Variable selection results
+
+\textbf{Figure S1.} Species-level responses (points + HPDIs)
+
+\textbf{Figure S2.} Species-level directional response summaries (bar proportions)
+
+\textbf{Figure S3.} Taxonomic bias
+
+\textbf{Figure S4.} Plateau vs montane species' intensities
+
+\textbf{Figure S5.} Covariance or sd for slopes?
+
+\textbf{Figure S6.} Maps of richness (total, by SF, by genus)
+
+
+
+
+\newpage
+
+\section{Appendix 1}
 \begin{table}[ht]
 	\centering
 	\begin{tabular}{ l l c }
@@ -334,21 +359,23 @@ Thanks to everyone: main people with Opération Fourmis, expert taxonomists, cit
 	\caption{\label{table:params} Parameters in the model. Could be moved to an appendix, or shortened since many of these don't need to be highlighted. }
 \end{table}
 
-\textbf{Appendix 2. Supplementary results.}
-\begin{enumerate}
-    \item Table of species, with taxonomic info and total counts (or elevational bins?) for each dataset
-    \item Table of variable selection loo
-    \item Figure of species-level responses (points + HPDIs)
-    \item Figure of species-level responses (bar proportions)
-    \item Figure of taxonomic bias
-    \item Figure of plateau vs montane species' intensities
-    \item Covariance or sd for slopes?
-    \item Maps of richness (total, by SF, by genus)
-\end{enumerate}
+
+
+
+
+
+\newpage
+
+\section{Appendix 2}
 
 \begin{figure}
-	\centering\includegraphics[width=6in]{ms/1_Ecography/1/figs/D2_I.png}
-	\caption{\label{fig:D2_I} $D^2_i$ by elevation in each model. For each structured sampling plot $i$, $D^2_i$ was calculated using the intercept-only version of the \emph{Structured} model as a comparison. Loess lines show no clear elevational trend in either the \emph{Joint} (purple) or \emph{Structured} (green) models. }
+	\centering\includegraphics[height=8in]{ms/1_Ecography/1/figs/obs_rng.png}
+	\caption{\label{fig:obs_rng} Observed elevational ranges. Species are colored as those detected only in the plateau ($<$1000m: grey), only detected in mountainous elevations ($\geq$1000m: blue), or detected in both (green). Vertical lines indicate 80\%, 90\%, and 95\% for either zone. }
+\end{figure}
+
+\begin{figure}
+	\centering\includegraphics[height=8in]{ms/1_Ecography/1/figs/lambda_zones.png}
+	\caption{\label{fig:lam_zones} Posterior species intensity across plateau and montane zones in each model. Each species' total intensity (a. Regional; b. Local) was partitioned into the proportion occurring in plateau ($<$1000m: grey) and montane ($\geq$1000m: green) elevations. Vertical lines indicate 80\%, 90\%, and 95\% for either zone. }
 \end{figure}
 
 \begin{figure}
@@ -362,6 +389,11 @@ Thanks to everyone: main people with Opération Fourmis, expert taxonomists, cit
 \end{figure}
 
 \begin{figure}
+	\centering\includegraphics[width=6in]{ms/1_Ecography/1/figs/D2_I.png}
+	\caption{\label{fig:D2_I} $D^2_i$ by elevation in each model. For each structured sampling plot $i$, $D^2_i$ was calculated using the intercept-only version of the \emph{Structured} model as a comparison. Loess lines show no clear elevational trend in either the \emph{Joint} (purple) or \emph{Structured} (green) models. }
+\end{figure}
+
+\begin{figure}
 	\centering\includegraphics[width=5in]{ms/1_Ecography/1/figs/DPCoA_Struc.png}
 	\caption{\label{fig:dpcoa_struc} Double principle coordinate analysis (DPCoA) of local communities predicted by the \emph{Structured} model, with plots colored by (a) elevational bin, and (b) region. The central plateau includes hills from $\sim$300m to $\sim$1000m, with the Jura and the Alps rising steeply in the east and west, respectively. }
 \end{figure}
@@ -369,16 +401,6 @@ Thanks to everyone: main people with Opération Fourmis, expert taxonomists, cit
 \begin{figure}
 	\centering\includegraphics[height=8in]{ms/1_Ecography/1/figs/D.png}
 	\caption{\label{fig:D} Proportional taxonomic bias posterior distributions. Medians and Highest Posterior Density Intervals (HPDIs; 80\%: thick; 95\%: thin) for the representation of each species in the presence-only dataset relative to the structured abundance dataset. Values less than 1 indicate under-representation in the presence-only dataset. Dark red: 95\% HPDIs exclude zero; light red: 80\% HPDIs exclude zero. }
-\end{figure}
-
-\begin{figure}
-	\centering\includegraphics[height=8in]{ms/1_Ecography/1/figs/obs_rng.png}
-	\caption{\label{fig:obs_rng} Observed elevational ranges. Species are colored as those detected only in the plateau ($<$1000m: grey), only detected in mountainous elevations ($\geq$1000m: blue), or detected in both (green). Vertical lines indicate 80\%, 90\%, and 95\% for either zone. }
-\end{figure}
-
-\begin{figure}
-	\centering\includegraphics[height=8in]{ms/1_Ecography/1/figs/lambda_zones.png}
-	\caption{\label{fig:lam_zones} Posterior species intensity across plateau and montane zones in each model. Each species' total intensity (a. Regional; b. Local) was partitioned into the proportion occurring in plateau ($<$1000m: grey) and montane ($\geq$1000m: green) elevations. Vertical lines indicate 80\%, 90\%, and 95\% for either zone. }
 \end{figure}
 
 \begin{figure}
