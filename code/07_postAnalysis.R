@@ -8,7 +8,7 @@ d.ls <- map(paste0("data/opt_noCnpy_rdExc/LV_", c("WY", "Y"),
 d.i <- map(paste0("data/opt_noCnpy_rdExc/LV_", c("WY", "Y"), 
                   "__opt_var_set_i.rds"), readRDS)
 # aggregate summarised output for optimal models (WY/Y, cov/LV)
-agg_opt.ls <- c(dir("out/", "agg_[cov,LV].*_Y", full.names=T),
+agg_opt.ls <- c(dir("out/opt_noCnpy_rdExc", "agg_[cov,LV].*_Y", full.names=T),
                 dir("out/opt_noCnpy_rdExc", 
                     "agg_[cov,LV].*_WY", full.names=T)) %>% 
   map(readRDS) %>% map(., ~discard(.x, is.null))
@@ -73,6 +73,9 @@ det.base <- ants$all %>% sf::st_set_geometry(NULL) %>%
 ## DATA SUMMARIES
 ########------------------------------------------------------------------------
 
+# Number of plots
+dim(plot_i)
+
 # Number of species
 cat("Total species:", n_distinct(ants$all$SPECIESID))
 cat("Public inventory:", n_distinct(ants$pub$SPECIESID))
@@ -98,8 +101,8 @@ site.mns %>% summary()
 ## PERFORMANCE
 ########------------------------------------------------------------------------
 
-mod_col <- c("Joint[LV]"="#762a83", "Structured[LV]"="#1b7837",
-             "Joint"="#9970ab", "Structured"="#5aae61")
+mod_col <- c("Joint"="#762a83", "Structured"="#1b7837",
+             "Joint[No LV]"="#9970ab", "Structured[No LV]"="#5aae61")
 
 # Cross-validation
 fS_out <- "out/fwd_ll/"

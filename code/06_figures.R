@@ -58,7 +58,7 @@ d.ls <- map(paste0("data/opt_noCnpy_rdExc/LV_", c("WY", "Y"),
 d.i <- map(paste0("data/opt_noCnpy_rdExc/LV_", c("WY", "Y"), 
                   "__opt_var_set_i.rds"), readRDS)
 # aggregate summarised output for optimal models (WY/Y, cov/LV)
-agg_opt.ls <- c(dir("out/", "agg_[cov,LV].*_Y", full.names=T),
+agg_opt.ls <- c(dir("out/opt_noCnpy_rdExc", "agg_[cov,LV].*_Y", full.names=T),
                 dir("out/opt_noCnpy_rdExc", 
                     "agg_[cov,LV].*_WY", full.names=T)) %>% 
   map(readRDS) %>% map(., ~discard(.x, is.null))
@@ -525,10 +525,6 @@ env.plot <- tibble(el_cont=lam.site.ls$el,
                    el=as.factor((el_cont %/% 100) * 100),
                    region=site_i$region[match(lam.site.ls$BDM, site_i$BDM)]) %>%
   mutate(region=factor(ifelse(region=="Low", "Plateau", region)))
-# env.plot <- tibble(el=as.factor((d.i[[1]]$V[,2] %/% 100) * 100),
-#                    el_cont=d.i[[1]]$V[,2],
-#                    region=site_i$region[match(lam.site.ls$BDM, site_i$BDM)]) %>%
-#   mutate(region=factor(ifelse(region=="Low", "Plateau", region)))
 
 lam.dpcoa <- dpcoa(as.data.frame(lam.plot.mx), 
                    vegan::taxa2dist(tax_dist, varstep=T), scannf=F, nf=4)
