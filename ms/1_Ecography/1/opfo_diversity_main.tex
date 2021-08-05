@@ -45,7 +45,7 @@
 \usepackage{pdflscape}
 \usepackage{natbib}
 
-\journal{Ecography}
+\journal{Ecological Modelling}
 \setcitestyle{authoryear,round,semicolon,sort}
 \bibliographystyle{apalike}
 \begin{document}
@@ -75,28 +75,24 @@ Keywords
 
 \section{Introduction}
 \label{S:1}
-% Focus on citizen science and modelling? Or ecological questions?
-% Broad introduction: 
-What shapes species richness, diversity, and community structure at different spatial scales? We know that at a coarse scale, climate is generally important, with some support for phylogenetically conserved temperature preferences. At a local scale, richness typically decreases with canopy cover. In general, abundance seems to be more idiosyncratic and variable, both temporally and spatially. This is particularly true for small species. In ants, abundance can be measured as either the number of colonies in a particular area (i.e., colony density) or as the number of workers (i.e., worker density). 
 
 % Growth of citizen science
-The aid of citizen scientists can help to overcome logistical limitations common in ecological research. The large number of volunteer collectors can cover a broad spatial extent \citep{Theobald2015}, and include private land that is otherwise inaccessible to researchers \citep{Pernat2020}. Accordingly, citizen science has become increasingly common, with applications ranging from monitoring the spread of an invasive rabbit in Australia \citep{Roy-Dufresne2019} to identifying the impacts of hunting on game species' life history traits in the Amazon \citep{ElBizri2020}, and the samples collected by citizen scientists represent a large component of many ecological datasets \citep{Poisson2020}. The goals and designs of citizen science projects are of course extremely diverse, but one common focus is collecting unstructured species occurrences which are used in species distribution models \citep{Theobald2015,Steen2019,Duan2020,Henckel2020}. After data quality issues such as spatial bias are appropriately accounted for \citep{Isaac2014,Steen2019,Johnston2020,Robinson2020}, the performance of distribution models fit with citizen science data can be equivalent or superior to those fit with scientifically collected data \citep{Steen2019,Sumner2019,Henckel2020}. 
+Citizen science holds strong potential for overcoming many of the logistical complications that hinder ecological research at broad scales. The many volunteer collectors can sample ecological systems across regional, continental, and even global extents \citep{Theobald2015}, and include private land that is otherwise inaccessible to researchers \citep{Pernat2020}. Accordingly, citizen science initiatives have become increasingly common, with applications ranging from monitoring the spread of an invasive rabbit in Australia \citep{Roy-Dufresne2019} to identifying the impacts of hunting on game species' life history traits in the Amazon \citep{ElBizri2020}, and the samples collected by citizen scientists represent a sizable component of many ecological datasets \citep{Poisson2020}.  While citizen science effort has not been equal across taxonomic groups \citep{Theobald2015,Troudet2017}, such projects could be particularly useful for overcoming the shortfall in knowledge of insect distributions, since specimens can be collected and easily returned for expert identification or genetic analysis \citep{Pernat2020}.
+
+% Value and potential shortcomings
+The effort of citizen scientists represents a valuable resource for understanding and monitoring the distribution of biodiversity on a rapidly changing planet. Unfortunately, despite the explosion in citizen science initiatives, as few as 12\% are associated with peer-reviewed publications \citep{Theobald2015}. Datasets collected by citizen scientists do have limitations, even with relatively straightforward designs such as collecting unstructured species occurrences for use in species distribution models \citep{Theobald2015,Steen2019,Duan2020,Henckel2020}. The typically decentralized nature of the data collection may require additional quality checks and filters, consideration of the potential for errors in species identifications or geo-location, and handling of non-random sampling. However, advances in modelling provide viable solutions to compensate for these pitfalls. For example, after accounting for such issues as spatial bias \citep{Isaac2014,Steen2019,Johnston2020,Robinson2020}, the performance of species distribution models fit with citizen science data can be equivalent or superior to those fit with scientifically collected data \citep{Steen2019,Sumner2019,Henckel2020}. 
 
 % Modelling richness with presence-only data: iSDMs, jSDMs, MRMs, mSDMs
-Survey-type citizen science projects often collect a broad set of species within a taxon, making them appealing to use for estimating community-level metrics like richness. A variety of methods have been developed, broadly categorized into those that model richness directly as a function of environmental variables, and those grew from methods for modelling individual species distributions \citep{Dubuis2011,Guisan2011,Calabrese2014,Biber2019}. For the latter, a simple approach stacks independent species distribution models, while more complex approaches model species' distributions jointly or in a hierarchical framework \citep{Caradima2019}. Alternatively, multi-species occupancy models can be used, which explicitly account for imperfect detection and predict the underlying occupancy state and probability of occurrence of each species in the community \citep{Frishkoff2019,Guillera-Arroita2019,Szewczyk2018,Devarajan2020}. However, occupancy models require presence-absence data collected across multiple sampling bouts to estimate detection probabilities, and consequently their use is largely limited to sampling designs with repeated samples.
+Survey-type citizen science projects often collect a broad set of species within a taxon, making them appealing to use for estimating taxon-level patterns of richness. A variety of methods have been developed, broadly categorized into those that model richness directly as a function of environmental variables, and those grew from methods for modelling individual species distributions \citep{Dubuis2011,Guisan2011,Calabrese2014,Biber2019}. For the latter, a simple approach stacks independent species distribution models, while more complex approaches model species' distributions jointly or in a hierarchical framework \citep{Caradima2019}. Alternatively, multi-species occupancy models explicitly account for imperfect detection and predict the underlying occupancy state and probability of occurrence of each species in the community \citep{Frishkoff2019,Guillera-Arroita2019,Szewczyk2018,Devarajan2020}. However, occupancy models require presence-absence data collected across multiple sampling bouts to estimate detection probabilities, and consequently their use is largely limited to sampling designs with repeated samples.
 
 % Methods for merging datasets
-Recent data integration techniques allow researchers to capitalize on the strengths of unstructured presence-only datasets while overcoming their limitations by combining them with structured samples \citep{Isaac2019,Miller2019}. These data integration methods aim to exploit the respective strengths of unstructured presence-only datasets such as those collected by citizen scientists, and structured samples collected by researchers. Models based on these integrated datasets often outperform those based on the individual structured and unstructured datasets \citep{Dorazio2014b,Fithian2015,Koshkina2017a}. For example, presence-only citizen science data are often better at detecting rare species, while datasets collected in a structured manner better represent community composition and abundance \citep{Steen2019,Henckel2020,Pernat2020}. Bayesian methods naturally and flexibly accommodate the incorporation of multiple datasets \citep{Clark2005,BeckEtAl2012,Szewczyk2018}, either by estimating a joint likelihood for all observations, or by incorporating the unstructured presence-only dataset as a covariate or via prior distribution \citep{Fletcher2019,Isaac2019,Miller2019}. 
+Recent data integration techniques allow researchers to capitalize on the strengths of unstructured presence-only data sets while overcoming their limitations by combining them with structured samples \citep{Isaac2019,Miller2019}. These methods aim to exploit the respective strengths of unstructured presence-only data sets such as those collected by citizen scientists, and structured samples collected by researchers. For example, presence-only citizen science data are often better at detecting rare species, while data sets collected in a structured manner better represent community composition and abundance \citep{Steen2019,Henckel2020,Pernat2020}. Models based on these integrated data sets often outperform those based on the individual data sets \citep{Dorazio2014b,Fithian2015,Koshkina2017a}. Bayesian methods naturally and flexibly accommodate the incorporation of multiple data sets \citep{Clark2005,BeckEtAl2012,Szewczyk2018}, either by estimating a joint likelihood for all observations, or by incorporating the unstructured presence-only data set as a covariate or via prior distributions \citep{Fletcher2019,Isaac2019,Miller2019}. 
 
 % Poisson point process models to unite spatial scales and accommodate density/abundance data
-Inhomogenous Poisson Point Process Models (PPMs) model a continuous intensity that varies across space with Poisson-distributed occurrences dependent on the intensity, making them a natural choice for modelling species distributions or suitability across landscapes \citep{Renner2013a,Renner2015}. PPMs are a particularly appealing option for combining different data sets. Observations collected with different methods can be modelled using appropriate sampling submodels based on the same underlying intensities \citep{Fithian2015,Hefley2016,Koshkina2017a,Fletcher2019,Renner2019}, and the intensities can be integrated to the appropriate resolution, allowing patterns and processes to be linked across spatial scales \citep{Keil2014,Hefley2016}.
-
-% Potential for CS to inform under-represented taxa
-% include short-comings (ID - easy remedy for insects)
-Given the recent advances in modelling and data integration techniques, the effort of citizen scientists represents a valuable resource for understanding and monitoring the distribution of biodiversity on a rapidly changing planet. Despite the explosion in citizen science initiatives, as few as 12\% are associated with peer-reviewed publications \citep{Theobald2015}. Like biodiversity research more broadly, citizen science effort has not been equal across taxonomic groups \citep{Theobald2015,Troudet2017}. Citizen science could be particularly useful for overcoming the general shortfall in knowledge of insect distributions, particularly since specimens can be collected and easily returned for expert identification or genetic analysis \citep{Pernat2020}.
+A natural choice for modelling species distributions or suitability across landscapes are inhomogenous Poisson Point Process Models (PPMs), which model a continuous, spatially variable intensity that produces Poisson-distributed occurrences \citep{Renner2013a,Renner2015}. PPMs are an especially appealing option for combining different data sets. Observations collected with different methods can be modelled using appropriate sampling submodels based on the same underlying intensities \citep{Fithian2015,Hefley2016,Koshkina2017a,Fletcher2019,Renner2019}, and the intensities can be integrated to the appropriate resolution, allowing patterns and processes to be linked across spatial scales \citep{Keil2014,Hefley2016}.
 
 % Mission statement
-Here, we combine species occurrences of ants collected in a citizen science project in the canton of Vaud, Switzerland with species abundance data from a concurrent structured sampling effort. In a hierarchical Bayesian framework, this community-level PPM models local ant colony density, with additional presence-only information integrated at a regional scale, while accounting for taxonomy and correlated residuals resulting from unmeasured variables or biotic interactions. We use this model to predict the patterns of ant colony density, richness, and diversity across the landscape at local and regional scales while incorporating uncertainty in species compositions, and to evaluate the support for hypothesized environmental drivers across spatial scales. We compare inferences from the combined model with those from each dataset independently, and also assess the differences in observed communities from each sampling method. 
+Here, we combine occurrences of ants collected in a citizen science project in the canton of Vaud, Switzerland with species abundance data from a concurrent structured sampling effort. In a hierarchical Bayesian framework, this community-level PPM models local ant colony density, with additional presence-only information integrated at a regional scale, while accounting for taxonomy and correlated residuals among species resulting from unmeasured variables or biotic interactions. We use this model to predict the patterns of ant colony density, richness, and diversity across the landscape at local and regional scales while incorporating uncertainty in species compositions, and to evaluate the support for hypothesized environmental drivers across spatial scales. We compare inferences from the combined model with those from only the structured data set, and also assess the differences in observed communities from each sampling method. 
 
 
 
@@ -108,7 +104,7 @@ Here, we combine species occurrences of ants collected in a citizen science proj
 This study focuses on ant species in the canton of Vaud in western Switzerland (46.2–47.0$^{\circ}$N, 6.1–7.2$^{\circ}$E), a topographically heterogeneous region (372–3201m) that includes the Jura mountains in the west, the Alps in the east, and the Swiss plateau centrally (Fig. \ref{fig:VD_map}). Much of the central plateau is dominated by anthropogenic land use, including cropland, vineyards, pastures, and urban zones, with forested areas that are predominantly deciduous. The mountain ranges rise steeply from the plateau from approximately 1000m and span the forested montane and subalpine zones through the alpine zone, with widespread cattle grazing \citep{Delarze2015,Gago-Silva2017,Beck2017}. 
 
 \begin{figure}
-	\centering\includegraphics[width=3.5in]{ms/1_Ecography/1/figs/map_VD+inset.png}
+	\centering\includegraphics[width=3.5in]{../../../ms/1_Ecography/1/figs/map_VD+inset.png}
 	\caption{\label{fig:VD_map} Map of the canton of Vaud, Switzerland. Samples consisted of presence-only data (blue points) aggregated to a 1 km$^2$ grid (light gray) and structured abundance data collected at 1 km$^2$ long-term biodiversity monitoring sites (red squares). }
 \end{figure}
 
@@ -201,7 +197,7 @@ The \emph{Joint} model, parameterized with both the \textbf{W} and \textbf{Y}, c
 The optimal variables for both models included growing degree days at a regional scale, and local effects of relative soil temperature and vegetation cover (Fig. \ref{fig:slope_means}a). The optimal \emph{Joint} model also included regional effects of forest cover and road length, while the optimal \emph{Structured} model included local effects of canopy type. For many variables, species showed a variety of responses, resulting in no clear aggregate effect as the 95\% Highest Posterior Density Intervals (HPDIs) for $\beta$ included zero (Fig. \ref{fig:slope_means}a, horizontal points and lines; Appendix 2 Fig. \ref{fig:b_byParam}). However, the aggregate effect of growing degree days was positive in the \emph{Joint} model, and the aggregate effect of squared growing degree days was negative in both models. For relative soil temperature, vegetation cover, and mixed canopy, nearly all species with non-zero HPDIs showed positive responses (Appendix 2 Fig. \ref{fig:b_bars}). The \emph{Joint} model reduced uncertainty in species' responses compared to the \emph{Structured} model across regional covariates, as indicated by narrower 95\% HPDIs (Fig. \ref{fig:slope_means}b). This reduction occurred on average across all species, but was greater for species that did not occur in the structured abundance dataset \textbf{Y}. In contrast, uncertainty was somewhat higher for local variables.
 
 \begin{figure}
-\centering\includegraphics[width=6in]{ms/1_Ecography/1/figs/slope_means+HDI.png}
+\centering\includegraphics[width=6in]{../../../ms/1_Ecography/1/figs/slope_means+HDI.png}
 \caption{\label{fig:slope_means} Covariate effects in optimal models. (a) Density curves summarise species-level posterior means for responses to variables in the model using both datasets (\emph{Joint}: purple) and the model using only the abundance data (\emph{Structured}: green). Points and lines show posterior means and Highest Posterior Density Intervals (HPDI; thick: 80\%; thin: 95\%) for the aggregate ($\beta$) responses. (b) Change in 95\% HPDI widths in species responses between models (negative: less uncertainty in \emph{Joint} model) for species observed in the structured abundance dataset \textbf{Y} (dark blue) or only in the presence-only dataset \textbf{W} (light blue). Points and lines show mean $\pm$ standard error across species. }
 \end{figure}
 
@@ -209,28 +205,28 @@ The optimal variables for both models included growing degree days at a regional
 Across the canton of Vaud, predicted ant richness in both models showed a peak just below 1000m at a regional scale, with no clear trend at a local scale for the plots within the 44 structured sites (Fig. \ref{fig:el_patterns}a). In contrast, the \emph{Joint} model predicted higher regional Shannon diversity at lower elevations, while the \emph{Structured} model predicted little elevational trend (Fig. \ref{fig:el_patterns}b). At a local scale, the \emph{Structured} model predicted lower Shannon diversity at low elevations, increasing until 1000m, while the \emph{Joint} model predicted little trend. The \emph{Structured} model predicted higher regional colony intensities at lower elevations, in contrast to the increase in intensity above 1000m predicted by the \emph{Joint} model (Fig. \ref{fig:el_patterns}c). Local predicted intensity was similar across models, with little trend. 
 
 \begin{figure}
-	\centering\includegraphics[width=6in]{ms/1_Ecography/1/figs/el_patterns.png}
+	\centering\includegraphics[width=6in]{../../../ms/1_Ecography/1/figs/el_patterns.png}
 	\caption{\label{fig:el_patterns} Elevational patterns of posterior distributions at regional and local scales for (a) species richness, (b) Shannon H diversity, and (c) total colony intensity. Lines and ribbons are loess lines using the posterior medians and 95\% Highest Posterior Density Interval, respectively, for the model parameterized with both datasets (\emph{Joint}: purple) and the model parameterized with only the structured abundance data (\emph{Structured}: green). }
 \end{figure}
 
 Both the presence-only (\textbf{W}) and structured abundance (\textbf{Y}) datasets showed strong differences in the genus composition between the plateau and montane samples (Fig. \ref{fig:genus_assemblages}). In both datasets, the plateau ($<$1000m) was dominated by \emph{Lasius spp.}, with high representation of \emph{Formica spp.} in the montane zone ($\geq$1000m). The structured abundance dataset also showed high relative abundance of \emph{Myrmica spp.}, particularly in montane environments. Compared to the structured abundance dataset, the presence-only dataset under-represented many species (95\% HPDIs $<$ 0; \emph{Joint}: 23 species = 29\%; Appendix 2 Fig. \ref{fig:D}), including nearly every species in the genus \emph{Myrmica}, a genus particularly prevalent in the montane structured abundance samples. In contrast, only the anthropophilic pavement ant \emph{Tetramorium immigrans} was clearly over-represented (95\% HPDIs $>$ 0; \emph{Joint}: 1 species = 1\%; Appendix 2 Fig. \ref{fig:D}). 
 
 \begin{figure}
-	\centering\includegraphics[width=3in]{ms/1_Ecography/1/figs/genus_assemblages.png}
+	\centering\includegraphics[width=3in]{../../../ms/1_Ecography/1/figs/genus_assemblages.png}
 	\caption{\label{fig:genus_assemblages} Genus composition in the presence-only and structured abundance datasets across plateau and montane environments. Only genera that constitute $\geq 1\%$ of at least one subset are shown, with others indicated as 'Other'.}
 \end{figure}
 
 The local ant communities showed strong separation across elevations. Using the posterior median local communities predicted by the \emph{Joint} model, the DPCoA showed communities in two distinct clusters representing plateau ($<$1000m) and montane ($\geq$1000m) plots (Fig. \ref{fig:dpcoa_joint}). The DPCoA accounts for relatedness among species, with the 100m elevational bins (Fig. \ref{fig:dpcoa_joint}a) or regions (Fig. \ref{fig:dpcoa_joint}b) applied \emph{post-hoc}. No clear pattern was seen at lower elevations, with broad, partially overlapping clusters for communities from 300–700m and 700–1000m (Fig. \ref{fig:dpcoa_joint}a). Above 1000m, communities showed a gradient, with elevation increasing down the y-axis. By regions, plateau communities formed a notably broad cluster (Fig. \ref{fig:dpcoa_joint}b), indicating greater variation among local ant communities. In contrast, montane communities formed a tighter clusters, with the communities found in the western Jura mountains appearing largely as a subset of those in the taller, eastern Alps. Results were qualitatively similar for analyses using the communities predicted by the \emph{Structured} model (Appendix 2 Fig. \ref{fig:dpcoa_struc}). Correspondingly, many species were predicted to occur predominantly in plateau or in montane elevational zones (Appendix 2 Fig. \ref{fig:lam_zones}), though 43 species (54\%) exhibited elevational ranges that extended into both plateau and montane zones (Appendix 2 Table S4).
 
 \begin{figure}
-	\centering\includegraphics[width=5in]{ms/1_Ecography/1/figs/DPCoA_Joint.png}
+	\centering\includegraphics[width=5in]{../../../ms/1_Ecography/1/figs/DPCoA_Joint.png}
 	\caption{\label{fig:dpcoa_joint} Double principle coordinate analysis (DPCoA) of local communities predicted by the \emph{Joint} model, with plots colored by (a) elevational bin, and (b) region. The central plateau includes hills from $\sim$300m to $\sim$1000m, with the Jura and the Alps rising steeply in the east and west, respectively. }
 \end{figure}
 
 Patterns of $\beta$-diversity among plots within each structured site did not strongly differ between models (Fig. \ref{fig:beta_div}). Overall $\beta$-diversity showed weak elevational patterns (\emph{Joint}: p=0.03, R$^2$=0.10, $\Delta$AICc=0.7; \emph{Structured}: p=0.06, R$^2$=0.06, $\Delta$AICc=3.1), representing relatively high variability among local communities on average regardless of elevation. The \emph{balanced variation} component drove variation among local plots at lower elevations, indicating turnover in the relative intensity of species such that species identities were likely to differ among plots (\emph{Joint}: p$<$0.001, R$^2$=0.70, $\Delta$AICc=5.4; \emph{Structured}: p$<$0.001, R$^2$=0.48, $\Delta$AICc=0.31). At higher elevations, the \emph{abundance gradient} component increased, indicating changes in total intensity among plots with less variation in species identities (\emph{Joint}: p$<$0.001, R$^2$=0.72, $\Delta$AICc=10.6; \emph{Structured}: p$<$0.001, R$^2$=0.44, $\Delta$AICc=2.4). 
 
 \begin{figure}
-\centering\includegraphics[width=3in]{ms/1_Ecography/1/figs/beta_diversity.png}
+\centering\includegraphics[width=3in]{../../../ms/1_Ecography/1/figs/beta_diversity.png}
 \caption{\label{fig:beta_div} Multi-site $\beta$-diversity and its components across elevation. Posterior medians were used to calculate multi-site $\beta$-diversity and its components within each 1 km$^2$ site, representing the variation among plots. \emph{Balanced variation} quantifies changes in relative abundance among species, while \emph{abundance gradient} denotes changes in total abundance.}
 \end{figure}
 
@@ -278,7 +274,7 @@ Thanks to everyone: main people with Opération Fourmis, expert taxonomists, cit
 
 \newpage
 \section{Bibliography}
-\bibliography{ms/opfo_diversity}
+\bibliography{../../../ms/opfo_diversity}
 
 
 
@@ -369,48 +365,48 @@ Thanks to everyone: main people with Opération Fourmis, expert taxonomists, cit
 \section{Appendix 2}
 
 \begin{figure}
-	\centering\includegraphics[height=7.5in]{ms/1_Ecography/1/figs/b_opt_byParam.png}
+	\centering\includegraphics[height=7.5in]{../../../ms/1_Ecography/1/figs/b_opt_byParam.png}
 	\caption{\label{fig:b_byParam} Posterior species responses to local and regional covariates. Points show posterior medians, while lines show the Highest Posterior Density Intervals (HPDIs: 80\%: thick; 95\%: thin). Solid points indicate 95\% HPDIs that exclude zero in the \emph{Joint} (purple) and \emph{Structured} (green) models.}
 \end{figure}
 
 \begin{figure}
-	\centering\includegraphics[width=6.5in]{ms/1_Ecography/1/figs/b_opt_bar.png}
+	\centering\includegraphics[width=6.5in]{../../../ms/1_Ecography/1/figs/b_opt_bar.png}
 	\caption{\label{fig:b_bars} Proportion of species' responses to each covariate. Responses are considered positive (red) or negative (blue) if the Highest Posterior Density Interval (HPDI) excludes zero for (a) 95\% HPDIs and (b) 80\% HPDIs. }
 \end{figure}
 
 \begin{figure}
-	\centering\includegraphics[height=8in]{ms/1_Ecography/1/figs/lambda_zones.png}
+	\centering\includegraphics[height=8in]{../../../ms/1_Ecography/1/figs/lambda_zones.png}
 	\caption{\label{fig:lam_zones} Posterior species intensity across plateau and montane zones in each model. Each species' total intensity (a. Regional; b. Local) was partitioned into the proportion occurring in plateau ($<$1000m: grey) and montane ($\geq$1000m: green) elevations. Vertical lines indicate 80\%, 90\%, and 95\% for either zone. }
 \end{figure}
 
 \begin{figure}
-	\centering\includegraphics[width=5in]{ms/1_Ecography/1/figs/DPCoA_Struc.png}
+	\centering\includegraphics[width=5in]{../../../ms/1_Ecography/1/figs/DPCoA_Struc.png}
 	\caption{\label{fig:dpcoa_struc} Double principle coordinate analysis (DPCoA) of local communities predicted by the \emph{Structured} model, with plots colored by (a) elevational bin, and (b) region. The central plateau includes hills from $\sim$300m to $\sim$1000m, with the Jura and the Alps rising steeply in the east and west, respectively. }
 \end{figure}
 
 \begin{figure}
-	\centering\includegraphics[height=8in]{ms/1_Ecography/1/figs/D.png}
+	\centering\includegraphics[height=8in]{../../../ms/1_Ecography/1/figs/D.png}
 	\caption{\label{fig:D} Proportional taxonomic bias posterior distributions. Medians and Highest Posterior Density Intervals (HPDIs; 80\%: thick; 95\%: thin) for the representation of each species in the presence-only dataset relative to the structured abundance dataset. Values less than 1 indicate under-representation in the presence-only dataset. Dark red: 95\% HPDIs exclude zero; light red: 80\% HPDIs exclude zero. }
 \end{figure}
 
 \begin{figure}
-	\centering\includegraphics[width=5in]{ms/1_Ecography/1/figs/maps/sf_S_J.png}
+	\centering\includegraphics[width=5in]{../../../ms/1_Ecography/1/figs/maps/sf_S_J.png}
 	\caption{\label{fig:sf_map_Joint} Maps of predicted richness in the \emph{Joint} model for subfamilies. Predictions are based on 95\% Highest Posterior Density Intervals for each species. }
 \end{figure}
 
 
 \begin{figure}
-	\centering\includegraphics[width=5in]{ms/1_Ecography/1/figs/maps/sf_S_S.png}
+	\centering\includegraphics[width=5in]{../../../ms/1_Ecography/1/figs/maps/sf_S_S.png}
 	\caption{\label{fig:sf_map_Structured+LV} Maps of predicted richness in the \emph{Structured} model for subfamilies. Predictions are based on 95\% Highest Posterior Density Intervals for each species. }
 \end{figure}
 
 \begin{figure}
-	\centering\includegraphics[width=6in]{ms/1_Ecography/1/figs/maps/gen_S_J.png}
+	\centering\includegraphics[width=6in]{../../../ms/1_Ecography/1/figs/maps/gen_S_J.png}
 	\caption{\label{fig:gen_map_Joint} Maps of predicted richness in the \emph{Joint} model for genera with at least two species. Predictions are based on 95\% Highest Posterior Density Intervals for each species. }
 \end{figure}
 
 \begin{figure}
-	\centering\includegraphics[width=6in]{ms/1_Ecography/1/figs/maps/gen_S_S.png}
+	\centering\includegraphics[width=6in]{../../../ms/1_Ecography/1/figs/maps/gen_S_S.png}
 	\caption{\label{fig:gen_map_Structured} Maps of predicted richness in the \emph{Structured} model for genera with at least two species. Predictions are based on 95\% Highest Posterior Density Intervals for each species. }
 \end{figure}
 
