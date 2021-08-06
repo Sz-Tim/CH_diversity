@@ -626,9 +626,9 @@ ggsave(paste0(ms_dir, "figs/D.png"), p, width=4, height=13)
 ## Elevational ranges
 ########------------------------------------------------------------------------
 
-ant.assemblages <- bind_rows(as_tibble(d.ls[[1]]$Y) %>% 
-                               mutate(el=d.i[[1]]$V[,"el"], 
-                                      Dataset="Structured"), 
+ant.assemblages <- bind_rows(as_tibble(d.ls[[1]]$Y) %>%
+                               mutate(el=d.i[[1]]$V[,"el"],
+                                      Dataset="Structured"),
                              as_tibble(d.ls[[1]]$W) %>%
                                mutate(el=d.i[[1]]$X[1:d.ls[[1]]$K, "el"],
                                       Dataset="Cit. Sci.")) %>%
@@ -647,6 +647,23 @@ ant.assemblages <- bind_rows(as_tibble(d.ls[[1]]$Y) %>%
   mutate(assemblage=factor(assemblage, 
                            levels=c("Plateau", "Mixed", "Montane"))) %>%
   arrange(assemblage, medEl, desc(minEl))
+
+ant.assemblages <- ants$all %>%
+  mutate(sppName=str_replace(str_remove(SPECIESID, "-GR"), "_", "."),
+         Genus=tax_i$FullGen[match(SPECIESID, tax_i$species)],
+         Subf=tax_i$FullSF[match(SPECIESID, tax_i$species)]) %>%
+  mutate(el=raster::extract(dem, ., fun=mean)) %>%
+  group_by(sppName, Genus, Subf) %>%
+  summarise(minEl=min(el, na.rm=T), 
+            maxEl=max(el, na.rm=T)) %>%
+  mutate(medEl=minEl + (maxEl-minEl)/2,
+         assemblage=case_when(maxEl <= 1000 ~ 'Plateau',
+                              maxEl > 1000 & minEl > 1000 ~ 'Montane',
+                              maxEl >= 1000 & minEl < 1000 ~ 'Mixed')) %>%
+  mutate(assemblage=factor(assemblage, 
+                           levels=c("Plateau", "Mixed", "Montane"))) %>%
+  arrange(assemblage, medEl, desc(minEl))
+
 ant.assemblages$spOrd <- factor(ant.assemblages$sppName, 
                                 levels=ant.assemblages$sppName)
 p <- ant.assemblages %>%
