@@ -18,7 +18,7 @@
 %% $Id: elsarticle-template-1-num.tex 149 2009-10-08 05:01:15Z rishi $
 %% $URL: http://lenova.river-valley.com/svn/elsbst/trunk/elsarticle-template-1-num.tex $
 %%
-\documentclass[preprint,review,times,12pt,3p]{elsarticle}
+\documentclass[preprint,final,times,12pt,3p]{elsarticle}
 
 %% Use the option review to obtain double line spacing
 %% \documentclass[preprint,review,12pt]{elsarticle}
@@ -46,6 +46,7 @@
 \usepackage{natbib}
 \usepackage{listings}
 \usepackage{lstbayes}
+\usepackage{longtable}
 
 \journal{Ecological Modelling}
 \setcitestyle{authoryear,round,semicolon,sort}
@@ -194,7 +195,12 @@ A double principal coordinates analysis (DPCoA) was also performed using $\lambd
 A total of 79 species were detected across both datasets, with 76 in the presence-only dataset, \textbf{W}, and 51 in the structured abundance dataset, \textbf{Y} (Table \ref{table:species_list}). The presence-only dataset contained 6,632 samples collected by citizen scientists and 363 supplemental transect or tree samples, covering 42\% of the 1 km$^2$ grid (1,309 cells; occurrences per cell: range=1–162, median=3). The structured abundance dataset contained 1,090 colonies detected across the 44 sites (per-site range=6–58, median=22.5). 
 
 % Model performance & covariates
-The \emph{Joint} model consistently outperformed the \emph{Structured} model in predicting novel local communities during cross-validation (optimal models: \emph{Joint} $D^2$=0.079; \emph{Structured} $D^2$=0.050; Table \ref{table:cross-validation}). However, in the full model, the \emph{Structured} model fit the data somewhat more closely (\emph{Joint} $D^2$=0.19; \emph{Structured} $D^2$=0.21). This same pattern occurred on average across species (median: \emph{Joint} $D^2_s$=0.16; \emph{Structured} $D^2_s$=0.21) and across plots (median: \emph{Joint} $D^2_i$=0.27; \emph{Structured} $D^2_i$=0.28). Compared to the \emph{Structured} model, the \emph{Joint} model dramatically improved fit for species that were not detected in \textbf{Y} (median: \emph{Joint} $D^2_{s[Not In Y]}$=0.52; \emph{Structured} $D^2_{s[Not In Y]}$=0.36). There was no elevational pattern in $D^2_i$.
+The \emph{Joint} model consistently outperformed the \emph{Structured} model in predicting novel local communities during cross-validation (optimal models: \emph{Joint} $D^2$=0.079; \emph{Structured} $D^2$=0.050; Fig. \ref{fig:cross-validation}, Table \ref{table:cross-validation}). However, in the full model, the \emph{Structured} model fit the data somewhat more closely (\emph{Joint} $D^2$=0.19; \emph{Structured} $D^2$=0.21). This same pattern occurred on average across species (median: \emph{Joint} $D^2_s$=0.16; \emph{Structured} $D^2_s$=0.21) and across plots (median: \emph{Joint} $D^2_i$=0.27; \emph{Structured} $D^2_i$=0.28). Compared to the \emph{Structured} model, the \emph{Joint} model dramatically improved fit for species that were not detected in \textbf{Y} (median: \emph{Joint} $D^2_{s[Not In Y]}$=0.52; \emph{Structured} $D^2_{s[Not In Y]}$=0.36). There was no elevational pattern in $D^2_i$.
+
+\begin{figure}
+	\centering\includegraphics[width=3in]{../../../ms/1_Ecography/1/figs/crossvalidation.png}
+	\caption{\label{fig:cross-validation} Out-of-sample $D^2$ during cross-validation with model complexity. The \emph{Joint} model (purple) consistently outperformed the \emph{Structured} model (green) in predicting out-of-sample local communities, and showed less susceptibility to over-fitting.  }
+\end{figure}
 
 The optimal variables for both models included growing degree days at a regional scale, and local effects of relative soil temperature and vegetation cover (Fig. \ref{fig:slope_means}a). The optimal \emph{Joint} model also included regional effects of forest cover and road length, while the optimal \emph{Structured} model included local effects of canopy type. For many variables, species showed a variety of responses, resulting in no clear aggregate effect as the 95\% Highest Posterior Density Intervals (HPDIs) for $\beta$ included zero (Fig. \ref{fig:slope_means}a, horizontal points and lines; Fig. \ref{fig:b_byParam}). However, the aggregate effect of growing degree days was positive in the \emph{Joint} model, and the aggregate effect of squared growing degree days was negative in both models. For relative soil temperature, vegetation cover, and mixed canopy, nearly all species with non-zero HPDIs showed positive responses (Fig. \ref{fig:b_bars}). The \emph{Joint} model reduced uncertainty in species' responses compared to the \emph{Structured} model across regional covariates, as indicated by narrower 95\% HPDIs (Fig. \ref{fig:slope_means}b). This reduction occurred on average across all species, but was greater for species not found in \textbf{Y}. In contrast, uncertainty in the \emph{Joint} model was somewhat higher for local variables.
 
@@ -211,19 +217,15 @@ Across the canton of Vaud, predicted ant richness in both models peaked just bel
 	\caption{\label{fig:el_patterns} Elevational patterns of posterior distributions at regional and local scales for (a) species richness, (b) Shannon H diversity, and (c) total colony intensity. Lines and ribbons are loess lines using the posterior medians and 95\% Highest Posterior Density Interval, respectively, for the model parameterized with both datasets (\emph{Joint}: purple) and the model parameterized with only the structured abundance data (\emph{Structured}: green). }
 \end{figure}
 
-Both datasets showed strong differences in the genus composition between the plateau and montane samples (Fig. \ref{fig:genus_assemblages}). The plateau ($<$1000m) was dominated by \emph{Lasius spp.}, with high representation of \emph{Formica spp.} in the montane zone ($\geq$1000m). The structured abundance dataset \textbf{Y} also showed high relative abundance of \emph{Myrmica spp.}, particularly in montane environments. Compared to \textbf{Y}, the presence-only dataset \textbf{W} under-represented many species (95\% HPDIs $<$ 0; \emph{Joint}: 23 species = 29\%; Fig. \ref{fig:D}), including nearly every species in the genus \emph{Myrmica}. In contrast, only the anthropophilic pavement ant \emph{Tetramorium immigrans} was clearly over-represented (95\% HPDIs $>$ 0; \emph{Joint}: 1 species = 1\%; Fig. \ref{fig:D}). 
+
+Local ant communities showed strong separation across elevations. Using the posterior median local communities predicted by the \emph{Joint} model, the DPCoA showed two distinct clusters representing plateau ($<$1000m) and montane ($\geq$1000m) plots (Fig. \ref{fig:DPCoA_assemblages}). The DPCoA accounts for relatedness among species, with the 100m elevational bins (Fig. \ref{fig:DPCoA_assemblages}a) or regions (Fig. \ref{fig:DPCoA_assemblages}b) applied \emph{post-hoc}. No clear pattern was seen at lower elevations, with broad, partially overlapping clusters from 300–700m and 700–1000m (Fig. \ref{fig:DPCoA_assemblages}a). Above 1000m, communities showed a gradient, with elevation increasing down the y-axis. By regions, plateau communities formed a notably broad cluster (Fig. \ref{fig:DPCoA_assemblages}b), indicating greater variation among local ant communities. In contrast, montane communities clustered more tightly, with the western Jura mountain plots appearing largely as a subset of those in the taller, eastern Alps. Correspondingly, many species were predicted to occur predominantly in plateau or in montane elevational zones (Fig. \ref{fig:lam_zones}), though 41 species (52\%) exhibited elevational ranges that spanned both (Table \ref{table:species_list}). Results were qualitatively similar for analyses using \emph{Structured} model predictions (Fig. \ref{fig:dpcoa_struc}).
 
 \begin{figure}
-	\centering\includegraphics[width=3in]{../../../ms/1_Ecography/1/figs/genus_assemblages.png}
-	\caption{\label{fig:genus_assemblages} Genus composition in the presence-only and structured abundance datasets across plateau and montane environments. Only genera that constitute $\geq 1\%$ of at least one subset are shown, with others indicated as 'Other'.}
+	\centering\includegraphics[width=\textwidth]{../../../ms/1_Ecography/1/figs/DPCoA_assemblage.png}
+	\caption{\label{fig:DPCoA_assemblages} Elevational assemblages in the ant communities. Double principle coordinate analysis (DPCoA) of local communities predicted by the \emph{Joint} model showed clustering by (a) elevational bin and (b) region. The central plateau includes hills from $\sim$300m to $\sim$1000m, with the Jura and the Alps rising steeply in the east and west, respectively. (c) Genus composition in the presence-only and structured abundance datasets each showed differentiation across plateau and montane environments. Only genera that constitute $\geq 1\%$ of at least one subset are shown, with others indicated as 'Other'.}
 \end{figure}
 
-Local ant communities showed strong separation across elevations. Using the posterior median local communities predicted by the \emph{Joint} model, the DPCoA showed two distinct clusters representing plateau ($<$1000m) and montane ($\geq$1000m) plots (Fig. \ref{fig:dpcoa_joint}). The DPCoA accounts for relatedness among species, with the 100m elevational bins (Fig. \ref{fig:dpcoa_joint}a) or regions (Fig. \ref{fig:dpcoa_joint}b) applied \emph{post-hoc}. No clear pattern was seen at lower elevations, with broad, partially overlapping clusters from 300–700m and 700–1000m (Fig. \ref{fig:dpcoa_joint}a). Above 1000m, communities showed a gradient, with elevation increasing down the y-axis. By regions, plateau communities formed a notably broad cluster (Fig. \ref{fig:dpcoa_joint}b), indicating greater variation among local ant communities. In contrast, montane communities clustered more tightly, with the western Jura mountain plots appearing largely as a subset of those in the taller, eastern Alps. Correspondingly, many species were predicted to occur predominantly in plateau or in montane elevational zones (Fig. \ref{fig:lam_zones}), though 41 species (52\%) exhibited elevational ranges that spanned both (Table \ref{table:species_list}). Results were qualitatively similar for analyses using \emph{Structured} model predictions (Fig. \ref{fig:dpcoa_struc}).
-
-\begin{figure}
-	\centering\includegraphics[width=5in]{../../../ms/1_Ecography/1/figs/DPCoA_Joint.png}
-	\caption{\label{fig:dpcoa_joint} Double principle coordinate analysis (DPCoA) of local communities predicted by the \emph{Joint} model, with plots colored by (a) elevational bin, and (b) region. The central plateau includes hills from $\sim$300m to $\sim$1000m, with the Jura and the Alps rising steeply in the east and west, respectively. }
-\end{figure}
+Both datasets showed strong differences in the genus composition between the plateau and montane samples (Fig. \ref{fig:DPCoA_assemblages}c). The plateau ($<$1000m) was dominated by \emph{Lasius spp.}, with high representation of \emph{Formica spp.} in the montane zone ($\geq$1000m). The structured abundance dataset \textbf{Y} also showed high relative abundance of \emph{Myrmica spp.}, particularly in montane environments. Compared to \textbf{Y}, the presence-only dataset \textbf{W} under-represented many species (95\% HPDIs $<$ 0; \emph{Joint}: 23 species = 29\%; Fig. \ref{fig:D}), including nearly every species in the genus \emph{Myrmica}. In contrast, only the anthropophilic pavement ant \emph{Tetramorium immigrans} was clearly over-represented (95\% HPDIs $>$ 0; \emph{Joint}: 1 species = 1\%; Fig. \ref{fig:D}). 
 
 Patterns of $\beta$-diversity among plots within each structured site did not strongly differ between models (Fig. \ref{fig:beta_div}). Overall $\beta$-diversity showed weak elevational patterns (\emph{Joint}: p=0.03, R$^2$=0.10, $\Delta$AICc=0.7; \emph{Structured}: p=0.06, R$^2$=0.06, $\Delta$AICc=3.1), representing relatively high variability among local communities on average regardless of elevation. The \emph{balanced variation} component drove differences among local plots at low elevations, indicating turnover in the relative intensity of species such that species identities were likely to differ among plots (\emph{Joint}: p$<$0.001, R$^2$=0.70, $\Delta$AICc=5.4; \emph{Structured}: p$<$0.001, R$^2$=0.48, $\Delta$AICc=0.31). At higher elevations, the \emph{abundance gradient} component increased, indicating changes in total intensity among plots with less variation in species identities (\emph{Joint}: p$<$0.001, R$^2$=0.72, $\Delta$AICc=10.6; \emph{Structured}: p$<$0.001, R$^2$=0.44, $\Delta$AICc=2.4). 
 
@@ -287,7 +289,7 @@ Thanks to everyone: main people with Opération Fourmis, expert taxonomists, cit
 
 \textbf{Table \ref{table:priors}.} Prior distributions
 
-\textbf{Code \ref{code:full_model}.} Stan code for full model
+\textbf{Code A.1.} Stan code for full model
 
 
 
@@ -301,11 +303,11 @@ Thanks to everyone: main people with Opération Fourmis, expert taxonomists, cit
 
 \textbf{Figure \ref{fig:b_bars}.} Species-level directional response summaries (bar proportions)
 
-\textbf{Figure \ref{fig:D}.} Taxonomic bias
-
 \textbf{Figure \ref{fig:lam_zones}.} Plateau vs montane species' intensities
 
 \textbf{Figure \ref{fig:dpcoa_struc}.} DPCoA based on \emph{Structured} model predictions
+
+\textbf{Figure \ref{fig:D}.} Taxonomic bias
 
 \textbf{Figure \ref{fig:sf_map_Joint}.} Maps of predicted richness by subfamily (\emph{Joint})
 
@@ -328,23 +330,23 @@ Thanks to everyone: main people with Opération Fourmis, expert taxonomists, cit
 		\hline
 		\textbf{Land cover type} & \textbf{Canopy} & \textbf{Plots} & \textbf{Colonies} & \textbf{Species} \\
 		\hline
-		Conifer forest & Closed & 99 (9.3\%) & 55 (5.0\%) & 13 (25.5\%) \\
+		Mixed forest & Closed & 82 (7.7\%) & 68 (6.2\%) & 14 (27.5\%) \\
 		Deciduous forest & Closed & 97 (9.2\%) & 68 (6.2\%) & 15 (29.4\%) \\
-		Mixed forest & Closed & 82 (7.7\%) & 68 (6.2\%) & 14 (27.4\%) \\
+		Conifer forest & Closed & 99 (9.3\%) & 55 (5.0\%) & 13 (25.5\%) \\
+		Alluvial zone & Mixed & 3 (0.3\%) & 4 (0.4\%) & 2 (3.9\%) \\
 		Orchards \& vineyards & Mixed & 16 (1.5\%) & 29 (2.7\%) & 6 (11.8\%) \\
+		Roadside & Mixed & 46 (4.3\%) & 67 (6.1\%) & 16 (31.4\%) \\
 		Transition & Mixed & 71 (6.7\%) & 70 (6.4\%) & 23 (45.1\%) \\
-		Roadsides & Mixed & 46 (4.3\%) & 67 (6.1\%) & 16 (31.4\%) \\
-		Alluvial zones & Mixed & 3 (0.3\%) & 4 (0.4\%) & 2 (3.9\%) \\
-		Built zones & Open & 52 (4.9\%) & 57 (5.2\%) & 13 (25.5\%) \\
-		Dry meadow & Open & 38 (3.6\%) & 63 (5.8\%) & 19 (37.2\%) \\
-		Gravel & Open & 4 (0.4\%) & 4 (0.4\%) & 2 (3.9\%) \\
 		Quarry & Open & 2 (0.2\%) & 1 (0.1\%) & 1 (2.0\%) \\
-		Scree & Open & 23 (2.2\%) & 8 (0.7\%) & 6 (11.8\%) \\
+		Gravel & Open & 4 (0.4\%) & 4 (0.4\%) & 2 (3.9\%) \\
 		Marsh & Open & 6 (0.6\%) & 11 (1.0\%) & 5 (9.8\%) \\
 		Wetland & Open & 7 (0.7\%) & 3 (0.3\%) & 3 (5.9\%) \\
+		Scree & Open & 23 (2.2\%) & 8 (0.7\%) & 6 (11.8\%) \\
+		Dry meadow & Open & 38 (3.6\%) & 63 (5.8\%) & 19 (37.3\%) \\
+		Built zone & Open & 52 (4.9\%) & 57 (5.2\%) & 13 (25.5\%) \\
 		Other open & Open & 513 (48.4\%) & 582 (53.4\%) & 35 (68.6\%) \\
 	\end{tabular}
-	\caption{\label{table:landcover} Land cover types and canopy classifications. }
+	\caption{\label{table:landcover} Land cover types and canopy classifications with the number of plots, colonies, and species detected in the structured abundance dataset. The percent of the column total is shown in parentheses. }
 \end{table}
 
 
@@ -385,28 +387,331 @@ Thanks to everyone: main people with Opération Fourmis, expert taxonomists, cit
 
 \section{Supplemental Results}
 
-\begin{table}[ht]
-	\centering
-	\begin{tabular}{ l c c}
-		\hline
-		\textbf{Species} & \textbf{Presence-only count (W)} & \textbf{Structured abundance count (Y)}  \\
-		\hline
-		\emph{Species} & 1 & 1  \\
-	\end{tabular}
-	\caption{\label{table:species_list} Species list with observed elevational ranges and counts in each dataset. }
-\end{table}
+\setlength{\LTcapwidth}{\textwidth}
+\begingroup\small
+\begin{longtable}{ l c c c c}
+	\caption{\label{table:species_list} Species list with observed elevational minimum and maximum (m), and counts in the presence-only dataset \textbf{W} and structured abundance dataset \textbf{Y}. } \\
+	\hline
+	\textbf{Species} & \textbf{Minimum} & \textbf{Maximum} & \textbf{W} & \textbf{Y}  \\
+	\hline
+	\endfirsthead
+	\caption[]{(continued)}\\
+	\hline
+	\textbf{Species} & \textbf{Minimum} & \textbf{Maximum} & \textbf{W} & \textbf{Y}  \\
+	\hline
+	\endhead
+	\emph{Aphaenogaster subterranea} & 395 & 710 & 39 (0.6\%) & 2 (0.2\%) \\
+	\emph{Camponotus aethiops} & 430 & 430 & 1 (0.0\%) & 0 (0.0\%) \\
+	\emph{Camponotus fallax} & 369 & 459 & 16 (0.2\%) & 0 (0.0\%) \\
+	\emph{Camponotus herculeanus} & 665 & 1839 & 38 (0.5\%) & 0 (0.0\%) \\
+	\emph{Camponotus ligniperda} & 381 & 1497 & 123 (1.8\%) & 3 (0.3\%) \\
+	\emph{Camponotus piceus} & 430 & 1323 & 13 (0.2\%) & 0 (0.0\%) \\
+	\emph{Colobopsis truncata} & 369 & 803 & 24 (0.3\%) & 1 (0.1\%) \\
+	\emph{Crematogaster scutellaris} & 415 & 415 & 1 (0.0\%) & 0 (0.0\%) \\
+	\emph{Dolichoderus quadripunctatus} & 383 & 746 & 16 (0.2\%) & 0 (0.0\%) \\
+	\emph{Formica cinerea} & 365 & 1085 & 3 (0.0\%) & 1 (0.1\%) \\
+	\emph{Formica cunicularia} & 369 & 1874 & 419 (6.0\%) & 10 (0.9\%) \\
+	\emph{Formica exsecta} & 918 & 1738 & 13 (0.2\%) & 0 (0.0\%) \\
+	\emph{Formica fusca} & 414 & 1984 & 132 (1.9\%) & 32 (2.9\%) \\
+	\emph{Formica fuscocinerea} & 950 & 950 & 2 (0.0\%) & 0 (0.0\%) \\
+	\emph{Formica lemani} & 607 & 2332 & 144 (2.1\%) & 111 (10.2\%) \\
+	\emph{Formica lugubris/paralugubris} & 489 & 2151 & 514 (7.3\%) & 26 (2.4\%) \\
+	\emph{Formica picea} & 1876 & 1876 & 1 (0.0\%) & 0 (0.0\%) \\
+	\emph{Formica polyctena} & 396 & 1612 & 179 (2.6\%) & 1 (0.1\%) \\
+	\emph{Formica pratensis} & 376 & 1984 & 91 (1.3\%) & 5 (0.5\%) \\
+	\emph{Formica pressilabris} & 1113 & 2285 & 239 (3.4\%) & 24 (2.2\%) \\
+	\emph{Formica rufa} & 398 & 1985 & 258 (3.7\%) & 4 (0.4\%) \\
+	\emph{Formica rufibarbis} & 369 & 1523 & 185 (2.6\%) & 5 (0.5\%) \\
+	\emph{Formica sanguinea} & 606 & 1695 & 83 (1.2\%) & 2 (0.2\%) \\
+	\emph{Formica selysi} & 934 & 1792 & 2 (0.0\%) & 0 (0.0\%) \\
+	\emph{Formica truncorum} & 1018 & 1407 & 6 (0.1\%) & 0 (0.0\%) \\
+	\emph{Formicoxenus nitidulus} & 1143 & 1826 & 8 (0.1\%) & 1 (0.1\%) \\
+	\emph{Harpagoxenus sublaevis} & 1428 & 1428 & 1 (0.0\%) & 0 (0.0\%) \\
+	\emph{Lasius alienus} & 414 & 769 & 9 (0.1\%) & 1 (0.1\%) \\
+	\emph{Lasius brunneus} & 379 & 1266 & 78 (1.1\%) & 4 (0.4\%) \\
+	\emph{Lasius emarginatus} & 369 & 1695 & 486 (6.9\%) & 2 (0.2\%) \\
+	\emph{Lasius flavus} & 365 & 1783 & 368 (5.3\%) & 134 (12.3\%) \\
+	\emph{Lasius fuliginosus} & 372 & 1479 & 182 (2.6\%) & 6 (0.6\%) \\
+	\emph{Lasius mixtus} & 502 & 1319 & 5 (0.1\%) & 1 (0.1\%) \\
+	\emph{Lasius myops} & 394 & 639 & 4 (0.1\%) & 0 (0.0\%) \\
+	\emph{Lasius niger} & 367 & 1803 & 1381 (19.7\%) & 186 (17.1\%) \\
+	\emph{Lasius paralienus} & 430 & 848 & 33 (0.5\%) & 8 (0.7\%) \\
+	\emph{Lasius platythorax} & 368 & 1440 & 192 (2.7\%) & 11 (1.0\%) \\
+	\emph{Lasius psammophilus} & 432 & 432 & 1 (0.0\%) & 0 (0.0\%) \\
+	\emph{Lasius umbratus} & 428 & 428 & 1 (0.0\%) & 0 (0.0\%) \\
+	\emph{Leptothorax acervorum} & 473 & 2043 & 30 (0.4\%) & 4 (0.4\%) \\
+	\emph{Leptothorax gredleri} & 1319 & 1337 & 3 (0.0\%) & 0 (0.0\%) \\
+	\emph{Leptothorax muscorum} & 1494 & 1494 & 1 (0.0\%) & 0 (0.0\%) \\
+	\emph{Manica rubida} & 726 & 2183 & 54 (0.8\%) & 18 (1.7\%) \\
+	\emph{Myrmecina graminicola} & 373 & 747 & 25 (0.4\%) & 2 (0.2\%) \\
+	\emph{Myrmica curvithorax} & 495 & 694 & 1 (0.0\%) & 2 (0.2\%) \\
+	\emph{Myrmica gallienii} & 429 & 429 & 1 (0.0\%) & 0 (0.0\%) \\
+	\emph{Myrmica lobicornis} & 1227 & 1759 & 1 (0.0\%) & 6 (0.6\%) \\
+	\emph{Myrmica lobulicornis} & 1107 & 1929 & 6 (0.1\%) & 15 (1.4\%) \\
+	\emph{Myrmica lonae} & 1210 & 1490 & 1 (0.0\%) & 1 (0.1\%) \\
+	\emph{Myrmica rubra} & 365 & 1552 & 92 (1.3\%) & 23 (2.1\%) \\
+	\emph{Myrmica ruginodis} & 371 & 2014 & 276 (3.9\%) & 116 (10.6\%) \\
+	\emph{Myrmica rugulosa} & 502 & 502 & 0 (0.0\%) & 1 (0.1\%) \\
+	\emph{Myrmica sabuleti} & 365 & 1876 & 118 (1.7\%) & 39 (3.6\%) \\
+	\emph{Myrmica scabrinodis} & 399 & 2030 & 34 (0.5\%) & 82 (7.5\%) \\
+	\emph{Myrmica schencki} & 401 & 2103 & 11 (0.2\%) & 5 (0.5\%) \\
+	\emph{Myrmica specioides} & 369 & 1317 & 49 (0.7\%) & 7 (0.6\%) \\
+	\emph{Myrmica sulcinodis} & 1687 & 1821 & 0 (0.0\%) & 2 (0.2\%) \\
+	\emph{Myrmica vandeli} & 1041 & 1442 & 0 (0.0\%) & 3 (0.3\%) \\
+	\emph{Plagiolepis pallidula} & 424 & 591 & 40 (0.6\%) & 0 (0.0\%) \\
+	\emph{Polyergus rufescens} & 384 & 763 & 4 (0.1\%) & 0 (0.0\%) \\
+	\emph{Ponera coarctata} & 400 & 623 & 12 (0.2\%) & 0 (0.0\%) \\
+	\emph{Ponera testacea} & 430 & 430 & 1 (0.0\%) & 0 (0.0\%) \\
+	\emph{Solenopsis fugax} & 366 & 1511 & 106 (1.5\%) & 34 (3.1\%) \\
+	\emph{Stenamma debile} & 384 & 734 & 2 (0.0\%) & 0 (0.0\%) \\
+	\emph{Tapinoma darioi} & 369 & 427 & 4 (0.1\%) & 0 (0.0\%) \\
+	\emph{Tapinoma erraticum} & 369 & 1444 & 195 (2.8\%) & 8 (0.7\%) \\
+	\emph{Tapinoma magnum} & 369 & 1283 & 25 (0.4\%) & 0 (0.0\%) \\
+	\emph{Tapinoma subboreale} & 378 & 1087 & 54 (0.8\%) & 3 (0.3\%) \\
+	\emph{Temnothorax affinis} & 365 & 912 & 28 (0.4\%) & 1 (0.1\%) \\
+	\emph{Temnothorax corticalis} & 434 & 657 & 2 (0.0\%) & 0 (0.0\%) \\
+	\emph{Temnothorax interruptus} & 424 & 1184 & 4 (0.1\%) & 0 (0.0\%) \\
+	\emph{Temnothorax luteus/parvulus} & 613 & 623 & 2 (0.0\%) & 1 (0.1\%) \\
+	\emph{Temnothorax nigriceps} & 723 & 1631 & 17 (0.2\%) & 2 (0.2\%) \\
+	\emph{Temnothorax nylanderi} & 371 & 1341 & 71 (1.0\%) & 68 (6.2\%) \\
+	\emph{Temnothorax tuberum} & 400 & 1524 & 4 (0.1\%) & 2 (0.2\%) \\
+	\emph{Temnothorax unifasciatus} & 369 & 1328 & 49 (0.7\%) & 1 (0.1\%) \\
+	\emph{Tetramorium caespitum} & 365 & 1683 & 305 (4.4\%) & 39 (3.6\%) \\
+	\emph{Tetramorium immigrans} & 366 & 545 & 22 (0.3\%) & 0 (0.0\%) \\
+	\emph{Tetramorium impurum} & 759 & 1838 & 54 (0.8\%) & 24 (2.2\%) \\
+\end{longtable}
+\endgroup
 
 
-\begin{table}[ht]
-	\centering
-	\begin{tabular}{ l c c}
-		\hline
-		\textbf{Species} & \textbf{Presence-only count (W)} & \textbf{Structured abundance count (Y)}  \\
-		\hline
-		\emph{Species} & 1 & 1  \\
-	\end{tabular}
-	\caption{\label{table:cross-validation} Variable selection results. }
-\end{table}
+\newpage
+
+\setlength{\LTcapwidth}{\textwidth}
+\begingroup\small
+\begin{longtable}{ c c c c c c c}
+	\caption{\label{table:cross-validation} Results of the 4-fold cross-validation. During the forward search, covariates were added consecutively, using expected log pointwise density (elpd) to assess performance. Bolded variable names indicate those that were kept for each level of model complexity up to the optimal models. } \\
+	\hline
+	\textbf{Model} & \textbf{Complexity} & \textbf{Variable} & \textbf{Scale} & \textbf{elpd} & \textbf{$\Delta$elpd}& \textbf{$D^2$}  \\
+	\hline
+	\endfirsthead
+	\caption[]{(continued)}\\
+	\hline
+	\textbf{Model} & \textbf{Complexity} & \textbf{Variable} & \textbf{Scale} & \textbf{elpd} & \textbf{$\Delta$elpd}& \textbf{$D^2$}  \\
+	\hline
+	\endhead
+	\textbf{\emph{Structured}} & \textbf{0} & \textbf{(intercept)} & \textbf{Regional} & \textbf{-3994.5} & \textbf{-199.1} & \textbf{0} \\
+	\textbf{\emph{Structured}} & \textbf{1} & \textbf{Growing deg. days} & \textbf{Regional} & \textbf{-3862.3} & \textbf{-66.9} & \textbf{0.033} \\
+	\emph{Structured} & 1 & Canopy Type & Local & -3934.4 & -139.0 & 0.015 \\
+	\emph{Structured} & 1 & Edge proportion & Regional & -3938.6 & -143.2 & 0.014 \\
+	\emph{Structured} & 1 & Soil temperature & Local & -3942.4 & -147.0 & 0.013 \\
+	\emph{Structured} & 1 & Pasture/Crop & Local & -3954.5 & -159.1 & 0.01 \\
+	\emph{Structured} & 1 & Agriculture proportion & Regional & -3970.0 & -174.6 & 0.006 \\
+	\emph{Structured} & 1 & Road length & Regional & -3973.6 & -178.2 & 0.005 \\
+	\emph{Structured} & 1 & Local veg. cover & Local & -3984.9 & -189.4 & 0.002 \\
+	\emph{Structured} & 1 & H'(Land cover) & Regional & -4010.6 & -215.2 & -0.004 \\
+	\emph{Structured} & 1 & Building perimeter & Regional & -4019.9 & -224.5 & -0.006 \\
+	\emph{Structured} & 1 & Annual precipitation & Regional & -4047.8 & -252.4 & -0.013 \\
+	\emph{Structured} & 1 & Forest proportion & Regional & -4067.9 & -272.5 & -0.018 \\
+	\emph{Structured} & 1 & North aspect & Regional & -4073.3 & -277.9 & -0.02 \\
+	\emph{Structured} & 1 & NPP & Regional & -4162.7 & -367.3 & -0.042 \\
+	\textbf{\emph{Structured}} & \textbf{2} & \textbf{Soil temperature} & \textbf{Local} & \textbf{-3801.0} & \textbf{-5.6} & \textbf{0.048} \\
+	\emph{Structured} & 2 & Canopy Type & Local & -3806.0 & -10.6 & 0.047 \\
+	\emph{Structured} & 2 & Local veg. cover & Local & -3847.8 & -52.4 & 0.037 \\
+	\emph{Structured} & 2 & Pasture/Crop & Local & -3851.2 & -55.8 & 0.036 \\
+	\emph{Structured} & 2 & Building perimeter & Regional & -3885.7 & -90.3 & 0.027 \\
+	\emph{Structured} & 2 & Edge proportion & Regional & -3889.4 & -94.0 & 0.026 \\
+	\emph{Structured} & 2 & Forest proportion & Regional & -3896.2 & -100.8 & 0.025 \\
+	\emph{Structured} & 2 & H'(Land cover) & Regional & -3897.8 & -102.4 & 0.024 \\
+	\emph{Structured} & 2 & NPP & Regional & -3903.8 & -108.3 & 0.023 \\
+	\emph{Structured} & 2 & Road length & Regional & -3906.4 & -111.0 & 0.022 \\
+	\emph{Structured} & 2 & Agriculture proportion & Regional & -3917.9 & -122.5 & 0.019 \\
+	\emph{Structured} & 2 & North aspect & Regional & -3925.2 & -129.8 & 0.017 \\
+	\emph{Structured} & 2 & Annual precipitation & Regional & -3936.6 & -141.2 & 0.015 \\
+	\textbf{\emph{Structured}} & \textbf{3} & \textbf{Canopy Type} & \textbf{Local} & \textbf{-3799.1} & \textbf{-3.7} & \textbf{0.049} \\
+	\emph{Structured} & 3 & Local veg. cover & Local & -3805.8 & -10.4 & 0.047 \\
+	\emph{Structured} & 3 & Building perimeter & Regional & -3820.5 & -25.0 & 0.044 \\
+	\emph{Structured} & 3 & Pasture/Crop & Local & -3821.6 & -26.2 & 0.043 \\
+	\emph{Structured} & 3 & Forest proportion & Regional & -3831.0 & -35.5 & 0.041 \\
+	\emph{Structured} & 3 & Edge proportion & Regional & -3831.6 & -36.2 & 0.041 \\
+	\emph{Structured} & 3 & H'(Land cover) & Regional & -3849.3 & -53.9 & 0.036 \\
+	\emph{Structured} & 3 & Road length & Regional & -3853.7 & -58.2 & 0.035 \\
+	\emph{Structured} & 3 & NPP & Regional & -3862.0 & -66.6 & 0.033 \\
+	\emph{Structured} & 3 & Agriculture proportion & Regional & -3862.0 & -66.6 & 0.033 \\
+	\emph{Structured} & 3 & North aspect & Regional & -3873.1 & -77.6 & 0.03 \\
+	\emph{Structured} & 3 & Annual precipitation & Regional & -3893.6 & -98.2 & 0.025 \\
+	\textbf{\emph{Structured}} & \textbf{4} & \textbf{Local veg. cover} & \textbf{Local} & \textbf{-3795.4} & \textbf{0.0} & \textbf{0.05} \\
+	\emph{Structured} & 4 & Pasture/Crop & Local & -3801.2 & -5.8 & 0.048 \\
+	\emph{Structured} & 4 & Building perimeter & Regional & -3801.7 & -6.3 & 0.048 \\
+	\emph{Structured} & 4 & Edge proportion & Regional & -3821.2 & -25.7 & 0.043 \\
+	\emph{Structured} & 4 & Forest proportion & Regional & -3831.3 & -35.9 & 0.041 \\
+	\emph{Structured} & 4 & H'(Land cover) & Regional & -3833.4 & -38.0 & 0.04 \\
+	\emph{Structured} & 4 & NPP & Regional & -3838.5 & -43.1 & 0.039 \\
+	\emph{Structured} & 4 & Road length & Regional & -3843.1 & -47.7 & 0.038 \\
+	\emph{Structured} & 4 & North aspect & Regional & -3853.8 & -58.4 & 0.035 \\
+	\emph{Structured} & 4 & Agriculture proportion & Regional & -3866.1 & -70.7 & 0.032 \\
+	\emph{Structured} & 4 & Annual precipitation & Regional & -3895.9 & -100.5 & 0.025 \\
+	﻿\emph{Structured} & 5 & Pasture/Crop & Local & -3818.3 & -22.9 & 0.044 \\
+	\emph{Structured} & 5 & Building perimeter & Regional & -3829.8 & -34.4 & 0.041 \\
+	\emph{Structured} & 5 & Edge proportion & Regional & -3834.6 & -39.1 & 0.04 \\
+	\emph{Structured} & 5 & Forest proportion & Regional & -3835.1 & -39.6 & 0.04 \\
+	\emph{Structured} & 5 & Road length & Regional & -3844.3 & -48.8 & 0.038 \\
+	\emph{Structured} & 5 & H'(Land cover) & Regional & -3852.2 & -56.8 & 0.036 \\
+	\emph{Structured} & 5 & NPP & Regional & -3853.9 & -58.5 & 0.035 \\
+	\emph{Structured} & 5 & North aspect & Regional & -3863.6 & -68.2 & 0.033 \\
+	\emph{Structured} & 5 & Agriculture proportion & Regional & -3879.3 & -83.8 & 0.029 \\
+	\emph{Structured} & 5 & Annual precipitation & Regional & -3904.1 & -108.6 & 0.023 \\
+	\emph{Structured} & 6 & H'(Land cover) & Regional & -3835.1 & -39.7 & 0.04 \\
+	\emph{Structured} & 6 & Building perimeter & Regional & -3835.8 & -40.4 & 0.04 \\
+	\emph{Structured} & 6 & Road length & Regional & -3839.4 & -44.0 & 0.039 \\
+	\emph{Structured} & 6 & Edge proportion & Regional & -3843.0 & -47.6 & 0.038 \\
+	\emph{Structured} & 6 & Forest proportion & Regional & -3845.2 & -49.8 & 0.037 \\
+	\emph{Structured} & 6 & NPP & Regional & -3857.9 & -62.5 & 0.034 \\
+	\emph{Structured} & 6 & North aspect & Regional & -3884.7 & -89.3 & 0.027 \\
+	\emph{Structured} & 6 & Agriculture proportion & Regional & -3886.6 & -91.2 & 0.027 \\
+	\emph{Structured} & 6 & Annual precipitation & Regional & -3904.1 & -108.7 & 0.023 \\
+	\emph{Structured} & 7 & Building perimeter & Regional & -3861.0 & -65.6 & 0.033 \\
+	\emph{Structured} & 7 & Forest proportion & Regional & -3868.2 & -72.8 & 0.032 \\
+	\emph{Structured} & 7 & Edge proportion & Regional & -3873.6 & -78.2 & 0.03 \\
+	\emph{Structured} & 7 & Road length & Regional & -3892.1 & -96.7 & 0.026 \\
+	\emph{Structured} & 7 & NPP & Regional & -3907.9 & -112.5 & 0.022 \\
+	\emph{Structured} & 7 & North aspect & Regional & -3908.7 & -113.3 & 0.021 \\
+	\emph{Structured} & 7 & Agriculture proportion & Regional & -3916.6 & -121.2 & 0.02 \\
+	\emph{Structured} & 7 & Annual precipitation & Regional & -3926.0 & -130.5 & 0.017 \\
+	\emph{Structured} & 8 & Forest proportion & Regional & -3892.0 & -96.6 & 0.026 \\
+	\emph{Structured} & 8 & Road length & Regional & -3920.8 & -125.4 & 0.018 \\
+	\emph{Structured} & 8 & North aspect & Regional & -3929.2 & -133.7 & 0.016 \\
+	\emph{Structured} & 8 & Annual precipitation & Regional & -3931.8 & -136.3 & 0.016 \\
+	\emph{Structured} & 8 & NPP & Regional & -3932.4 & -137.0 & 0.016 \\
+	\emph{Structured} & 8 & Agriculture proportion & Regional & -3943.6 & -148.1 & 0.013 \\
+	\emph{Structured} & 8 & Edge proportion & Regional & -3950.1 & -154.7 & 0.011 \\
+	\emph{Structured} & 9 & Road length & Regional & -3954.9 & -159.5 & 0.01 \\
+	\emph{Structured} & 9 & Annual precipitation & Regional & -3971.7 & -176.2 & 0.006 \\
+	\emph{Structured} & 9 & North aspect & Regional & -3974.2 & -178.8 & 0.005 \\
+	\emph{Structured} & 9 & Agriculture proportion & Regional & -3987.0 & -191.6 & 0.002 \\
+	\emph{Structured} & 9 & NPP & Regional & -3988.1 & -192.6 & 0.002 \\
+	\emph{Structured} & 9 & Edge proportion & Regional & -4007.5 & -212.1 & -0.003 \\
+	\emph{Structured} & 10 & Agriculture proportion & Regional & -3977.0 & -181.6 & 0.004 \\
+	\emph{Structured} & 10 & NPP & Regional & -4033.4 & -238.0 & -0.01 \\
+	\emph{Structured} & 10 & Annual precipitation & Regional & -4040.8 & -245.4 & -0.012 \\
+	\emph{Structured} & 10 & North aspect & Regional & -4045.9 & -250.5 & -0.013 \\
+	\emph{Structured} & 10 & Edge proportion & Regional & -4137.6 & -342.1 & -0.036 \\
+	\emph{Structured} & 11 & Annual precipitation & Regional & -4087.9 & -292.5 & -0.023 \\
+	\emph{Structured} & 11 & North aspect & Regional & -4133.4 & -338.0 & -0.035 \\
+	\emph{Structured} & 11 & NPP & Regional & -4146.4 & -351.0 & -0.038 \\
+	\emph{Structured} & 11 & Edge proportion & Regional & -4234.1 & -438.7 & -0.06 \\
+	\emph{Structured} & 12 & North aspect & Regional & -4180.0 & -384.5 & -0.046 \\
+	\emph{Structured} & 12 & Edge proportion & Regional & -4214.5 & -419.0 & -0.055 \\
+	\emph{Structured} & 12 & NPP & Regional & -4274.1 & -478.6 & -0.07 \\
+	\emph{Structured} & 13 & NPP & Regional & -4271.4 & -476.0 & -0.069 \\
+	\emph{Structured} & 13 & Edge proportion & Regional & -4282.3 & -486.9 & -0.072 \\
+	\emph{Structured} & 14 & Edge proportion & Regional & -4425.6 & -630.2 & -0.108 \\
+	\textbf{\emph{Joint}} & \textbf{0} & \textbf{(intercept)} & \textbf{Regional} & \textbf{-3988.0} & \textbf{-308.5} & \textbf{0.002} \\
+	\textbf{\emph{Joint}} & \textbf{1} & \textbf{Growing deg. days} & \textbf{Regional} & \textbf{-3764.9} & \textbf{-85.4} & \textbf{0.057} \\
+	\emph{Joint} & 1 & Agriculture proportion & Regional & -3839.3 & -159.8 & 0.039 \\
+	\emph{Joint} & 1 & Road length & Regional & -3879.8 & -200.3 & 0.029 \\
+	\emph{Joint} & 1 & Edge proportion & Regional & -3909.5 & -230.0 & 0.021 \\
+	\emph{Joint} & 1 & Soil temperature & Local & -3937.5 & -258.0 & 0.014 \\
+	\emph{Joint} & 1 & Pasture/Crop & Local & -3957.0 & -277.5 & 0.009 \\
+	\emph{Joint} & 1 & Canopy Type & Local & -3961.3 & -281.8 & 0.008 \\
+	\emph{Joint} & 1 & Local veg. cover & Local & -3981.2 & -301.7 & 0.003 \\
+	\emph{Joint} & 1 & Building perimeter & Regional & -3981.3 & -301.8 & 0.003 \\
+	\emph{Joint} & 1 & H'(Land cover) & Regional & -3983.2 & -303.7 & 0.003 \\
+	\emph{Joint} & 1 & North aspect & Regional & -3994.6 & -315.1 & 0 \\
+	\emph{Joint} & 1 & Forest proportion & Regional & -4015.7 & -336.2 & -0.005 \\
+	\emph{Joint} & 1 & NPP & Regional & -4021.4 & -341.9 & -0.007 \\
+	\emph{Joint} & 1 & Annual precipitation & Regional & -4120.8 & -441.3 & -0.032 \\
+	\textbf{\emph{Joint}} & \textbf{2} & \textbf{Soil temperature} & \textbf{Local} & \textbf{-3707.5} & \textbf{-28.0} & \textbf{0.072} \\
+	\emph{Joint} & 2 & Canopy Type & Local & -3740.6 & -61.1 & 0.064 \\
+	\emph{Joint} & 2 & Local veg. cover & Local & -3747.4 & -67.9 & 0.062 \\
+	\emph{Joint} & 2 & Forest proportion & Regional & -3756.0 & -76.5 & 0.06 \\
+	\emph{Joint} & 2 & H'(Land cover) & Regional & -3760.9 & -81.4 & 0.058 \\
+	\emph{Joint} & 2 & Agriculture proportion & Regional & -3762.4 & -82.9 & 0.058 \\
+	\emph{Joint} & 2 & Road length & Regional & -3764.3 & -84.8 & 0.058 \\
+	\emph{Joint} & 2 & Pasture/Crop & Local & -3765.6 & -86.1 & 0.057 \\
+	\emph{Joint} & 2 & NPP & Regional & -3772.8 & -93.3 & 0.055 \\
+	\emph{Joint} & 2 & Edge proportion & Regional & -3781.9 & -102.4 & 0.053 \\
+	\emph{Joint} & 2 & North aspect & Regional & -3784.4 & -104.9 & 0.053 \\
+	\emph{Joint} & 2 & Building perimeter & Regional & -3785.9 & -106.4 & 0.052 \\
+	\emph{Joint} & 2 & Annual precipitation & Regional & -3804.3 & -124.8 & 0.048 \\
+	\textbf{\emph{Joint}} & \textbf{3} & \textbf{Forest proportion} & \textbf{Regional} & \textbf{-3695.4} & \textbf{-15.9} & \textbf{0.075} \\
+	\emph{Joint} & 3 & Agriculture proportion & Regional & -3703.8 & -24.3 & 0.073 \\
+	\emph{Joint} & 3 & Local veg. cover & Local & -3709.1 & -29.6 & 0.071 \\
+	\emph{Joint} & 3 & H'(Land cover) & Regional & -3712.8 & -33.3 & 0.071 \\
+	\emph{Joint} & 3 & NPP & Regional & -3714.7 & -35.2 & 0.07 \\
+	\emph{Joint} & 3 & Road length & Regional & -3715.6 & -36.1 & 0.07 \\
+	\emph{Joint} & 3 & Building perimeter & Regional & -3724.2 & -44.7 & 0.068 \\
+	\emph{Joint} & 3 & Canopy Type & Local & -3725.8 & -46.3 & 0.067 \\
+	\emph{Joint} & 3 & Pasture/Crop & Local & -3726.1 & -46.6 & 0.067 \\
+	\emph{Joint} & 3 & North aspect & Regional & -3730.4 & -50.9 & 0.066 \\
+	\emph{Joint} & 3 & Edge proportion & Regional & -3731.7 & -52.2 & 0.066 \\
+	\emph{Joint} & 3 & Annual precipitation & Regional & -3759.9 & -80.4 & 0.059 \\
+	\textbf{\emph{Joint}} & \textbf{4} & \textbf{Road length} & \textbf{Regional} & \textbf{-3684.7} & \textbf{-5.2} & \textbf{0.078} \\
+	\emph{Joint} & 4 & NPP & Regional & -3689.1 & -9.6 & 0.076 \\
+	\emph{Joint} & 4 & Local veg. cover & Local & -3692.6 & -13.1 & 0.076 \\
+	\emph{Joint} & 4 & H'(Land cover) & Regional & -3696.4 & -16.9 & 0.075 \\
+	\emph{Joint} & 4 & Agriculture proportion & Regional & -3699.5 & -20.0 & 0.074 \\
+	\emph{Joint} & 4 & Pasture/Crop & Local & -3704.6 & -25.1 & 0.073 \\
+	\emph{Joint} & 4 & Edge proportion & Regional & -3711.2 & -31.7 & 0.071 \\
+	\emph{Joint} & 4 & Building perimeter & Regional & -3717.1 & -37.6 & 0.069 \\
+	\emph{Joint} & 4 & North aspect & Regional & -3720.8 & -41.3 & 0.069 \\
+	\emph{Joint} & 4 & Canopy Type & Local & -3721.6 & -42.1 & 0.068 \\
+	\emph{Joint} & 4 & Annual precipitation & Regional & -3724.9 & -45.4 & 0.067 \\
+	\textbf{\emph{Joint}} & \textbf{5} & \textbf{Local veg. cover} & \textbf{Local} & \textbf{-3679.5} & \textbf{0.0} & \textbf{0.079} \\
+	\emph{Joint} & 5 & Agriculture proportion & Regional & -3686.2 & -6.7 & 0.077 \\
+	\emph{Joint} & 5 & NPP & Regional & -3690.3 & -10.8 & 0.076 \\
+	\emph{Joint} & 5 & Annual precipitation & Regional & -3695.1 & -15.6 & 0.075 \\
+	\emph{Joint} & 5 & H'(Land cover) & Regional & -3695.3 & -15.8 & 0.075 \\
+	\emph{Joint} & 5 & Pasture/Crop & Local & -3698.2 & -18.7 & 0.074 \\
+	\emph{Joint} & 5 & Building perimeter & Regional & -3703.7 & -24.2 & 0.073 \\
+	\emph{Joint} & 5 & Edge proportion & Regional & -3705.0 & -25.5 & 0.072 \\
+	\emph{Joint} & 5 & North aspect & Regional & -3707.7 & -28.2 & 0.072 \\
+	\emph{Joint} & 5 & Canopy Type & Local & -3709.5 & -30.0 & 0.071 \\
+	\emph{Joint} & 6 & H'(Land cover) & Regional & -3691.7 & -12.2 & 0.076 \\
+	\emph{Joint} & 6 & Agriculture proportion & Regional & -3692.9 & -13.4 & 0.075 \\
+	\emph{Joint} & 6 & Pasture/Crop & Local & -3694.5 & -15.0 & 0.075 \\
+	\emph{Joint} & 6 & NPP & Regional & -3694.6 & -15.1 & 0.075 \\
+	\emph{Joint} & 6 & Edge proportion & Regional & -3700.3 & -20.8 & 0.074 \\
+	\emph{Joint} & 6 & Annual precipitation & Regional & -3703.0 & -23.5 & 0.073 \\
+	\emph{Joint} & 6 & Building perimeter & Regional & -3710.1 & -30.6 & 0.071 \\
+	\emph{Joint} & 6 & North aspect & Regional & -3712.0 & -32.5 & 0.071 \\
+	\emph{Joint} & 6 & Canopy Type & Local & -3719.2 & -39.7 & 0.069 \\
+	\emph{Joint} & 7 & Agriculture proportion & Regional & -3699.8 & -20.3 & 0.074 \\
+	\emph{Joint} & 7 & NPP & Regional & -3702.6 & -23.1 & 0.073 \\
+	\emph{Joint} & 7 & Annual precipitation & Regional & -3711.0 & -31.5 & 0.071 \\
+	\emph{Joint} & 7 & Pasture/Crop & Local & -3721.3 & -41.8 & 0.068 \\
+	\emph{Joint} & 7 & Building perimeter & Regional & -3722.3 & -42.8 & 0.068 \\
+	\emph{Joint} & 7 & North aspect & Regional & -3724.3 & -44.8 & 0.068 \\
+	\emph{Joint} & 7 & Canopy Type & Local & -3727.8 & -48.3 & 0.067 \\
+	\emph{Joint} & 7 & Edge proportion & Regional & -3739.6 & -60.1 & 0.064 \\
+	\emph{Joint} & 8 & NPP & Regional & -3709.0 & -29.5 & 0.071 \\
+	\emph{Joint} & 8 & Annual precipitation & Regional & -3718.0 & -38.5 & 0.069 \\
+	\emph{Joint} & 8 & Pasture/Crop & Local & -3722.6 & -43.1 & 0.068 \\
+	\emph{Joint} & 8 & Building perimeter & Regional & -3727.5 & -48.0 & 0.067 \\
+	\emph{Joint} & 8 & North aspect & Regional & -3732.7 & -53.2 & 0.066 \\
+	\emph{Joint} & 8 & Canopy Type & Local & -3737.7 & -58.2 & 0.064 \\
+	\emph{Joint} & 8 & Edge proportion & Regional & -3740.8 & -61.3 & 0.064 \\
+	\emph{Joint} & 9 & Pasture/Crop & Local & -3729.5 & -50.0 & 0.066 \\
+	\emph{Joint} & 9 & Annual precipitation & Regional & -3733.1 & -53.6 & 0.065 \\
+	\emph{Joint} & 9 & North aspect & Regional & -3735.5 & -56.0 & 0.065 \\
+	\emph{Joint} & 9 & Building perimeter & Regional & -3737.8 & -58.3 & 0.064 \\
+	\emph{Joint} & 9 & Canopy Type & Local & -3753.0 & -73.5 & 0.06 \\
+	\emph{Joint} & 9 & Edge proportion & Regional & -3778.5 & -99.0 & 0.054 \\
+	\emph{Joint} & 10 & Annual precipitation & Regional & -3754.5 & -75.0 & 0.06 \\
+	\emph{Joint} & 10 & Canopy Type & Local & -3755.9 & -76.4 & 0.06 \\
+	\emph{Joint} & 10 & North aspect & Regional & -3758.7 & -79.2 & 0.059 \\
+	\emph{Joint} & 10 & Building perimeter & Regional & -3761.7 & -82.2 & 0.058 \\
+	\emph{Joint} & 10 & Edge proportion & Regional & -3800.2 & -120.7 & 0.049 \\
+	\emph{Joint} & 11 & Canopy Type & Local & -3766.9 & -87.4 & 0.057 \\
+	\emph{Joint} & 11 & North aspect & Regional & -3774.7 & -95.2 & 0.055 \\
+	\emph{Joint} & 11 & Building perimeter & Regional & -3775.7 & -96.2 & 0.055 \\
+	\emph{Joint} & 11 & Edge proportion & Regional & -3789.4 & -109.9 & 0.051 \\
+	\emph{Joint} & 12 & North aspect & Regional & -3796.1 & -116.6 & 0.05 \\
+	\emph{Joint} & 12 & Edge proportion & Regional & -3799.2 & -119.7 & 0.049 \\
+	\emph{Joint} & 12 & Building perimeter & Regional & -3799.3 & -119.8 & 0.049 \\
+	\emph{Joint} & 13 & Edge proportion & Regional & -3820.5 & -141.0 & 0.044 \\
+	\emph{Joint} & 13 & Building perimeter & Regional & -3821.9 & -142.4 & 0.043 \\
+	\emph{Joint} & 14 & Building perimeter & Regional & -3843.9 & -164.4 & 0.038 \\
+\end{longtable}
+\endgroup
 
 
 
