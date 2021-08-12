@@ -1,0 +1,213 @@
+model,Covariate,latex
+\emph{Structured},\textbf{(intercept)},\textbf{\emph{Structured}} & \textbf{0} & \textbf{(intercept)} & \textbf{Regional} & \textbf{-3994.5} & \textbf{-199.1} & \textbf{0} \\
+\emph{Structured},\textbf{Growing deg. days},\textbf{\emph{Structured}} & \textbf{1} & \textbf{Growing deg. days} & \textbf{Regional} & \textbf{-3862.3} & \textbf{-66.9} & \textbf{0.033} \\
+\emph{Structured},Canopy Type,\emph{Structured} & 1 & Canopy Type & Local & -3934.4 & -139.0 & 0.015 \\
+\emph{Structured},Edge proportion,\emph{Structured} & 1 & Edge proportion & Regional & -3938.6 & -143.2 & 0.014 \\
+\emph{Structured},Soil temperature,\emph{Structured} & 1 & Soil temperature & Local & -3942.4 & -147.0 & 0.013 \\
+\emph{Structured},Pasture/Crop,\emph{Structured} & 1 & Pasture/Crop & Local & -3954.5 & -159.1 & 0.01 \\
+\emph{Structured},Agriculture proportion,\emph{Structured} & 1 & Agriculture proportion & Regional & -3970.0 & -174.6 & 0.006 \\
+\emph{Structured},Road length,\emph{Structured} & 1 & Road length & Regional & -3973.6 & -178.2 & 0.005 \\
+\emph{Structured},Local veg. cover,\emph{Structured} & 1 & Local veg. cover & Local & -3984.9 & -189.4 & 0.002 \\
+\emph{Structured},H'(Land cover),\emph{Structured} & 1 & H'(Land cover) & Regional & -4010.6 & -215.2 & -0.004 \\
+\emph{Structured},Building perimeter,\emph{Structured} & 1 & Building perimeter & Regional & -4019.9 & -224.5 & -0.006 \\
+\emph{Structured},Annual precipation,\emph{Structured} & 1 & Annual precipation & Regional & -4047.8 & -252.4 & -0.013 \\
+\emph{Structured},Forest proportion,\emph{Structured} & 1 & Forest proportion & Regional & -4067.9 & -272.5 & -0.018 \\
+\emph{Structured},North aspect,\emph{Structured} & 1 & North aspect & Regional & -4073.3 & -277.9 & -0.02 \\
+\emph{Structured},NPP,\emph{Structured} & 1 & NPP & Regional & -4162.7 & -367.3 & -0.042 \\
+\emph{Structured},\textbf{Soil temperature},\textbf{\emph{Structured}} & \textbf{2} & \textbf{Soil temperature} & \textbf{Local} & \textbf{-3801.0} & \textbf{-5.6} & \textbf{0.048} \\
+\emph{Structured},Canopy Type,\emph{Structured} & 2 & Canopy Type & Local & -3806.0 & -10.6 & 0.047 \\
+\emph{Structured},Local veg. cover,\emph{Structured} & 2 & Local veg. cover & Local & -3847.8 & -52.4 & 0.037 \\
+\emph{Structured},Pasture/Crop,\emph{Structured} & 2 & Pasture/Crop & Local & -3851.2 & -55.8 & 0.036 \\
+\emph{Structured},Building perimeter,\emph{Structured} & 2 & Building perimeter & Regional & -3885.7 & -90.3 & 0.027 \\
+\emph{Structured},Edge proportion,\emph{Structured} & 2 & Edge proportion & Regional & -3889.4 & -94.0 & 0.026 \\
+\emph{Structured},Forest proportion,\emph{Structured} & 2 & Forest proportion & Regional & -3896.2 & -100.8 & 0.025 \\
+\emph{Structured},H'(Land cover),\emph{Structured} & 2 & H'(Land cover) & Regional & -3897.8 & -102.4 & 0.024 \\
+\emph{Structured},NPP,\emph{Structured} & 2 & NPP & Regional & -3903.8 & -108.3 & 0.023 \\
+\emph{Structured},Road length,\emph{Structured} & 2 & Road length & Regional & -3906.4 & -111.0 & 0.022 \\
+\emph{Structured},Agriculture proportion,\emph{Structured} & 2 & Agriculture proportion & Regional & -3917.9 & -122.5 & 0.019 \\
+\emph{Structured},North aspect,\emph{Structured} & 2 & North aspect & Regional & -3925.2 & -129.8 & 0.017 \\
+\emph{Structured},Annual precipation,\emph{Structured} & 2 & Annual precipation & Regional & -3936.6 & -141.2 & 0.015 \\
+\emph{Structured},\textbf{Canopy Type},\textbf{\emph{Structured}} & \textbf{3} & \textbf{Canopy Type} & \textbf{Local} & \textbf{-3799.1} & \textbf{-3.7} & \textbf{0.049} \\
+\emph{Structured},Local veg. cover,\emph{Structured} & 3 & Local veg. cover & Local & -3805.8 & -10.4 & 0.047 \\
+\emph{Structured},Building perimeter,\emph{Structured} & 3 & Building perimeter & Regional & -3820.5 & -25.0 & 0.044 \\
+\emph{Structured},Pasture/Crop,\emph{Structured} & 3 & Pasture/Crop & Local & -3821.6 & -26.2 & 0.043 \\
+\emph{Structured},Forest proportion,\emph{Structured} & 3 & Forest proportion & Regional & -3831.0 & -35.5 & 0.041 \\
+\emph{Structured},Edge proportion,\emph{Structured} & 3 & Edge proportion & Regional & -3831.6 & -36.2 & 0.041 \\
+\emph{Structured},H'(Land cover),\emph{Structured} & 3 & H'(Land cover) & Regional & -3849.3 & -53.9 & 0.036 \\
+\emph{Structured},Road length,\emph{Structured} & 3 & Road length & Regional & -3853.7 & -58.2 & 0.035 \\
+\emph{Structured},NPP,\emph{Structured} & 3 & NPP & Regional & -3862.0 & -66.6 & 0.033 \\
+\emph{Structured},Agriculture proportion,\emph{Structured} & 3 & Agriculture proportion & Regional & -3862.0 & -66.6 & 0.033 \\
+\emph{Structured},North aspect,\emph{Structured} & 3 & North aspect & Regional & -3873.1 & -77.6 & 0.03 \\
+\emph{Structured},Annual precipation,\emph{Structured} & 3 & Annual precipation & Regional & -3893.6 & -98.2 & 0.025 \\
+\emph{Structured},\textbf{Local veg. cover},\textbf{\emph{Structured}} & \textbf{4} & \textbf{Local veg. cover} & \textbf{Local} & \textbf{-3795.4} & \textbf{0.0} & \textbf{0.05} \\
+\emph{Structured},Pasture/Crop,\emph{Structured} & 4 & Pasture/Crop & Local & -3801.2 & -5.8 & 0.048 \\
+\emph{Structured},Building perimeter,\emph{Structured} & 4 & Building perimeter & Regional & -3801.7 & -6.3 & 0.048 \\
+\emph{Structured},Edge proportion,\emph{Structured} & 4 & Edge proportion & Regional & -3821.2 & -25.7 & 0.043 \\
+\emph{Structured},Forest proportion,\emph{Structured} & 4 & Forest proportion & Regional & -3831.3 & -35.9 & 0.041 \\
+\emph{Structured},H'(Land cover),\emph{Structured} & 4 & H'(Land cover) & Regional & -3833.4 & -38.0 & 0.04 \\
+\emph{Structured},NPP,\emph{Structured} & 4 & NPP & Regional & -3838.5 & -43.1 & 0.039 \\
+\emph{Structured},Road length,\emph{Structured} & 4 & Road length & Regional & -3843.1 & -47.7 & 0.038 \\
+\emph{Structured},North aspect,\emph{Structured} & 4 & North aspect & Regional & -3853.8 & -58.4 & 0.035 \\
+\emph{Structured},Agriculture proportion,\emph{Structured} & 4 & Agriculture proportion & Regional & -3866.1 & -70.7 & 0.032 \\
+\emph{Structured},Annual precipation,\emph{Structured} & 4 & Annual precipation & Regional & -3895.9 & -100.5 & 0.025 \\
+\emph{Structured},\textbf{Pasture/Crop},_\emph{Structured} & 5 & Pasture/Crop & Local & -3818.3 & -22.9 & 0.044 \\
+\emph{Structured},Building perimeter,\emph{Structured} & 5 & Building perimeter & Regional & -3829.8 & -34.4 & 0.041 \\
+\emph{Structured},Edge proportion,\emph{Structured} & 5 & Edge proportion & Regional & -3834.6 & -39.1 & 0.04 \\
+\emph{Structured},Forest proportion,\emph{Structured} & 5 & Forest proportion & Regional & -3835.1 & -39.6 & 0.04 \\
+\emph{Structured},Road length,\emph{Structured} & 5 & Road length & Regional & -3844.3 & -48.8 & 0.038 \\
+\emph{Structured},H'(Land cover),\emph{Structured} & 5 & H'(Land cover) & Regional & -3852.2 & -56.8 & 0.036 \\
+\emph{Structured},NPP,\emph{Structured} & 5 & NPP & Regional & -3853.9 & -58.5 & 0.035 \\
+\emph{Structured},North aspect,\emph{Structured} & 5 & North aspect & Regional & -3863.6 & -68.2 & 0.033 \\
+\emph{Structured},Agriculture proportion,\emph{Structured} & 5 & Agriculture proportion & Regional & -3879.3 & -83.8 & 0.029 \\
+\emph{Structured},Annual precipation,\emph{Structured} & 5 & Annual precipation & Regional & -3904.1 & -108.6 & 0.023 \\
+\emph{Structured},H'(Land cover),\emph{Structured} & 6 & H'(Land cover) & Regional & -3835.1 & -39.7 & 0.04 \\
+\emph{Structured},Building perimeter,\emph{Structured} & 6 & Building perimeter & Regional & -3835.8 & -40.4 & 0.04 \\
+\emph{Structured},Road length,\emph{Structured} & 6 & Road length & Regional & -3839.4 & -44.0 & 0.039 \\
+\emph{Structured},Edge proportion,\emph{Structured} & 6 & Edge proportion & Regional & -3843.0 & -47.6 & 0.038 \\
+\emph{Structured},Forest proportion,\emph{Structured} & 6 & Forest proportion & Regional & -3845.2 & -49.8 & 0.037 \\
+\emph{Structured},NPP,\emph{Structured} & 6 & NPP & Regional & -3857.9 & -62.5 & 0.034 \\
+\emph{Structured},North aspect,\emph{Structured} & 6 & North aspect & Regional & -3884.7 & -89.3 & 0.027 \\
+\emph{Structured},Agriculture proportion,\emph{Structured} & 6 & Agriculture proportion & Regional & -3886.6 & -91.2 & 0.027 \\
+\emph{Structured},Annual precipation,\emph{Structured} & 6 & Annual precipation & Regional & -3904.1 & -108.7 & 0.023 \\
+\emph{Structured},Building perimeter,\emph{Structured} & 7 & Building perimeter & Regional & -3861.0 & -65.6 & 0.033 \\
+\emph{Structured},Forest proportion,\emph{Structured} & 7 & Forest proportion & Regional & -3868.2 & -72.8 & 0.032 \\
+\emph{Structured},Edge proportion,\emph{Structured} & 7 & Edge proportion & Regional & -3873.6 & -78.2 & 0.03 \\
+\emph{Structured},Road length,\emph{Structured} & 7 & Road length & Regional & -3892.1 & -96.7 & 0.026 \\
+\emph{Structured},NPP,\emph{Structured} & 7 & NPP & Regional & -3907.9 & -112.5 & 0.022 \\
+\emph{Structured},North aspect,\emph{Structured} & 7 & North aspect & Regional & -3908.7 & -113.3 & 0.021 \\
+\emph{Structured},Agriculture proportion,\emph{Structured} & 7 & Agriculture proportion & Regional & -3916.6 & -121.2 & 0.02 \\
+\emph{Structured},Annual precipation,\emph{Structured} & 7 & Annual precipation & Regional & -3926.0 & -130.5 & 0.017 \\
+\emph{Structured},Forest proportion,\emph{Structured} & 8 & Forest proportion & Regional & -3892.0 & -96.6 & 0.026 \\
+\emph{Structured},Road length,\emph{Structured} & 8 & Road length & Regional & -3920.8 & -125.4 & 0.018 \\
+\emph{Structured},North aspect,\emph{Structured} & 8 & North aspect & Regional & -3929.2 & -133.7 & 0.016 \\
+\emph{Structured},Annual precipation,\emph{Structured} & 8 & Annual precipation & Regional & -3931.8 & -136.3 & 0.016 \\
+\emph{Structured},NPP,\emph{Structured} & 8 & NPP & Regional & -3932.4 & -137.0 & 0.016 \\
+\emph{Structured},Agriculture proportion,\emph{Structured} & 8 & Agriculture proportion & Regional & -3943.6 & -148.1 & 0.013 \\
+\emph{Structured},Edge proportion,\emph{Structured} & 8 & Edge proportion & Regional & -3950.1 & -154.7 & 0.011 \\
+\emph{Structured},Road length,\emph{Structured} & 9 & Road length & Regional & -3954.9 & -159.5 & 0.01 \\
+\emph{Structured},Annual precipation,\emph{Structured} & 9 & Annual precipation & Regional & -3971.7 & -176.2 & 0.006 \\
+\emph{Structured},North aspect,\emph{Structured} & 9 & North aspect & Regional & -3974.2 & -178.8 & 0.005 \\
+\emph{Structured},Agriculture proportion,\emph{Structured} & 9 & Agriculture proportion & Regional & -3987.0 & -191.6 & 0.002 \\
+\emph{Structured},NPP,\emph{Structured} & 9 & NPP & Regional & -3988.1 & -192.6 & 0.002 \\
+\emph{Structured},Edge proportion,\emph{Structured} & 9 & Edge proportion & Regional & -4007.5 & -212.1 & -0.003 \\
+\emph{Structured},Agriculture proportion,\emph{Structured} & 10 & Agriculture proportion & Regional & -3977.0 & -181.6 & 0.004 \\
+\emph{Structured},NPP,\emph{Structured} & 10 & NPP & Regional & -4033.4 & -238.0 & -0.01 \\
+\emph{Structured},Annual precipation,\emph{Structured} & 10 & Annual precipation & Regional & -4040.8 & -245.4 & -0.012 \\
+\emph{Structured},North aspect,\emph{Structured} & 10 & North aspect & Regional & -4045.9 & -250.5 & -0.013 \\
+\emph{Structured},Edge proportion,\emph{Structured} & 10 & Edge proportion & Regional & -4137.6 & -342.1 & -0.036 \\
+\emph{Structured},Annual precipation,\emph{Structured} & 11 & Annual precipation & Regional & -4087.9 & -292.5 & -0.023 \\
+\emph{Structured},North aspect,\emph{Structured} & 11 & North aspect & Regional & -4133.4 & -338.0 & -0.035 \\
+\emph{Structured},NPP,\emph{Structured} & 11 & NPP & Regional & -4146.4 & -351.0 & -0.038 \\
+\emph{Structured},Edge proportion,\emph{Structured} & 11 & Edge proportion & Regional & -4234.1 & -438.7 & -0.06 \\
+\emph{Structured},North aspect,\emph{Structured} & 12 & North aspect & Regional & -4180.0 & -384.5 & -0.046 \\
+\emph{Structured},Edge proportion,\emph{Structured} & 12 & Edge proportion & Regional & -4214.5 & -419.0 & -0.055 \\
+\emph{Structured},NPP,\emph{Structured} & 12 & NPP & Regional & -4274.1 & -478.6 & -0.07 \\
+\emph{Structured},NPP,\emph{Structured} & 13 & NPP & Regional & -4271.4 & -476.0 & -0.069 \\
+\emph{Structured},Edge proportion,\emph{Structured} & 13 & Edge proportion & Regional & -4282.3 & -486.9 & -0.072 \\
+\emph{Structured},Edge proportion,\emph{Structured} & 14 & Edge proportion & Regional & -4425.6 & -630.2 & -0.108 \\
+\emph{Joint},\textbf{(intercept)},\textbf{\emph{Joint}} & \textbf{0} & \textbf{(intercept)} & \textbf{Regional} & \textbf{-3988.0} & \textbf{-308.5} & \textbf{0.002} \\
+\emph{Joint},\textbf{Growing deg. days},\textbf{\emph{Joint}} & \textbf{1} & \textbf{Growing deg. days} & \textbf{Regional} & \textbf{-3764.9} & \textbf{-85.4} & \textbf{0.057} \\
+\emph{Joint},Agriculture proportion,\emph{Joint} & 1 & Agriculture proportion & Regional & -3839.3 & -159.8 & 0.039 \\
+\emph{Joint},Road length,\emph{Joint} & 1 & Road length & Regional & -3879.8 & -200.3 & 0.029 \\
+\emph{Joint},Edge proportion,\emph{Joint} & 1 & Edge proportion & Regional & -3909.5 & -230.0 & 0.021 \\
+\emph{Joint},Soil temperature,\emph{Joint} & 1 & Soil temperature & Local & -3937.5 & -258.0 & 0.014 \\
+\emph{Joint},Pasture/Crop,\emph{Joint} & 1 & Pasture/Crop & Local & -3957.0 & -277.5 & 0.009 \\
+\emph{Joint},Canopy Type,\emph{Joint} & 1 & Canopy Type & Local & -3961.3 & -281.8 & 0.008 \\
+\emph{Joint},Local veg. cover,\emph{Joint} & 1 & Local veg. cover & Local & -3981.2 & -301.7 & 0.003 \\
+\emph{Joint},Building perimeter,\emph{Joint} & 1 & Building perimeter & Regional & -3981.3 & -301.8 & 0.003 \\
+\emph{Joint},H'(Land cover),\emph{Joint} & 1 & H'(Land cover) & Regional & -3983.2 & -303.7 & 0.003 \\
+\emph{Joint},North aspect,\emph{Joint} & 1 & North aspect & Regional & -3994.6 & -315.1 & 0 \\
+\emph{Joint},Forest proportion,\emph{Joint} & 1 & Forest proportion & Regional & -4015.7 & -336.2 & -0.005 \\
+\emph{Joint},NPP,\emph{Joint} & 1 & NPP & Regional & -4021.4 & -341.9 & -0.007 \\
+\emph{Joint},Annual precipation,\emph{Joint} & 1 & Annual precipation & Regional & -4120.8 & -441.3 & -0.032 \\
+\emph{Joint},\textbf{Soil temperature},\textbf{\emph{Joint}} & \textbf{2} & \textbf{Soil temperature} & \textbf{Local} & \textbf{-3707.5} & \textbf{-28.0} & \textbf{0.072} \\
+\emph{Joint},Canopy Type,\emph{Joint} & 2 & Canopy Type & Local & -3740.6 & -61.1 & 0.064 \\
+\emph{Joint},Local veg. cover,\emph{Joint} & 2 & Local veg. cover & Local & -3747.4 & -67.9 & 0.062 \\
+\emph{Joint},Forest proportion,\emph{Joint} & 2 & Forest proportion & Regional & -3756.0 & -76.5 & 0.06 \\
+\emph{Joint},H'(Land cover),\emph{Joint} & 2 & H'(Land cover) & Regional & -3760.9 & -81.4 & 0.058 \\
+\emph{Joint},Agriculture proportion,\emph{Joint} & 2 & Agriculture proportion & Regional & -3762.4 & -82.9 & 0.058 \\
+\emph{Joint},Road length,\emph{Joint} & 2 & Road length & Regional & -3764.3 & -84.8 & 0.058 \\
+\emph{Joint},Pasture/Crop,\emph{Joint} & 2 & Pasture/Crop & Local & -3765.6 & -86.1 & 0.057 \\
+\emph{Joint},NPP,\emph{Joint} & 2 & NPP & Regional & -3772.8 & -93.3 & 0.055 \\
+\emph{Joint},Edge proportion,\emph{Joint} & 2 & Edge proportion & Regional & -3781.9 & -102.4 & 0.053 \\
+\emph{Joint},North aspect,\emph{Joint} & 2 & North aspect & Regional & -3784.4 & -104.9 & 0.053 \\
+\emph{Joint},Building perimeter,\emph{Joint} & 2 & Building perimeter & Regional & -3785.9 & -106.4 & 0.052 \\
+\emph{Joint},Annual precipation,\emph{Joint} & 2 & Annual precipation & Regional & -3804.3 & -124.8 & 0.048 \\
+\emph{Joint},\textbf{Forest proportion},\textbf{\emph{Joint}} & \textbf{3} & \textbf{Forest proportion} & \textbf{Regional} & \textbf{-3695.4} & \textbf{-15.9} & \textbf{0.075} \\
+\emph{Joint},Agriculture proportion,\emph{Joint} & 3 & Agriculture proportion & Regional & -3703.8 & -24.3 & 0.073 \\
+\emph{Joint},Local veg. cover,\emph{Joint} & 3 & Local veg. cover & Local & -3709.1 & -29.6 & 0.071 \\
+\emph{Joint},H'(Land cover),\emph{Joint} & 3 & H'(Land cover) & Regional & -3712.8 & -33.3 & 0.071 \\
+\emph{Joint},NPP,\emph{Joint} & 3 & NPP & Regional & -3714.7 & -35.2 & 0.07 \\
+\emph{Joint},Road length,\emph{Joint} & 3 & Road length & Regional & -3715.6 & -36.1 & 0.07 \\
+\emph{Joint},Building perimeter,\emph{Joint} & 3 & Building perimeter & Regional & -3724.2 & -44.7 & 0.068 \\
+\emph{Joint},Canopy Type,\emph{Joint} & 3 & Canopy Type & Local & -3725.8 & -46.3 & 0.067 \\
+\emph{Joint},Pasture/Crop,\emph{Joint} & 3 & Pasture/Crop & Local & -3726.1 & -46.6 & 0.067 \\
+\emph{Joint},North aspect,\emph{Joint} & 3 & North aspect & Regional & -3730.4 & -50.9 & 0.066 \\
+\emph{Joint},Edge proportion,\emph{Joint} & 3 & Edge proportion & Regional & -3731.7 & -52.2 & 0.066 \\
+\emph{Joint},Annual precipation,\emph{Joint} & 3 & Annual precipation & Regional & -3759.9 & -80.4 & 0.059 \\
+\emph{Joint},\textbf{Road length},\textbf{\emph{Joint}} & \textbf{4} & \textbf{Road length} & \textbf{Regional} & \textbf{-3684.7} & \textbf{-5.2} & \textbf{0.078} \\
+\emph{Joint},NPP,\emph{Joint} & 4 & NPP & Regional & -3689.1 & -9.6 & 0.076 \\
+\emph{Joint},Local veg. cover,\emph{Joint} & 4 & Local veg. cover & Local & -3692.6 & -13.1 & 0.076 \\
+\emph{Joint},H'(Land cover),\emph{Joint} & 4 & H'(Land cover) & Regional & -3696.4 & -16.9 & 0.075 \\
+\emph{Joint},Agriculture proportion,\emph{Joint} & 4 & Agriculture proportion & Regional & -3699.5 & -20.0 & 0.074 \\
+\emph{Joint},Pasture/Crop,\emph{Joint} & 4 & Pasture/Crop & Local & -3704.6 & -25.1 & 0.073 \\
+\emph{Joint},Edge proportion,\emph{Joint} & 4 & Edge proportion & Regional & -3711.2 & -31.7 & 0.071 \\
+\emph{Joint},Building perimeter,\emph{Joint} & 4 & Building perimeter & Regional & -3717.1 & -37.6 & 0.069 \\
+\emph{Joint},North aspect,\emph{Joint} & 4 & North aspect & Regional & -3720.8 & -41.3 & 0.069 \\
+\emph{Joint},Canopy Type,\emph{Joint} & 4 & Canopy Type & Local & -3721.6 & -42.1 & 0.068 \\
+\emph{Joint},Annual precipation,\emph{Joint} & 4 & Annual precipation & Regional & -3724.9 & -45.4 & 0.067 \\
+\emph{Joint},\textbf{Local veg. cover},\textbf{\emph{Joint}} & \textbf{5} & \textbf{Local veg. cover} & \textbf{Local} & \textbf{-3679.5} & \textbf{0.0} & \textbf{0.079} \\
+\emph{Joint},Agriculture proportion,\emph{Joint} & 5 & Agriculture proportion & Regional & -3686.2 & -6.7 & 0.077 \\
+\emph{Joint},NPP,\emph{Joint} & 5 & NPP & Regional & -3690.3 & -10.8 & 0.076 \\
+\emph{Joint},Annual precipation,\emph{Joint} & 5 & Annual precipation & Regional & -3695.1 & -15.6 & 0.075 \\
+\emph{Joint},H'(Land cover),\emph{Joint} & 5 & H'(Land cover) & Regional & -3695.3 & -15.8 & 0.075 \\
+\emph{Joint},Pasture/Crop,\emph{Joint} & 5 & Pasture/Crop & Local & -3698.2 & -18.7 & 0.074 \\
+\emph{Joint},Building perimeter,\emph{Joint} & 5 & Building perimeter & Regional & -3703.7 & -24.2 & 0.073 \\
+\emph{Joint},Edge proportion,\emph{Joint} & 5 & Edge proportion & Regional & -3705.0 & -25.5 & 0.072 \\
+\emph{Joint},North aspect,\emph{Joint} & 5 & North aspect & Regional & -3707.7 & -28.2 & 0.072 \\
+\emph{Joint},Canopy Type,\emph{Joint} & 5 & Canopy Type & Local & -3709.5 & -30.0 & 0.071 \\
+\emph{Joint},H'(Land cover),\emph{Joint} & 6 & H'(Land cover) & Regional & -3691.7 & -12.2 & 0.076 \\
+\emph{Joint},Agriculture proportion,\emph{Joint} & 6 & Agriculture proportion & Regional & -3692.9 & -13.4 & 0.075 \\
+\emph{Joint},Pasture/Crop,\emph{Joint} & 6 & Pasture/Crop & Local & -3694.5 & -15.0 & 0.075 \\
+\emph{Joint},NPP,\emph{Joint} & 6 & NPP & Regional & -3694.6 & -15.1 & 0.075 \\
+\emph{Joint},Edge proportion,\emph{Joint} & 6 & Edge proportion & Regional & -3700.3 & -20.8 & 0.074 \\
+\emph{Joint},Annual precipation,\emph{Joint} & 6 & Annual precipation & Regional & -3703.0 & -23.5 & 0.073 \\
+\emph{Joint},Building perimeter,\emph{Joint} & 6 & Building perimeter & Regional & -3710.1 & -30.6 & 0.071 \\
+\emph{Joint},North aspect,\emph{Joint} & 6 & North aspect & Regional & -3712.0 & -32.5 & 0.071 \\
+\emph{Joint},Canopy Type,\emph{Joint} & 6 & Canopy Type & Local & -3719.2 & -39.7 & 0.069 \\
+\emph{Joint},Agriculture proportion,\emph{Joint} & 7 & Agriculture proportion & Regional & -3699.8 & -20.3 & 0.074 \\
+\emph{Joint},NPP,\emph{Joint} & 7 & NPP & Regional & -3702.6 & -23.1 & 0.073 \\
+\emph{Joint},Annual precipation,\emph{Joint} & 7 & Annual precipation & Regional & -3711.0 & -31.5 & 0.071 \\
+\emph{Joint},Pasture/Crop,\emph{Joint} & 7 & Pasture/Crop & Local & -3721.3 & -41.8 & 0.068 \\
+\emph{Joint},Building perimeter,\emph{Joint} & 7 & Building perimeter & Regional & -3722.3 & -42.8 & 0.068 \\
+\emph{Joint},North aspect,\emph{Joint} & 7 & North aspect & Regional & -3724.3 & -44.8 & 0.068 \\
+\emph{Joint},Canopy Type,\emph{Joint} & 7 & Canopy Type & Local & -3727.8 & -48.3 & 0.067 \\
+\emph{Joint},Edge proportion,\emph{Joint} & 7 & Edge proportion & Regional & -3739.6 & -60.1 & 0.064 \\
+\emph{Joint},NPP,\emph{Joint} & 8 & NPP & Regional & -3709.0 & -29.5 & 0.071 \\
+\emph{Joint},Annual precipation,\emph{Joint} & 8 & Annual precipation & Regional & -3718.0 & -38.5 & 0.069 \\
+\emph{Joint},Pasture/Crop,\emph{Joint} & 8 & Pasture/Crop & Local & -3722.6 & -43.1 & 0.068 \\
+\emph{Joint},Building perimeter,\emph{Joint} & 8 & Building perimeter & Regional & -3727.5 & -48.0 & 0.067 \\
+\emph{Joint},North aspect,\emph{Joint} & 8 & North aspect & Regional & -3732.7 & -53.2 & 0.066 \\
+\emph{Joint},Canopy Type,\emph{Joint} & 8 & Canopy Type & Local & -3737.7 & -58.2 & 0.064 \\
+\emph{Joint},Edge proportion,\emph{Joint} & 8 & Edge proportion & Regional & -3740.8 & -61.3 & 0.064 \\
+\emph{Joint},Pasture/Crop,\emph{Joint} & 9 & Pasture/Crop & Local & -3729.5 & -50.0 & 0.066 \\
+\emph{Joint},Annual precipation,\emph{Joint} & 9 & Annual precipation & Regional & -3733.1 & -53.6 & 0.065 \\
+\emph{Joint},North aspect,\emph{Joint} & 9 & North aspect & Regional & -3735.5 & -56.0 & 0.065 \\
+\emph{Joint},Building perimeter,\emph{Joint} & 9 & Building perimeter & Regional & -3737.8 & -58.3 & 0.064 \\
+\emph{Joint},Canopy Type,\emph{Joint} & 9 & Canopy Type & Local & -3753.0 & -73.5 & 0.06 \\
+\emph{Joint},Edge proportion,\emph{Joint} & 9 & Edge proportion & Regional & -3778.5 & -99.0 & 0.054 \\
+\emph{Joint},Annual precipation,\emph{Joint} & 10 & Annual precipation & Regional & -3754.5 & -75.0 & 0.06 \\
+\emph{Joint},Canopy Type,\emph{Joint} & 10 & Canopy Type & Local & -3755.9 & -76.4 & 0.06 \\
+\emph{Joint},North aspect,\emph{Joint} & 10 & North aspect & Regional & -3758.7 & -79.2 & 0.059 \\
+\emph{Joint},Building perimeter,\emph{Joint} & 10 & Building perimeter & Regional & -3761.7 & -82.2 & 0.058 \\
+\emph{Joint},Edge proportion,\emph{Joint} & 10 & Edge proportion & Regional & -3800.2 & -120.7 & 0.049 \\
+\emph{Joint},Canopy Type,\emph{Joint} & 11 & Canopy Type & Local & -3766.9 & -87.4 & 0.057 \\
+\emph{Joint},North aspect,\emph{Joint} & 11 & North aspect & Regional & -3774.7 & -95.2 & 0.055 \\
+\emph{Joint},Building perimeter,\emph{Joint} & 11 & Building perimeter & Regional & -3775.7 & -96.2 & 0.055 \\
+\emph{Joint},Edge proportion,\emph{Joint} & 11 & Edge proportion & Regional & -3789.4 & -109.9 & 0.051 \\
+\emph{Joint},North aspect,\emph{Joint} & 12 & North aspect & Regional & -3796.1 & -116.6 & 0.05 \\
+\emph{Joint},Edge proportion,\emph{Joint} & 12 & Edge proportion & Regional & -3799.2 & -119.7 & 0.049 \\
+\emph{Joint},Building perimeter,\emph{Joint} & 12 & Building perimeter & Regional & -3799.3 & -119.8 & 0.049 \\
+\emph{Joint},Edge proportion,\emph{Joint} & 13 & Edge proportion & Regional & -3820.5 & -141.0 & 0.044 \\
+\emph{Joint},Building perimeter,\emph{Joint} & 13 & Building perimeter & Regional & -3821.9 & -142.4 & 0.043 \\
+\emph{Joint},Building perimeter,\emph{Joint} & 14 & Building perimeter & Regional & -3843.9 & -164.4 & 0.038 \\
