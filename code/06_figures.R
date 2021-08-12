@@ -29,6 +29,7 @@ lc_sum <- readxl::read_xlsx("../1_opfo/data/landcover_id.xlsx", 1) %>%
   mutate(VD=c(52381568, 24099, 2361482, 14810092, 8926571, 7856914, 95030, 
               101983, 6954192, 571985, 1114617, 960859, 5151839, 603243, 8666373), 
          VD_prop=VD/sum(VD))
+lc_i <- readxl::read_xlsx("../1_opfo/data/landcover_id.xlsx", 1)
 VD_raw <- st_read("../2_gis/data/VD_21781/Vaud_boundaries.shp") 
 VD <- st_union(VD_raw %>% filter(!grepl("Lac ", NAME)))
 dem <- raster::raster("../2_gis/data/VD_21781/dem_VD_21781.tif") %>%
@@ -40,15 +41,17 @@ world <- st_read("../2_gis/data/world/World_Countries__Generalized_.shp") %>%
 site.sf <- st_read("../2_gis/data/VD_21781/site_env_sf.shp")
 names(site.sf) <- c(read_csv("../2_gis/data/VD_21781/site_env_sf_names.csv")$full,
                     "geometry")
+plot_i <- read_csv("../1_opfo/data/opfo_envDataProcessed.csv") %>% 
+  arrange(BDM, Plot_id) %>% filter(Plot_id != "020201") 
 ants_raw <- load_ant_data(str_type="all", clean_spp=T, 
                           DNA_dir="../1_opfo/data/DNA_ID_clean")
 ants <- list(pub=bind_rows(ants_raw$pub, 
                       ants_raw$str %>% filter(TypeOfSample != "soil") %>%
                         select(TubeNo, SPECIESID, SampleDate)), 
              str=ants_raw$str %>% filter(TypeOfSample == "soil") %>%
-               select(TubeNo, SPECIESID, SampleDate))
+               select(TubeNo, SPECIESID, SampleDate, Categorie))
 ants$all <- bind_rows(ants$pub %>% mutate(source="p"),
-                      ants$str %>% mutate(source="s"))
+                      ants$str %>% mutate(source="s") %>% select(-Categorie))
 tax_i <- read_csv("data/tax_i.csv")
 
 
@@ -592,12 +595,13 @@ ordihull(env.pca, group=env.plot$region, lwd=2,
 ## Taxonomic bias
 ########------------------------------------------------------------------------
 
-p <- agg_opt$D %>%# filter(grepl("LV", model)) %>%
+p <- agg_opt$D %>%
   mutate(genFull=tax_i$FullGen[match(sppName, tax_i$species)],
          sppName=str_replace(str_remove(sppName, "-GR"), "_", "."),
          sig=case_when(sign(L10-1)==sign(L90-1) & sign(L025-1)!=sign(L975-1) ~ "sig80",
                        sign(L025-1)==sign(L975-1) ~ "sig95",
                        sign(L10-1)!=sign(L90-1) ~ "ns")) %>%
+  mutate(sppName=factor(sppName, levels=sort(unique(sppName), decreasing=T))) %>%
   ggplot(aes(x=median, xmin=L025, xmax=L975, y=sppName, colour=sig)) + 
   geom_vline(xintercept=1, colour="gray") +
   geom_point() + 
@@ -756,6 +760,7 @@ p <- agg_opt$b %>% filter(ParName != "intercept") %>%
          Par=factor(Par, levels=rev(unique(parName.df$full))),
          genName=tax_i$FullGen[match(sppName, tax_i$species)],
          sppName=str_replace(str_remove(sppName, "-GR"), "_", ".")) %>%
+  mutate(sppName=factor(sppName, levels=sort(unique(sppName), decreasing=T))) %>%
   ggplot(aes(x=sppName, y=median, colour=model)) + 
   geom_hline(yintercept=0, linetype=3, colour="gray30", size=0.5) +
   geom_point(aes(shape=sign(L025)==sign(L975)),
@@ -1051,6 +1056,155 @@ for(m in 1:nrow(abb.LU)) {
            width=6, height=6, units="in", dpi=300)
   
 }
+
+
+
+
+
+
+
+
+
+
+
+########------------------------------------------------------------------------
+## Tables
+########------------------------------------------------------------------------
+
+# Land cover summaries
+full_join(plot_i %>% group_by(Categorie) %>% 
+            summarise(Plots.n=n(), 
+                      Plots.p=n()/nrow(plot_i)),
+          ants$str %>% st_set_geometry(NULL) %>% group_by(Categorie) %>% 
+            summarise(N.n=n(), 
+                      N.p=n()/nrow(ants$str), 
+                      S.n=n_distinct(SPECIESID), 
+                      S.p=n_distinct(SPECIESID)/n_distinct(ants$str$SPECIESID)),
+          by="Categorie") %>%
+  full_join(., lc_i %>% rename(Categorie=LC) %>% 
+              select(Categorie, Canopy, Category) %>%
+              mutate(Category=gsub("&", "\\&", Category, fixed=T)), 
+            by="Categorie") %>%
+  mutate(across(contains(".p"), ~formatC(round(100*.x, 1), 1, format="f"))) %>%
+  mutate(Plots=paste0(Plots.n, " (", Plots.p, "%)"),
+         Colonies=paste0(N.n, " (", N.p, "%)"),
+         Species=paste0(S.n, " (", S.p, "%)")) %>%
+  mutate(latex=paste0(paste(Category, Canopy, Plots, Colonies, Species, sep=" & "), 
+                      " \\\\")) %>%
+  arrange(Canopy, Plots.n) %>%
+  select(Category, latex) %>%
+  mutate(latex=gsub("%", "\\%", latex, fixed=T)) %>%
+  write_csv(paste0(ms_dir, "supp/Table_landcover.csv"))
+
+
+
+
+# Species list with elevational ranges and counts
+ants$all %>%
+  mutate(sppName=str_replace(str_remove(SPECIESID, "-GR"), "_", "."),
+         Species=tax_i$FullSpp[match(SPECIESID, tax_i$species)],
+         Genus=tax_i$FullGen[match(SPECIESID, tax_i$species)]) %>%
+  mutate(el=raster::extract(dem, ., fun=mean),
+         Species=paste0("\\emph{", Genus, " ", Species, "}")) %>%
+  mutate(Species=gsub("-", "/", Species)) %>%
+  st_set_geometry(NULL) %>%
+  group_by(Species) %>%
+  summarise(minEl=round(min(el, na.rm=T), 0), 
+            maxEl=round(max(el, na.rm=T), 0),
+            N.Y=sum(source=="s"),
+            N.W=sum(source=="p")) %>%
+  arrange(Species) %>% ungroup %>%
+  mutate(P.Y=N.Y/sum(N.Y), 
+         P.W=N.W/sum(N.W)) %>%
+  mutate(across(contains("P."), ~formatC(round(100*.x, 1), 1, format="f"))) %>%
+  mutate(W=paste0(N.W, " (", P.W, "%)"),
+         Y=paste0(N.Y, " (", P.Y, "%)"),
+         latex=paste0(paste(Species, minEl, maxEl, W, Y, sep=" & "), 
+                      " \\\\")) %>%
+  select(Species, latex) %>%
+  mutate(latex=gsub("%", "\\%", latex, fixed=T)) %>%
+  write_csv(paste0(ms_dir, "supp/Species_list.csv"))
+
+
+
+
+
+# Cross-validation
+par.cv <- tibble(par=c("R_",
+                       "R_rdLen", 
+                       "R_npp",
+                       "R_lcH",
+                       "R_grwnDD0", 
+                       "R_Forest",
+                       "R_Edge",
+                       "R_bldgPer",
+                       "R_aspctN",
+                       "R_AP", 
+                       "R_Ag",
+                       "L_SoilTSt", 
+                       "L_Pasture", 
+                       "L_CnpyOpn", 
+                       "L_VegTot"),
+                 full=c("(intercept)",
+                        "Road length", 
+                        "NPP",
+                        "H'(Land cover)",
+                        "Growing deg. days",
+                        "Forest proportion", 
+                        "Edge proportion",
+                        "Building perimeter",
+                        "North aspect",
+                        "Annual precipitation",
+                        "Agriculture proportion",
+                        "Soil temperature", 
+                        "Pasture/Crop", 
+                        "Canopy Type",
+                        "Local veg. cover"))
+fS_out <- "out/fwd_ll/"
+loo.f <- dir(fS_out, "loo_LV.*csv")
+loo.df <- map_dfr(loo.f, ~suppressMessages(read_csv(paste0(fS_out, .x))) %>%
+                    select(X1, elpd_loo, looic) %>%
+                    mutate(mod=str_split_fixed(.x, "_", 4)[3],
+                           nCov=as.numeric(str_sub(str_split_fixed(.x, "_", 4)[4], 1, -7)),
+                           v_name=str_split_fixed(X1, "__", 2)[,2],
+                           model=case_when(mod=="WY" ~ "Joint",
+                                           mod=="Y" ~ "Structured"))) %>%
+  group_by(model) %>% arrange(model, looic) %>%
+  mutate(elpd_diff=elpd_loo-first(elpd_loo),
+         looic_diff=looic-first(looic)) %>%
+  arrange(desc(model), nCov, looic) %>% ungroup %>%
+  mutate(D=(first(elpd_loo) - elpd_loo)/first(elpd_loo),
+         R2_mcf=1-(elpd_loo/first(elpd_loo)))
+
+
+loo.df %>% select(model, nCov, v_name, elpd_loo, elpd_diff, D) %>%
+  mutate(model=paste0("\\emph{", model, "}"),
+         Covariate=par.cv$full[match(v_name, par.cv$par)],
+         Scale=if_else(grepl("R_", v_name), "Regional", "Local")) %>%
+  mutate(across(contains("elpd"), ~formatC(round(.x, 1), 1, format="f")),
+         D=round(D, 3)) %>%
+  group_by(model, nCov) %>%
+  mutate(across(everything(), 
+                ~if_else(elpd_loo==first(elpd_loo) & nCov < 6,
+                         paste0("\\textbf{", .x, "}"),
+                         as.character(.x)))) %>% 
+  mutate(latex=paste0(paste(model, nCov, Covariate, Scale, elpd_loo, elpd_diff, D, 
+                            sep=" & "), " \\\\")) %>%
+  ungroup %>% select(model, Covariate, latex) %>%
+  write_csv(paste0(ms_dir, "supp/Cross-validation.csv"))
+
+
+p <- ggplot(loo.df, aes(x=nCov, y=D, colour=model)) + 
+  geom_hline(yintercept=0, size=0.15, colour="grey70") +
+  geom_point(shape=1, alpha=0.8) + 
+  scale_colour_manual("Model", values=mod_col) +
+  scale_x_continuous(breaks=seq(0, 14, by=2)) +
+  labs(x="Cross-validation model complexity\n(Number of covariates)", 
+       y=expression('Out-of-sample'~~italic(D^2))) + 
+  ms_fonts + theme(legend.text=element_text(face="italic"))
+ggsave(paste0(ms_dir, "figs/crossvalidation.png"), 
+       p, width=5, height=3.25)
+
 
 
 
