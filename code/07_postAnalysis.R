@@ -50,7 +50,7 @@ tax_i <- read_csv("data/tax_i.csv") %>%
   mutate(across(contains("Full"), as.factor))
   
 
-det_Y <- which(colSums(d.ls$Y)>0)
+det_Y <- which(colSums(d.ls[[1]]$Y)>0)
 
 site.mns <- ants$str %>% filter(TypeOfSample=="soil") %>%
   st_set_geometry(NULL) %>% group_by(BDM, Plot_id) %>%
@@ -145,7 +145,23 @@ agg_opt$LL_S %>% group_by(sppName, model) %>%
   select(model, sppName, contains("R2")) %>%
   mutate(Improve=R2_mn > 0) %>%
   group_by(model) %>%
-  summarise(across(contains("R2"), median), pImprove=mean(Improve))
+  summarise(R2_median=median(R2_mn),
+            R2_mean=mean(R2_mn),
+            R2_se=sd(R2_mn)/sqrt(n()), pImprove=mean(Improve))
+
+agg_opt$LL_S %>% group_by(sppName, model) %>%
+  left_join(., agg_null$LL_S %>% filter(model=="Structured[No LV]") %>%
+              select(L025, median, mean, L975, sppName, model), 
+            by="sppName", suffix=c("", "_null")) %>%
+  mutate(R2_mn=1-median/median_null) %>%
+  select(model, sppName, contains("R2")) %>%
+  mutate(Improve=R2_mn > 0,
+         SpInY=c("Species not in Y", 
+                 "Species in Y")[(sppName %in% names(det_Y))+1]) %>%
+  group_by(model, SpInY) %>%
+  summarise(R2_median=median(R2_mn),
+            R2_mean=mean(R2_mn),
+            R2_se=sd(R2_mn)/sqrt(n()), pImprove=mean(Improve))
 
 agg_opt$LL_I %>% group_by(el, id, model) %>%
   left_join(., agg_null$LL_I %>% filter(model=="Structured[No LV]") %>%
@@ -155,7 +171,9 @@ agg_opt$LL_I %>% group_by(el, id, model) %>%
   select(model, el, id, contains("R2")) %>%
   mutate(Improve=R2_mn > 0) %>%
   group_by(model) %>%
-  summarise(mnR2=median(R2_mn), pImprove=mean(Improve))
+  summarise(R2_median=median(R2_mn),
+            R2_mean=mean(R2_mn),
+            R2_se=sd(R2_mn)/sqrt(n()), pImprove=mean(Improve))
   
 
 
