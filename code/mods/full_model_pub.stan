@@ -35,7 +35,7 @@ data {
   
   // taxonomy
   int<lower=0> tax_i[S,2];  // species-genus lookup
-  real<lower=0.5, upper=1.5> D_prior[S];
+  real<lower=0.5, upper=1.5> D_prior[S]; // all 1's
   
   // observed data
   int<lower=0> W[K,S];  // W counts 
@@ -63,10 +63,12 @@ parameters {
   cholesky_factor_corr[G] L_Omega_B[R+L];
   vector<lower=0>[G] sigma_B[R+L]; 
   
+  // latent variable
   row_vector<lower=-1,upper=1>[S] gamma;
   vector[I] zeta;
   
-  real<lower=0, upper=1> disp_lam;  // implied prior: Uniform(0,1)
+  // Generalized Poisson dispersion parameter
+  real<lower=0, upper=1> disp_lam;  
   
   // bias: W species random effects
   vector<lower=0>[S] D;  // species bias in W
@@ -82,7 +84,6 @@ transformed parameters {
   matrix[K+J,S] lLAMBDA;  // cell level
   matrix[I,S] llambda;  // plot level
   
-  // cell level
   for(m in 1:(R+L)) {
     // B ~ mvNorm(beta, sigma_B * L_Omega_B * sigma_B);  
     // b ~ Norm(B, sigma_b)
@@ -98,7 +99,7 @@ model {
   // effort and species bias priors
   D ~ normal(D_prior, 1);
   
-  // cell level priors
+  // slope priors
   beta[1] ~ normal(-4, 2);
   beta[2:(R+L)] ~ normal(0, 1);
   for(m in 1:(R+L)) {
@@ -119,105 +120,3 @@ model {
   }
   Y ~ GP_log(disp_lam, llambda);
 }
-
-
-generated quantities {
-  matrix[K_,S] lLAMBDA_= X_ * b[1:R,] - log(h);
-  int pred_YL[I,S];
-  int pred_Y[K+J,S];
-  int pred_Y_[K_,S];
-  matrix[I,S] prPresL;
-  matrix[K+J,S] prPres;
-  matrix[K_,S] prPres_;
-  vector[I] ShannonH_L;
-  vector[K+J] ShannonH;
-  vector[K_] ShannonH_;
-  int RichL[I];
-  int Rich[K+J];
-  int Rich_[K_];
-  vector[I] tot_llam;
-  vector[K+J] tot_lLAM;
-  vector[K_] tot_lLAM_;
-  vector[I] tot_lam;
-  vector[K+J] tot_LAM;
-  vector[K_] tot_LAM_;
-  matrix[G,G] Sigma_B[R+L];
-  real log_lik;
-  vector[S] log_lik_S;
-  vector[I] log_lik_I;
-  row_vector[S] gamma_sig2;
-  matrix[S,S] gamma_Sigma;
-  
-  // calculate plot-scale quantities:
-  // tot_llam, tot_lam, prPresL, RichL, ShannonH_L
-  {
-    // temporary variables
-    matrix[I,S] p_L;
-    matrix[I,S] lambda = exp(llambda);
-    matrix[I,S] log_lik_is;
-    
-    for(i in 1:I) {
-      tot_llam[i] = sum(llambda[i,]);
-      tot_lam[i] = sum(exp(llambda[i,]));
-      p_L[i,] = lambda[i,] / tot_lam[i];
-      for(s in 1:S) {
-        log_lik_is[i,s] = GP_point_log_lpdf(Y[i,s] | disp_lam, llambda[i,s]);
-        prPresL[i,s] = 1 - exp(GP_point_log_lpdf(0 | disp_lam, llambda[i,s]));
-        pred_YL[i,s] = bernoulli_rng(prPresL[i,s]);
-      }
-      RichL[i] = sum(pred_YL[i,]);
-    }
-    ShannonH_L = - rows_dot_product(p_L, log(p_L));
-    log_lik = sum(log_lik_is);
-    for(i in 1:I) {
-      log_lik_I[i] = sum(log_lik_is[i,]);
-    }
-    for(s in 1:S) {
-      log_lik_S[s] = sum(log_lik_is[,s]);
-    }
-  }
-  
-  // calculate cell-scale quantities:
-  // prPres, tot_lLAM, tot_LAM, pred_Y, Rich, ShannonH
-  {
-    // temporary variables
-    matrix[K+J,S] p;
-    matrix[K_,S] p_;
-    matrix[K+J,S] LAMBDA = exp(lLAMBDA);
-    matrix[K_,S] LAMBDA_=exp(lLAMBDA_);
-    prPres = 1 - exp(-LAMBDA);
-    prPres_ = 1 - exp(-LAMBDA_);
-    
-    for(i in 1:(K+J)) {
-      tot_lLAM[i] = sum(lLAMBDA[i]);
-      tot_LAM[i] = sum(LAMBDA[i]);
-      p[i,] = LAMBDA[i,] / tot_LAM[i];
-      for(s in 1:S) {
-        pred_Y[i,s] = prPres[i,s] > 0.95;
-      }
-      Rich[i] = sum(pred_Y[i,]);
-    }
-    for(i in 1:K_) {
-      tot_lLAM_[i] = sum(lLAMBDA_[i]);
-      tot_LAM_[i] = sum(LAMBDA_[i]);
-      p_[i,] = LAMBDA_[i,] / tot_LAM_[i];
-      for(s in 1:S) {
-        pred_Y_[i,s] = prPres_[i,s] > 0.95;
-      }
-      Rich_[i] = sum(pred_Y_[i,]);
-    }
-    ShannonH = - rows_dot_product(p, log(p));
-    ShannonH_ = - rows_dot_product(p_, log(p_)); 
-  }
-  
-  // compose correlation matrices = sigma * LL' * sigma
-  for(m in 1:(R+L)) {
-    Sigma_B[m] = quad_form_diag(multiply_lower_tri_self_transpose(L_Omega_B[m]),
-                                sigma_B[m]);
-  }
-  gamma_sig2 = 1 - (gamma .* gamma);
-  gamma_Sigma = gamma' * gamma + diag_matrix(gamma_sig2');
-}
-
-
-
