@@ -146,8 +146,8 @@ png(paste0(ms_dir, "figs/map_VD.png"),
     height=7, width=7, res=400, units="in")
 par(mar=c(0.5, 0.5, 0, 0), fig=c(0, 1, 0, 1))
 raster::plot(dem, legend=F, axes=F, box=F, 
-             col=colorRampPalette(c("gray45", "white"))(255))
-raster::scalebar(d=10000, xy=c(570000, 162000), below="km", 
+             col=colorRampPalette(c("gray55", "white"))(255))
+raster::scalebar(d=10000, xy=c(571000, 160000), below="km", 
                  label=c(0, 5, 10), type="bar")
 plot(VD, add=TRUE, lwd=0.5)
 plot(select(d.i[[1]]$grd_W.sf, inbd), add=TRUE, 
@@ -157,7 +157,7 @@ plot(select(ants$pub, TubeNo), add=TRUE,
 plot(select(site.sf, el), add=TRUE, col=NA, fill=NA, border="#b2182b", lwd=1.5)
 legend(565000, 182000, pch=c(0,1), pt.cex=c(1.2, 1), y.intersp=1.25,
        col=c("#b2182b", rgb(5/256,113/256,176/256,0.75)),
-       legend=c("Structured\nsampling site", "Public sample"), 
+       legend=c("Structured site", "Presence-only"), 
        bty="n")
 dev.off()
 
