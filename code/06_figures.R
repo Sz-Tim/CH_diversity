@@ -284,6 +284,78 @@ ggsave(paste0(ms_dir, "figs/el_patterns.png"),
 
 
 
+a <- agg_opt$S_L %>% 
+  mutate(site=str_sub(str_pad(id, 6, "left", "0"), 1, 2)) %>%
+  group_by(model, site) %>%
+  summarise(mn_el=mean(el),
+            mn_S=mean(mean), 
+            sd_S=sd(mean)) %>%
+  ggplot(aes(mn_el, sd_S, colour=model)) + geom_point() +
+  stat_smooth(method="lm") +
+  scale_colour_manual(values=mod_col[1:2]) +
+  labs(x="", y="sd(richness)")
+b <- agg_opt$H_L %>% 
+  mutate(site=str_sub(str_pad(id, 6, "left", "0"), 1, 2)) %>%
+  group_by(model, site) %>%
+  summarise(mn_el=mean(el),
+            mn_H=mean(mean), 
+            sd_H=sd(mean)) %>%
+  ggplot(aes(mn_el, sd_H, colour=model)) + geom_point() +
+  stat_smooth(method="lm") +
+  scale_colour_manual(values=mod_col[1:2]) +
+  labs(x="", y="sd(diversity)")
+c <- agg_opt$tot_llam %>% 
+  mutate(site=str_sub(str_pad(id, 6, "left", "0"), 1, 2)) %>%
+  group_by(model, site) %>%
+  summarise(mn_el=mean(el),
+            mn_lam=mean(mean), 
+            sd_lam=sd(mean)) %>%
+  ggplot(aes(mn_el, sd_lam, colour=model)) + geom_point() +
+  stat_smooth(method="lm") +
+  scale_colour_manual(values=mod_col[1:2]) +
+  labs(x="Elevation (m)", y="sd(log intensity)")
+
+agg_opt$S_L %>% 
+  mutate(site=str_sub(str_pad(id, 6, "left", "0"), 1, 2)) %>%
+  group_by(model, site) %>%
+  summarise(mn_el=mean(el),
+            mn_S=mean(mean), 
+            sd_S=sd(mean)) %>%
+  lm(sd_S ~ mn_el * model, data=.) %>% summary
+agg_opt$H_L %>% 
+  mutate(site=str_sub(str_pad(id, 6, "left", "0"), 1, 2)) %>%
+  group_by(model, site) %>%
+  summarise(mn_el=mean(el),
+            mn_H=mean(mean), 
+            sd_H=sd(mean)) %>%
+  lm(sd_H ~ mn_el * model, data=.) %>% summary
+agg_opt$tot_llam %>% 
+  mutate(site=str_sub(str_pad(id, 6, "left", "0"), 1, 2)) %>%
+  group_by(model, site) %>%
+  summarise(mn_el=mean(el),
+            mn_lam=mean(mean), 
+            sd_lam=sd(mean)) %>%
+  lm(sd_lam ~ mn_el * model, data=.) %>% summary
+p <- ggpubr::ggarrange(a, b, c, ncol=1, widths=c(.9, .9, 1),
+                       labels=c("a.", "b.", "c."), label.x=0.02,
+                       common.legend=T, legend="bottom") 
+ggsave(paste0(ms_dir, "figs/el_patterns_sd.png"),
+       p, width=3, height=8, units="in")
+
+
+
+
+agg_opt$tot_lam %>% 
+  mutate(site=str_sub(str_pad(id, 6, "left", "0"), 1, 2)) %>%
+  group_by(model, site) %>%
+  summarise(mn_el=mean(el),
+            mn_lam=mean(mean), 
+            sd_lam=sd(mean)) %>%
+  ggplot(aes(mn_el, sd_lam, colour=model)) + geom_point() +
+  stat_smooth() +
+  scale_colour_manual(values=mod_col[1:2])
+
+
 
 ########------------------------------------------------------------------------
 ## Posterior species responses
@@ -565,7 +637,7 @@ genProp.df <- genProp.df %>%
 p <- ggplot(genProp.df, aes(elCat, fill=genus_1pct)) + 
   geom_hline(yintercept=0, colour="gray30", size=0.25) + 
   geom_bar(position="fill", colour="black", size=0.25) +
-  scale_fill_viridis_d("Genus", option="D") + 
+  scale_fill_brewer("Genus", type="qual", palette=3) + 
   facet_grid(.~source) + 
   ms_fonts + 
   labs(x="", y="Proportion of samples")
@@ -744,8 +816,30 @@ p <- ggpubr::ggarrange(p.A, p.B, nrow=1, labels=c("a.", "b."),
 ggsave(paste0(ms_dir, "figs/lambda_zones.png"), 
        p, width=10, height=13, units="in")
 
+p <- LAM.zone %>% 
+  left_join(st_drop_geometry(ant.assemblages) %>% select(sppName, assemblage)) %>% 
+  mutate(zone=factor(zone, levels=c("Plateau", "Montane"))) %>%
+  ggplot(aes(zone, prop, fill=model)) + geom_boxplot() + 
+  facet_wrap(~assemblage) + 
+  scale_fill_manual("Model", values=mod_col[1:2]) + 
+  labs(x="Elevational zone", 
+       y=expression("Proportion of total"~Lambda~"by species"), 
+       title="Predicted elevational distribution faceted by categorized observed range") 
+ggsave(paste0(ms_dir, "figs/lambda_zones_vs_obsRanges.png"), 
+       p, width=7, height=5, units="in")
 
-
+p <- agg_opt$LAM %>% 
+  select(sppName, model, mean, el) %>% 
+  group_by(model, sppName) %>%
+  mutate(prop=mean/sum(mean)) %>% 
+  ungroup %>% 
+  mutate(sppName=str_replace(str_remove(sppName, "-GR"), "_", ".")) %>% 
+  left_join(ant.assemblages %>% st_drop_geometry() %>% select(sppName, assemblage)) %>% 
+  ggplot(aes(el, prop, colour=model, group=paste(model, sppName))) + 
+  stat_smooth(se=F, size=0.5, alpha=0.5) + 
+  facet_wrap(~assemblage, scales="free_y")
+ggsave(paste0(ms_dir, "figs/lambda_zones_vs_obsRanges_relOcc.png"), 
+       p, width=9, height=5, units="in")
 
 
 
@@ -841,8 +935,136 @@ p <- ggpubr::ggarrange(p.A, p.B, nrow=1, labels=c("a.", "b."),
 ggsave(paste0(ms_dir, "figs/b_opt_bar.png"), 
        p, width=12, height=5, units="in")
 
+b_assemblage <- agg_opt$b %>% filter(ParName != "intercept") %>%
+  mutate(Scale=factor(str_sub(ParName, 1L, 1L), levels=c("R", "L"), 
+                      labels=c("Regional", "Local")),
+         Par=parName.df$full[match(ParName, parName.df$par)],
+         Par=factor(Par, levels=rev(unique(parName.df$full))),
+         genName=tax_i$FullGen[match(sppName, tax_i$species)],
+         sppName=str_replace(str_remove(sppName, "-GR"), "_", ".")) %>%
+  left_join(ant.assemblages %>% st_drop_geometry() %>% select(sppName, assemblage))
+b_assemblage_mn <- b_assemblage %>% group_by(model, Par, assemblage) %>%
+  summarise(mn=mean(mean), se=2*sd(mean)/sqrt(n()))
+
+b_assemblage %>% ggplot(aes(y=Par, fill=assemblage)) + 
+  geom_vline(xintercept=0, colour="grey", size=0.2) +
+  ggridges::geom_density_ridges(aes(x=mean), alpha=0.5, size=0.2, 
+                                rel_min_height=0.01, scale=0.99) + 
+  geom_point(data=b_assemblage_mn, aes(x=mn, colour=assemblage), 
+             shape=1, size=0.5, position=position_nudge(y=-0.1)) +
+  geom_linerange(data=b_assemblage_mn, aes(xmin=mn-se, xmax=mn+se, colour=assemblage), 
+             size=0.25, position=position_nudge(y=-0.1)) +
+  facet_wrap(~model) + 
+  scale_fill_manual("", values=c(col_region[3], "Mixed"="seagreen3", "Montane"="blue3"),
+                    guide=guide_legend(reverse=T)) +
+  scale_colour_manual("", values=c(col_region[3], "Mixed"="seagreen3", "Montane"="blue3"),
+                    guide=guide_legend(reverse=T)) +
+  theme(panel.grid.major.y=element_line(size=0.2, colour="grey")) +
+  labs(x="Species response", y="")
+ggsave(paste0(ms_dir, "figs/b_byElevAssemblage.png"), width=7, height=4, units="in")
+
+agg_opt$b %>% filter(ParName != "intercept") %>%
+  mutate(Scale=factor(str_sub(ParName, 1L, 1L), levels=c("R", "L"), 
+                      labels=c("Regional", "Local")),
+         Par=parName.df$full[match(ParName, parName.df$par)],
+         Par=factor(Par, levels=rev(unique(parName.df$full))),
+         genName=tax_i$FullGen[match(sppName, tax_i$species)],
+         sppName=str_replace(str_remove(sppName, "-GR"), "_", ".")) %>%
+  left_join(ant.assemblages %>% st_drop_geometry() %>% select(sppName, assemblage)) %>%
+  filter(Par=="Road length") %>% 
+  lm(mean ~ assemblage, data=.) %>% aov %>% TukeyHSD()
 
 
+
+b_bySpp <- agg_opt$b %>% filter(ParName != "intercept") %>%
+  mutate(Scale=factor(str_sub(ParName, 1L, 1L), levels=c("R", "L"), 
+                      labels=c("Regional", "Local")),
+         Par=parName.df$full[match(ParName, parName.df$par)],
+         Par=factor(Par, levels=unique(parName.df$full)),
+         genName=tax_i$FullGen[match(sppName, tax_i$species)],
+         sppName=str_replace(str_remove(sppName, "-GR"), "_", ".")) %>%
+  select(Par, sppName, model, mean, median) %>%
+  rename(b_mean=mean, b_med=median)
+
+agg_opt$LAM %>% 
+  mutate(elBin=el %/% 100 * 100) %>%
+  select(sppName, model, mean, elBin) %>% 
+  group_by(model, sppName, elBin) %>%
+  summarise(mean=sum(mean)) %>%
+  group_by(model, sppName) %>%
+  mutate(prop=mean/sum(mean)) %>% 
+  ungroup %>% 
+  mutate(sppName=str_replace(str_remove(sppName, "-GR"), "_", ".")) %>% 
+  left_join(ant.assemblages %>% st_drop_geometry() %>% select(sppName, assemblage)) %>%
+  full_join(b_bySpp) %>%
+  group_by(model, Par, elBin) %>%
+  summarise(b_mn=sum(b_mean*prop),
+            b_se=2*sd(b_mean*prop)) %>%
+  ggplot(aes(elBin, b_mn, colour=model)) + 
+  geom_hline(yintercept=0, colour="grey", size=0.2) + 
+  geom_ribbon(aes(ymin=b_mn-b_se, ymax=b_mn+b_se, fill=model), 
+              alpha=0.5, colour=NA) +
+  geom_line() + 
+  facet_wrap(~Par, scales="free_y", ncol=2, dir="v") + 
+  scale_colour_manual("", values=mod_col[1:2]) + 
+  scale_fill_manual("", values=mod_col[1:2]) + 
+  labs(x="Elevation (m)", y="Abundance-weighted response") +
+  theme(legend.position=c(0.92, 0.15), legend.background=element_blank()) +
+  scale_x_continuous(breaks=c(500, 1500, 2500))
+ggsave(paste0(ms_dir, "figs/b_byElev_abundWeight.png"), width=7, height=7, units="in")
+
+
+
+agg_opt$LAM %>% 
+  mutate(elBin=el %/% 100 * 100) %>%
+  select(sppName, model, mean, elBin) %>% 
+  group_by(model, sppName, elBin) %>%
+  summarise(mean=sum(mean)) %>%
+  group_by(model, sppName) %>%
+  mutate(prop=mean/sum(mean)) %>% 
+  ungroup %>% 
+  mutate(sppName=str_replace(str_remove(sppName, "-GR"), "_", ".")) %>% 
+  left_join(ant.assemblages %>% st_drop_geometry() %>% select(sppName, assemblage)) %>%
+  full_join(b_bySpp) %>%
+  group_by(model, Par, elBin) %>%
+  mutate(relAbund=mean/sum(mean)) %>%
+  summarise(b_mn=sum(b_mean*relAbund),
+            b_se=2*sd(b_mean*relAbund)) %>%
+  ggplot(aes(elBin, b_mn, colour=model)) + 
+  geom_hline(yintercept=0, colour="grey30", size=0.2) + 
+  geom_ribbon(aes(ymin=b_mn-b_se, ymax=b_mn+b_se, fill=model),
+              alpha=0.5, colour=NA) +
+  geom_line() + 
+  facet_wrap(~Par, scales="free_y", ncol=2, dir="v") + 
+  scale_colour_manual("", values=mod_col[1:2]) + 
+  scale_fill_manual("", values=mod_col[1:2]) + 
+  labs(x="Elevation (m)", y="Abundance-weighted response") +
+  theme(legend.position=c(0.35, 0.19), 
+        legend.background=element_blank(),
+        legend.key.size=unit(0.15, "in")) +
+  scale_x_continuous(breaks=c(500, 1500, 2500))
+ggsave(paste0(ms_dir, "figs/b_byElev_abundWeight.png"), width=5, height=7, units="in")
+
+
+
+  
+
+b_assemblage %>% ggplot(aes(y=Par, fill=assemblage)) + 
+  geom_vline(xintercept=0, colour="grey", size=0.2) +
+  ggridges::geom_density_ridges(aes(x=mean), alpha=0.5, size=0.2, 
+                                rel_min_height=0.01, scale=0.99) + 
+  geom_point(data=b_assemblage_mn, aes(x=mn, colour=assemblage), 
+             shape=1, size=0.5, position=position_nudge(y=-0.1)) +
+  geom_linerange(data=b_assemblage_mn, aes(xmin=mn-se, xmax=mn+se, colour=assemblage), 
+                 size=0.25, position=position_nudge(y=-0.1)) +
+  facet_wrap(~model) + 
+  scale_fill_manual("", values=c(col_region[3], "Mixed"="seagreen3", "Montane"="blue3"),
+                    guide=guide_legend(reverse=T)) +
+  scale_colour_manual("", values=c(col_region[3], "Mixed"="seagreen3", "Montane"="blue3"),
+                      guide=guide_legend(reverse=T)) +
+  theme(panel.grid.major.y=element_line(size=0.2, colour="grey")) +
+  labs(x="Species response", y="")
+ggsave(paste0(ms_dir, "figs/b_byElevAssemblage.png"), width=7, height=4, units="in")
 
 
 
@@ -941,12 +1163,26 @@ out.sf <- d.i[[1]]$grd_W.sf %>% st_set_crs(21781) %>%
   left_join(., L.site)
 
 # Richness
-ggplot(out.sf, aes(fill=S_mn_J)) + 
-  geom_sf(colour="black", size=0.1) + 
-  scale_fill_viridis(expression(S[Joint]), limits=c(0, 80))
-ggplot(out.sf, aes(fill=S_mn_S)) + 
-  geom_sf(colour="black", size=0.1) + 
-  scale_fill_viridis(expression(S[Str]), limits=c(0, 80))
+S.rng <- range(out.sf$S_mn_J, out.sf$S_mn_S, na.rm=T)
+S.J <- ggplot(out.sf, aes(fill=S_mn_J)) + 
+  geom_sf(colour="grey30", size=0.05) + 
+  annotate("text", label="a. Joint", x=490000, y=203000, size=3, hjust=0) +
+  scale_fill_viridis("Predicted\nRichness", limits=S.rng) +
+  theme(axis.title=element_blank(),
+        legend.key.width=unit(2, "cm"),
+        legend.key.height=unit(0.25, "cm"))
+S.S <- ggplot(out.sf, aes(fill=S_mn_S)) + 
+  geom_sf(colour="grey30", size=0.05) + 
+  annotate("text", label="b. Structured", x=490000, y=203000, size=3, hjust=0) +
+  scale_fill_viridis("Predicted\nRichness", limits=S.rng) +
+  theme(axis.title=element_blank(),
+        axis.text.y=element_text(colour="white"),
+        legend.key.width=unit(2, "cm"),
+        legend.key.height=unit(0.25, "cm"))
+S.JS <- ggpubr::ggarrange(S.J, S.S, common.legend=T, legend="bottom")
+ggsave(paste0(ms_dir, "figs/map_mnS_predicted.png"), S.JS,
+       width=7, height=4, units="in")
+
 ggplot(out.sf, aes(fill=S_mn_J - S_mn_S)) + 
   geom_sf(colour="black", size=0.1) + 
   scale_fill_gradient2(expression(S[Joint]-S[Str]))
@@ -2829,7 +3065,8 @@ loo::loo_compare(loo.all)
 library(sf); library(viridis)
 VD_raw <- st_read("../2_gis/data/VD_21781/Vaud_boundaries.shp") %>%
   filter(!grepl("Lac ", NAME)) 
-site.sf <- agg_str_site_data() %>% arrange(BDM)
+site.sf <- agg_str_site_data(gis.dir="../2_gis/data/VD_21781/",
+                             opfo.dir="../1_opfor/data/") %>% arrange(BDM)
 X_all <- rbind(d.i[[1]]$X, d.i[[1]]$X_) %>% as.data.frame
 lLAM.site <- agg$tot_LAM %>% filter(id<1e5) %>% 
   group_by(id, model) %>% 

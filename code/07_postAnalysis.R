@@ -249,7 +249,7 @@ agg_opt$beta %>% select(ParName, model, L025, mean, median, L975) %>% print.AsIs
 
 spp_obs <- which(colSums(d.i[[1]]$Y)>0)
 
-agg_opt$lam %>% mutate(obs=rep(c(t(d.i[[1]]$Y)), times=4)) %>%
+agg_opt$lam %>% mutate(obs=rep(c(t(d.i[[1]]$Y)), times=2)) %>%
   mutate(resid=mean - obs) %>%
   filter(obs > 0) %>%
   group_by(dataset, LV, el) %>%
